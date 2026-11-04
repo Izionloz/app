@@ -1,26 +1,25 @@
 # HUD map (mgux)
 
-An independent iDrive 7 (MGU) app that moves the CarPlay map between the instrument
-cluster and the head-up display, and sets its size and position from the HMI.
+An independent iDrive 7 (MGU) app that shows the CarPlay map on the instrument cluster,
+the head-up display, or both, and resizes and moves it live from the HMI.
 
-- `apps/mgux_hud_map` - the HMI app (source package, built on the head unit).
-- `native/mgux-hud-ctl` - a small root helper. waze-on-cluster reads its target and
-  `map_rect` only at its start, so the helper stores your choice, passes it to
-  waze-on-cluster through a drop-in and restarts that service (a few seconds) after
-  the last change. The choice survives a head-unit restart.
+- `apps/mgux_hud_map` - the HMI app (a source package, built on the head unit).
+- `native/mgux-hud-ctl` - a small root helper. waze-on-cluster is started with its render
+  socket pointed at the helper's proxy (`renderproxy.js`), which sits between
+  waze-on-cluster and cluster-render. It creates the map's layer on the cluster, the HUD or
+  both, and moves or resizes it while the map runs. Nothing restarts, so CarPlay's cluster
+  stream is never cut. Settings survive a head-unit restart.
 
 Needs the stock `waze-on-cluster` tool (0.6.0 or newer) from the mgu Store. No fork.
+After installing, restart the head unit once so waze-on-cluster starts through the proxy.
+Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct connection.
 
-## Publish (done in the browser)
-1. Create a repository on GitHub and upload the contents of this folder.
-2. Releases -> "Draft a new release":
-   - tag `mgux-hud-ctl@1.1.0`, attach `release-assets/mgux-hud-ctl@1.1.0.tgz`
-   - tag `mgux_hud_map@1.3.0`, attach `release-assets/mgux_hud_map@1.3.0.tgz`
-   - tag `catalog`, attach `catalog.json` (see below)
-3. `release-assets/catalog.json` is ready for `Izionloz/app`; if you use another
-   repository, replace `Izionloz/app` in it.
-4. Add the source in the Store: Settings -> Add source -> `Izionloz/app`
-   (Releases).
+## Releases (this repository's Store source)
+- tag `mgux-hud-ctl@2.0.1`: `mgux-hud-ctl@2.0.1.tgz`
+- tag `mgux_hud_map@2.0.0`: `mgux_hud_map@2.0.0.tgz`
+- tag `catalog`: `catalog.json`
+
+Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
 
 ## Build
 ```
