@@ -1,0 +1,39 @@
+{
+  "id": "mgux-hud-ctl",
+  "kind": "tool",
+  "version": "1.1.0",
+  "title": "HUD map settings",
+  "description": "Keeps the HUD map's display (cluster or HUD) and its rectangle for waze-on-cluster, which reads them at its start; the HUD map app talks to it",
+  "files": [
+    {
+      "path": "hudctl.js",
+      "mode": "0644"
+    }
+  ],
+  "units": [
+    {
+      "name": "mgux-hud-ctl.service"
+    }
+  ],
+  "dropins": [
+    {
+      "unit": "waze-on-cluster.service",
+      "name": "zz-mgux-hud-ctl.conf"
+    }
+  ],
+  "enable": [
+    {
+      "unit": "mgux-hud-ctl.service",
+      "target": "multi-user.target"
+    }
+  ],
+  "recmgr": [
+    "mgux-hud-ctl"
+  ],
+  "restart": [
+    "mgux-hud-ctl.service"
+  ],
+  "mguHmi": [
+    "ID7"
+  ]
+}

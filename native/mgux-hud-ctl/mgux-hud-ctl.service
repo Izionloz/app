@@ -1,0 +1,12 @@
+[Unit]
+Description=HUD map settings helper for waze-on-cluster (target and map_rect)
+After=local-fs.target
+RequiresMountsFor=/var/opt
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /var/opt/mgux-hud-ctl/current/hudctl.js
+Restart=always
+RestartSec=3
+Nice=10
+LimitCORE=0

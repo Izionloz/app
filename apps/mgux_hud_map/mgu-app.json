@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "mgux_hud_map",
+  "version": "1.3.0",
+  "tree": "mgux_hud_map@1.0.0",
+  "modules": [
+    "src/mgux_hud_map.js",
+    "src/hud_control.js"
+  ],
+  "sdk": [
+    "oap-sdk/src/core/OnlineApp.js",
+    "oap-sdk/src/logging/logging"
+  ]
+}
