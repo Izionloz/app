@@ -18,8 +18,8 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
 function demoRect(which) {
     const c = CANVAS[which];
-    return which === 'hud' ? { custom: false, x: 172, y: 140, w: 456, h: 202, opacity: 1, zoom: 1, rot: 0 }
-        : { custom: false, x: 0, y: 0, w: c.w, h: c.h, opacity: 1, zoom: 1, rot: 0 };
+    return which === 'hud' ? { custom: false, x: 172, y: 140, w: 456, h: 202, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }
+        : { custom: false, x: 0, y: 0, w: c.w, h: c.h, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 };
 }
 
 class HudClient {

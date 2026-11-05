@@ -46,6 +46,21 @@ function rotOf(rect) {
     return rect && typeof rect.rot === 'number' ? rect.rot : 0;
 }
 
+function focusOf(rect, k) {
+    return rect && typeof rect[k] === 'number' ? rect[k] : 0.5;
+}
+
+/* cluster-render scales and turns a layer about its pivot (px, py; the rect's centre by default). For the
+ * focus f (0-1, a point of the picture) to show in the middle at zoom z, the pivot p has p + z (f - p) = 0.5,
+ * so p = (z f - 0.5) / (z - 1). It is held to 0-1 (the rect): there a zoom >= 1 still fills the rect, so a
+ * focus near the picture's edge goes as near the middle as it can. A zoom of 1 or less turns about the middle. */
+function pivot(z, f) {
+    if (z <= 1.001) {
+        return 0.5;
+    }
+    return Math.max(0, Math.min(1, (z * f - 0.5) / (z - 1)));
+}
+
 function frame(type, bodyBuf) {
     const head = Buffer.alloc(5);
     head.writeUInt32LE(bodyBuf.length + 1, 0);
@@ -292,16 +307,31 @@ class Link {
     /* ---- what the layers should be ---- */
     desired() {
         const L = this.getLayout();
-        const out = [];
+        const one = (ref, target, rect) => ({ ref, target, rect, opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
+            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy') });
         if (L.mode === HUD) {
-            out.push({ ref: this.ref, target: HUD, rect: L.hud, opacity: opacityOf(L.hud), zoom: zoomOf(L.hud), rot: rotOf(L.hud) });
-        } else if (L.mode === 'both') {
-            out.push({ ref: this.ref, target: MAP, rect: L.map, opacity: opacityOf(L.map), zoom: zoomOf(L.map), rot: rotOf(L.map) });
-            out.push({ ref: this.ref + DUP, target: HUD, rect: L.hud, opacity: opacityOf(L.hud), zoom: zoomOf(L.hud), rot: rotOf(L.hud) });
-        } else {
-            out.push({ ref: this.ref, target: MAP, rect: L.map, opacity: opacityOf(L.map), zoom: zoomOf(L.map), rot: rotOf(L.map) });
+            return [one(this.ref, HUD, L.hud)];
         }
-        return out;
+        if (L.mode === 'both') {
+            return [one(this.ref, MAP, L.map), one(this.ref + DUP, HUD, L.hud)];
+        }
+        return [one(this.ref, MAP, L.map)];
+    }
+
+    /* the layer's size on its target: the rect, else waze's own place, else the whole target */
+    sizeOf(d) {
+        if (d.rect) {
+            return { w: d.rect.w, h: d.rect.h };
+        }
+        const b = d.target === this.base.target ? this.base : {};
+        return { w: typeof b.w === 'number' ? b.w : this.fullW(d.target), h: typeof b.h === 'number' ? b.h : this.fullH() };
+    }
+
+    /* zoom, turn and pivot, as layer fields; the pivot is always sent (cluster-render keeps the last one) */
+    look(d) {
+        const sz = this.sizeOf(d);
+        return { sx: d.zoom, sy: d.zoom, rotate: d.rot,
+            px: Math.round(pivot(d.zoom, d.fx) * sz.w), py: Math.round(pivot(d.zoom, d.fy) * sz.h) };
     }
 
     layerMessage(d) {
@@ -313,21 +343,16 @@ class Link {
         if (d.rect) {
             msg.x = d.rect.x; msg.y = d.rect.y; msg.w = d.rect.w; msg.h = d.rect.h;
         }
-        if (d.zoom !== 1) {
-            msg.sx = d.zoom;
-            msg.sy = d.zoom;
-        }
-        if (d.rot !== 0) {
-            msg.rotate = d.rot;
-        }
+        Object.assign(msg, this.look(d));
         if (d.opacity !== 1) {
             msg.opacity = this.layerOpacity(d);
         }
         return msg;
     }
 
-    /* Brings the real layers to the wanted ones: a changed target is a drop and a new layer
-     * (with the last frame replayed), a changed rectangle too. */
+    /* Brings the real layers to the wanted ones. A changed target is a drop and a new layer (with the last
+     * frame replayed), a changed rectangle too (unless HUDCTL_LIVE_SET); zoom, turn, focus and brightness are
+     * a `set` (cluster-render takes any layer field in a `set`), so the map does not blink while they move. */
     reconcile() {
         if (this.ref === null || !this.base || this.closed) {
             return;
@@ -342,7 +367,9 @@ class Link {
             }
         });
         want.forEach((d) => {
-            const place = `${d.rect ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : ''}z${d.zoom}r${d.rot}`;
+            const place = d.rect ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : '';
+            const look = Object.assign(this.look(d), { opacity: this.layerOpacity(d) });
+            const lookKey = JSON.stringify(look);
             const cur = this.actual[d.ref];
             if (cur && cur.target !== d.target) {
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
@@ -350,17 +377,16 @@ class Link {
             }
             const was = this.actual[d.ref];
             if (was && was.place === place) {
-                if (was.opacity !== d.opacity) {
-                    /* only the brightness changed: a `set`, so the map does not blink while the bar moves */
-                    this.toUp(jsonMsg({ op: 'set', ref: d.ref, opacity: this.layerOpacity(d) }));
+                if (was.look !== lookKey) {
+                    this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref }, look)));
+                    was.look = lookKey;
                     was.opacity = d.opacity;
                 }
                 return;
             }
             if (was && LIVE_SET && was.rect && d.rect) {
-                this.toUp(jsonMsg({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h,
-                    sx: d.zoom, sy: d.zoom, rotate: d.rot, opacity: this.layerOpacity(d) }));
-                this.actual[d.ref] = { target: d.target, place, rect: true, opacity: d.opacity };
+                this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h }, look)));
+                this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: true, opacity: d.opacity };
                 return;
             }
             if (was) {
@@ -369,7 +395,7 @@ class Link {
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
             }
             this.toUp(jsonMsg(this.layerMessage(d)));
-            this.actual[d.ref] = { target: d.target, place, rect: !!d.rect, opacity: d.opacity };
+            this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: !!d.rect, opacity: d.opacity };
             if (this.lastFrame) {
                 this.sendFrame(d.ref, this.lastFrame);
             }
@@ -432,4 +458,4 @@ class RenderProxy {
     }
 }
 
-module.exports = { RenderProxy, Splitter, frame, jsonMsg, DUP };
+module.exports = { RenderProxy, Splitter, frame, jsonMsg, DUP, pivot };

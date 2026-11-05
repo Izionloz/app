@@ -15,6 +15,8 @@ const { CANVAS } = require('./hudclient');
 const PREV = { x: 24, y: 56, w: 704, h: 452 };      /* the preview panel */
 const RIGHT_X = 756, RIGHT_W = 820;
 const HANDLE_HIT = 38;                              /* touch target radius, px of the page */
+const FOCUS_HIT = 28;                               /* the focus mark's */
+const FOCUS_COLOUR = '#ff9f1a';
 const MAP_ASPECT = 1088 / 480;
 
 const MODES = [['map', 'Cluster'], ['hud', 'HUD'], ['both', 'Cluster + HUD']];
@@ -51,6 +53,12 @@ function previewBox(which) {
 function rectOnPage(which, r) {
     const b = previewBox(which);
     return { x: b.x + r.x * b.s, y: b.y + r.y * b.s, w: r.w * b.s, h: r.h * b.s };
+}
+
+/* the focus (where the zoom centres: put it on the car) as a point of the page rectangle */
+function focusOnPage(p, r) {
+    const fx = typeof r.fx === 'number' ? r.fx : 0.5, fy = typeof r.fy === 'number' ? r.fy : 0.5;
+    return { x: p.x + fx * p.w, y: p.y + fy * p.h };
 }
 
 /* eight handles of a page rectangle: corners and edge middles */
@@ -118,6 +126,8 @@ class Designer {
             if (x >= s.trackX - 30 && x <= s.trackX + s.trackW + 30 && y >= s.y && y < s.y + s.h) { return { type: 'slider', i }; }
         }
         const p = rectOnPage(this.which, st[this.which]);
+        const f = focusOnPage(p, st[this.which]);
+        if (Math.hypot(f.x - x, f.y - y) < FOCUS_HIT) { return { type: 'focus' }; }
         let best = null, bd = HANDLE_HIT;
         for (const h of handles(p)) {
             const d = Math.hypot(h.x - x, h.y - y);
@@ -142,6 +152,8 @@ class Designer {
                 this._slider(this.drag.hit.i, x);
             } else if (t === 'body' || t === 'handle') {
                 this._moveRect(x, y);
+            } else if (t === 'focus') {
+                this._moveFocus(x, y);
             }
         } else if (phase === 3) {
             const d = this.drag;
@@ -176,6 +188,13 @@ class Designer {
         const value = Math.abs(v - def.def) < (def.max - def.min) * 0.015 ? def.def : v;
         this.client.rect(this.which, def.put(value, this.client.state()[this.which]));
     }
+    /* the focus follows the finger, held inside the map's rectangle */
+    _moveFocus(x, y) {
+        const p = rectOnPage(this.which, this.rectNow());
+        const fx = Math.max(0, Math.min(1, (x - p.x) / p.w)), fy = Math.max(0, Math.min(1, (y - p.y) / p.h));
+        this.client.rect(this.which, { fx: Math.round(fx * 100) / 100, fy: Math.round(fy * 100) / 100 });
+    }
+
     _moveRect(x, y) {
         const d = this.drag, b = previewBox(this.which), r0 = d.r0;
         const dx = (x - d.x0) / b.s, dy = (y - d.y0) / b.s;
@@ -273,7 +292,13 @@ class Designer {
             cv.circle(h.x, h.y, 13, '#ffffff');
             cv.circle(h.x, h.y, 9, t.accent);
         });
-        cv.text('Drag the map to move it. Drag a dot to resize.', PREV.x + 24, PREV.y + PREV.h - 14, 22, t.dim, { literal: true });
+        // the focus: a ring with a cross, put on the car so the zoom keeps it in the middle
+        const f = focusOnPage(p, r);
+        cv.circle(f.x, f.y, 15, FOCUS_COLOUR);
+        cv.circle(f.x, f.y, 11, shown ? '#0d2a33' : '#1a1a1a');
+        cv.line(f.x - 20, f.y, f.x + 20, f.y, 3, FOCUS_COLOUR);
+        cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, FOCUS_COLOUR);
+        cv.text('Drag the map to move it, a dot to resize, the orange + onto the car.', PREV.x + 24, PREV.y + PREV.h - 14, 22, t.dim, { literal: true });
     }
 
     _roads(cv, p, r) {
@@ -325,4 +350,4 @@ function clipSegment(a, b, p) {
     return [a[0] + t0 * dx, a[1] + t0 * dy, a[0] + t1 * dx, a[1] + t1 * dy];
 }
 
-module.exports = { Designer, sliders, previewBox, rectOnPage, handles, layout, MODES, WHICH, PREV };
+module.exports = { Designer, sliders, previewBox, rectOnPage, focusOnPage, handles, layout, MODES, WHICH, PREV };
