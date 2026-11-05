@@ -101,7 +101,7 @@ test('viet: letters are split into a base and its marks', () => {
     assert.deepStrictEqual(V.runs('Độ sáng').map((r) => r.text), ['D', 'o', ' s', 'a', 'ng']);
 });
 
-test('designer: width and height rows keep the middle; a touch anywhere on the preview moves only the focus', () => {
+test('designer: width and height rows keep the middle; the + places the focus, the map drags to move', () => {
     const { D, c, d, at } = listRig();
     const r0 = Object.assign({}, c.state().hud);
     d.scroll = d.rows().find((x) => x.id === 'width').top - 60;
@@ -116,13 +116,23 @@ test('designer: width and height rows keep the middle; a touch anywhere on the p
     d.touch(1, t.b.minus.x + 20, t.b.cy);
     d.touch(3, t.b.minus.x + 20, t.b.cy);
     assert.strictEqual(c.state().hud.h, r0.h - 4);
-    // the preview: a touch at its top-left corner puts the focus at the map's top-left, the map does not move
+    // the preview: the orange + moves the focus only; a drag elsewhere on the map moves the map, its size kept
     const b = D.previewBox('hud');
     r = Object.assign({}, c.state().hud);
-    d.touch(1, b.x, b.y);
-    d.touch(2, b.x + 5, b.y + 5);
-    d.touch(3, b.x + 5, b.y + 5);
-    const after = c.state().hud;
-    assert.deepStrictEqual([after.fx, after.fy], [0, 0]);
-    assert.deepStrictEqual([after.x, after.y, after.w, after.h], [r.x, r.y, r.w, r.h]);
+    const p = D.rectOnPage('hud', r), f = D.focusOnPage(p, r);
+    d.touch(1, f.x, f.y);
+    d.touch(2, p.x + 2, p.y + 2);
+    d.touch(3, p.x + 2, p.y + 2);
+    let after = c.state().hud;
+    assert.deepStrictEqual([after.x, after.y, after.w, after.h], [r.x, r.y, r.w, r.h], 'the + does not move the map');
+    assert.ok(after.fx < 0.05 && after.fy < 0.05);
+    const gx = p.x + p.w - 6, gy = p.y + p.h - 6;      /* a corner of the map, away from the + */
+    d.touch(1, gx, gy);
+    d.touch(2, gx - 10 * b.s, gy - 20 * b.s);
+    d.touch(3, gx - 10 * b.s, gy - 20 * b.s);
+    after = c.state().hud;
+    assert.deepStrictEqual([after.x, after.y, after.w, after.h], [r.x - 10, r.y - 20, r.w, r.h]);
+    // outside the map: nothing
+    d.touch(1, b.x + 2, b.y + b.h - 2);
+    assert.strictEqual(d.drag, null);
 });

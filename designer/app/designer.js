@@ -6,9 +6,8 @@
  * Page (1600 x 520), laid out like the car's own Head-Up Display settings:
  *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting with its name and value above a
  *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
- *  - right, a preview of the chosen display with the map's rectangle; a touch or drag anywhere on it puts the
- *    orange + (the zoom focus: the zoom keeps that point in the middle) under the finger, held inside the map.
- *    Place and size are set in the list.
+ *  - right, a preview of the chosen display with the map's rectangle: drag the map to move it, drag the orange +
+ *    (the zoom focus: the zoom keeps that point in the middle) onto the car. Size is set in the list.
  * Every change goes to the mgux-hud-ctl helper at once; the helper saves it (it says so under the preview).
  */
 'use strict';
@@ -18,7 +17,8 @@ const V = require('./viet');
 
 const LIST = { x: 24, y: 60, w: 760, h: 452 };     /* the list's window */
 const PREV = { x: 808, y: 60, w: 768, h: 452 };     /* the preview panel */
-const SCROLL_START = 14;                            /* a finger moving this far up or down scrolls the list */
+const SCROLL_START = 14;
+const FOCUS_HIT = 40;                               /* touch radius of the orange + */                            /* a finger moving this far up or down scrolls the list */
 const MAP_ASPECT = 1088 / 480;
 
 const C = {
@@ -163,9 +163,12 @@ class Designer {
             }
             return { type: 'list' };
         }
-        /* the preview only places the focus: a touch anywhere on the display puts it under the finger */
-        const b = previewBox(this.which);
-        if (inRect({ x: b.x - 20, y: b.y - 20, w: b.w + 40, h: b.h + 40 }, x, y)) { return { type: 'focus' }; }
+        /* the preview: the orange + places the zoom focus, the rest of the map moves it (its size is set in the list) */
+        const st = this.client.state();
+        const p = rectOnPage(this.which, st[this.which]);
+        const f = focusOnPage(p, st[this.which]);
+        if (Math.hypot(f.x - x, f.y - y) < FOCUS_HIT) { return { type: 'focus' }; }
+        if (inRect({ x: p.x - 10, y: p.y - 10, w: p.w + 20, h: p.h + 20 }, x, y)) { return { type: 'body' }; }
         return null;
     }
 
@@ -178,8 +181,6 @@ class Designer {
                 if (h.part === 'track') {
                     this._slider(h.i, x);
                 }
-            } else if (h && h.type === 'focus') {
-                this._moveFocus(x, y);
             }
         } else if (phase === 2 && this.drag) {
             const d = this.drag, t = d.hit.type;
@@ -190,6 +191,8 @@ class Designer {
                     d.scrolling = true;
                     this.scroll = clamp(d.s0 - (y - d.y0), 0, this.maxScroll());
                 }
+            } else if (t === 'body') {
+                this._moveRect(x, y);
             } else if (t === 'focus') {
                 this._moveFocus(x, y);
             }
@@ -246,6 +249,13 @@ class Designer {
         const p = rectOnPage(this.which, this.rectNow());
         const fx = clamp((x - p.x) / p.w, 0, 1), fy = clamp((y - p.y) / p.h, 0, 1);
         this.client.rect(this.which, { fx: round2(fx), fy: round2(fy) });
+    }
+
+    /* the map follows the finger, its size kept and its place held inside the display */
+    _moveRect(x, y) {
+        const d = this.drag, b = previewBox(this.which), r0 = d.r0, c = CANVAS[this.which];
+        const dx = (x - d.x0) / b.s, dy = (y - d.y0) / b.s;
+        this.client.rect(this.which, { x: Math.round(clamp(r0.x + dx, 0, c.w - r0.w)), y: Math.round(clamp(r0.y + dy, 0, c.h - r0.h)) });
     }
 
     /* ---------------- drawing ---------------- */
@@ -356,7 +366,7 @@ class Designer {
         cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, C.focus);
         // help and whether the settings are kept
         const ly = b.y + b.h + 34;
-        V.text(cv, 'Chạm hoặc kéo để đặt dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
+        V.text(cv, 'Kéo bản đồ để di chuyển, kéo dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
         const info = this.client.info ? this.client.info() : { live: false };
         let saved = 'Chưa kết nối mgux-hud-ctl: chế độ thử', col = C.warn;
         if (info.live) {

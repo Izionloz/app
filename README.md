@@ -42,8 +42,8 @@ preview whether the saved settings were restored; `journalctl -u mgux-hud-ctl` s
 ### Designer
 Laid out like the car's own Head-Up Display settings, in Vietnamese: a list (Hiện bản đồ trên, Đang chỉnh, Kích
 thước, Chiều rộng, Chiều cao, Độ sáng, Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng, Căn giữa, Đặt lại) with
-− ▬▬ + bars and the row in use lit red. Place and size are set in the list only; the preview on the right only
-places the zoom focus (the orange +): a touch or drag anywhere on it puts the + under the finger. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
+− ▬▬ + bars and the row in use lit red. On the preview on the right, drag the map to move it and drag the orange +
+(the zoom focus) onto the car; the size is set in the list. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.
 
 ### Zoom focus
@@ -52,16 +52,16 @@ edge. Each map has a focus (`fx`, `fy`, 0-1 of the picture, the middle by defaul
 middle of the map's rectangle, as far as the zoomed picture still fills it. In the designer, set the zoom to 100 %,
 drag the orange + onto the car, then zoom in. The helper sends it as cluster-render's pivot (`px`, `py`).
 
-### Moving the map without a blink (to try)
-A brightness change is sent to cluster-render as a `set`. A move, resize, zoom or turn drops the layer and makes it
-again (with the last frame replayed). To try sending those as a `set` too, on the head unit:
+### Moving the map without a blink
+A move, resize, zoom, turn or brightness change is sent to cluster-render as a `set` on the layer, which re-places
+it (cluster-render's `server.cpp` `apply()` -> `Compositor::changed()` -> `place()`), so the map follows a drag
+without a blink. Should an older cluster-render not move the map that way, go back to dropping and re-making the
+layer on the head unit:
 ```
 mkdir -p /etc/systemd/system/mgux-hud-ctl.service.d
-printf '[Service]\nEnvironment=HUDCTL_LIVE_SET=1\n' > /etc/systemd/system/mgux-hud-ctl.service.d/live-set.conf
+printf '[Service]\nEnvironment=HUDCTL_LIVE_SET=0\n' > /etc/systemd/system/mgux-hud-ctl.service.d/live-set.conf
 systemctl daemon-reload && systemctl restart mgux-hud-ctl
 ```
-If the map then does not move when you move it, cluster-render does not take a place in a `set`: remove the file
-and restart the helper again.
 
 ## Build
 ```
