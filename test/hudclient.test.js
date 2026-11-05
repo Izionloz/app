@@ -37,6 +37,7 @@ function listRig() {
     const d = new D.Designer(c);
     const at = (key) => {
         const r = d.rows().find((x) => x.id === key);
+        d.scroll = Math.max(0, Math.min(d.maxScroll(), r.top - 40));    /* scrolled to it, as on the car */
         return { r, y: d.rowY(r), b: D.bar(D.LIST.x, d.rowY(r), D.LIST.w) };
     };
     const tap = (x, y) => { d.touch(1, x, y); d.touch(3, x, y); };
@@ -98,4 +99,30 @@ test('viet: letters are split into a base and its marks', () => {
     assert.deepStrictEqual(V.split('ư'), { base: 'u', marks: ['horn'], upper: false });
     assert.deepStrictEqual(V.split('Ẳ'), { base: 'A', marks: ['breve', 'hook'], upper: true });
     assert.deepStrictEqual(V.runs('Độ sáng').map((r) => r.text), ['D', 'o', ' s', 'a', 'ng']);
+});
+
+test('designer: width and height rows keep the middle; a touch anywhere on the preview moves only the focus', () => {
+    const { D, c, d, at } = listRig();
+    const r0 = Object.assign({}, c.state().hud);
+    d.scroll = d.rows().find((x) => x.id === 'width').top - 60;
+    const w = at('width');
+    d.touch(1, w.b.plus.x + 20, w.b.cy);
+    d.touch(3, w.b.plus.x + 20, w.b.cy);
+    let r = c.state().hud;
+    assert.strictEqual(r.w, r0.w + 4);
+    assert.strictEqual(r.x + r.w / 2, r0.x + r0.w / 2, 'the middle stays');
+    assert.strictEqual(r.h, r0.h, 'height untouched');
+    const t = at('tall');
+    d.touch(1, t.b.minus.x + 20, t.b.cy);
+    d.touch(3, t.b.minus.x + 20, t.b.cy);
+    assert.strictEqual(c.state().hud.h, r0.h - 4);
+    // the preview: a touch at its top-left corner puts the focus at the map's top-left, the map does not move
+    const b = D.previewBox('hud');
+    r = Object.assign({}, c.state().hud);
+    d.touch(1, b.x, b.y);
+    d.touch(2, b.x + 5, b.y + 5);
+    d.touch(3, b.x + 5, b.y + 5);
+    const after = c.state().hud;
+    assert.deepStrictEqual([after.fx, after.fy], [0, 0]);
+    assert.deepStrictEqual([after.x, after.y, after.w, after.h], [r.x, r.y, r.w, r.h]);
 });

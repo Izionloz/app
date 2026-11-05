@@ -41,8 +41,9 @@ preview whether the saved settings were restored; `journalctl -u mgux-hud-ctl` s
 
 ### Designer
 Laid out like the car's own Head-Up Display settings, in Vietnamese: a list (Hiện bản đồ trên, Đang chỉnh, Kích
-thước, Độ sáng, Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng, Căn giữa, Đặt lại) with − ▬▬ + bars, the row
-in use lit red, and the preview on the right. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
+thước, Chiều rộng, Chiều cao, Độ sáng, Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng, Căn giữa, Đặt lại) with
+− ▬▬ + bars and the row in use lit red. Place and size are set in the list only; the preview on the right only
+places the zoom focus (the orange +): a touch or drag anywhere on it puts the + under the finger. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.
 
 ### Zoom focus

@@ -6,8 +6,9 @@
  * Page (1600 x 520), laid out like the car's own Head-Up Display settings:
  *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting with its name and value above a
  *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
- *  - right, a preview of the chosen display with the map's rectangle: drag inside it to move, a white dot to
- *    resize, the orange + onto the car (the zoom keeps that point in the middle).
+ *  - right, a preview of the chosen display with the map's rectangle; a touch or drag anywhere on it puts the
+ *    orange + (the zoom focus: the zoom keeps that point in the middle) under the finger, held inside the map.
+ *    Place and size are set in the list.
  * Every change goes to the mgux-hud-ctl helper at once; the helper saves it (it says so under the preview).
  */
 'use strict';
@@ -17,8 +18,6 @@ const V = require('./viet');
 
 const LIST = { x: 24, y: 60, w: 760, h: 452 };     /* the list's window */
 const PREV = { x: 808, y: 60, w: 768, h: 452 };     /* the preview panel */
-const HANDLE_HIT = 38;                              /* touch target radius, px of the page */
-const FOCUS_HIT = 28;
 const SCROLL_START = 14;                            /* a finger moving this far up or down scrolls the list */
 const MAP_ASPECT = 1088 / 480;
 
@@ -32,6 +31,7 @@ const MODES = [['map', 'Đồng hồ'], ['hud', 'HUD'], ['both', 'Cả hai']];
 const WHICH = [['hud', 'Bản đồ HUD'], ['map', 'Bản đồ đồng hồ']];
 
 const pct = (v) => `${Math.round(v * 100)} %`;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const round2 = (v) => Math.round(v * 100) / 100;
 
 /* the settings rows of one display: value <-> rect; lim(r) gives [min, max]; `sym` fills the bar from the middle */
@@ -43,6 +43,18 @@ function sliders(which) {
             put: (v, r) => {
                 const w = Math.max(40, Math.round(v * c.w)), h = Math.max(20, Math.round(w / MAP_ASPECT));
                 return { w, h, x: Math.round(r.x + r.w / 2 - w / 2), y: Math.round(r.y + r.h / 2 - h / 2) };
+            } },
+        { key: 'width', label: 'Chiều rộng', lim: () => [40, c.w], def: which === 'hud' ? 456 : c.w, step: 4,
+            show: (v) => `${Math.round(v)} px`, get: (r) => r.w,
+            put: (v, r) => {
+                const w = Math.round(v);
+                return { w, x: Math.round(clamp(r.x + r.w / 2 - w / 2, 0, c.w - w)) };
+            } },
+        { key: 'tall', label: 'Chiều cao', lim: () => [20, c.h], def: which === 'hud' ? 202 : c.h, step: 4,
+            show: (v) => `${Math.round(v)} px`, get: (r) => r.h,
+            put: (v, r) => {
+                const h = Math.round(v);
+                return { h, y: Math.round(clamp(r.y + r.h / 2 - h / 2, 0, c.h - h)) };
             } },
         { key: 'bright', label: 'Độ sáng', lim: () => [0.1, 1], def: 1, step: 0.05, show: pct,
             get: (r) => r.opacity, put: (v) => ({ opacity: round2(v) }) },
@@ -104,17 +116,7 @@ function focusOnPage(p, r) {
     return { x: p.x + fx * p.w, y: p.y + fy * p.h };
 }
 
-/* eight handles of a page rectangle: corners and edge middles */
-function handles(p) {
-    const x2 = p.x + p.w, y2 = p.y + p.h, mx = p.x + p.w / 2, my = p.y + p.h / 2;
-    return [
-        { id: 'tl', x: p.x, y: p.y }, { id: 'tr', x: x2, y: p.y }, { id: 'bl', x: p.x, y: y2 }, { id: 'br', x: x2, y: y2 },
-        { id: 't', x: mx, y: p.y }, { id: 'b', x: mx, y: y2 }, { id: 'l', x: p.x, y: my }, { id: 'r', x: x2, y: my }
-    ];
-}
-
 const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 class Designer {
     constructor(client) {
@@ -161,17 +163,9 @@ class Designer {
             }
             return { type: 'list' };
         }
-        const st = this.client.state();
-        const p = rectOnPage(this.which, st[this.which]);
-        const f = focusOnPage(p, st[this.which]);
-        if (Math.hypot(f.x - x, f.y - y) < FOCUS_HIT) { return { type: 'focus' }; }
-        let best = null, bd = HANDLE_HIT;
-        for (const h of handles(p)) {
-            const d = Math.hypot(h.x - x, h.y - y);
-            if (d < bd) { bd = d; best = h.id; }
-        }
-        if (best) { return { type: 'handle', id: best }; }
-        if (inRect({ x: p.x - 6, y: p.y - 6, w: p.w + 12, h: p.h + 12 }, x, y)) { return { type: 'body' }; }
+        /* the preview only places the focus: a touch anywhere on the display puts it under the finger */
+        const b = previewBox(this.which);
+        if (inRect({ x: b.x - 20, y: b.y - 20, w: b.w + 40, h: b.h + 40 }, x, y)) { return { type: 'focus' }; }
         return null;
     }
 
@@ -184,6 +178,8 @@ class Designer {
                 if (h.part === 'track') {
                     this._slider(h.i, x);
                 }
+            } else if (h && h.type === 'focus') {
+                this._moveFocus(x, y);
             }
         } else if (phase === 2 && this.drag) {
             const d = this.drag, t = d.hit.type;
@@ -194,8 +190,6 @@ class Designer {
                     d.scrolling = true;
                     this.scroll = clamp(d.s0 - (y - d.y0), 0, this.maxScroll());
                 }
-            } else if (t === 'body' || t === 'handle') {
-                this._moveRect(x, y);
             } else if (t === 'focus') {
                 this._moveFocus(x, y);
             }
@@ -252,26 +246,6 @@ class Designer {
         const p = rectOnPage(this.which, this.rectNow());
         const fx = clamp((x - p.x) / p.w, 0, 1), fy = clamp((y - p.y) / p.h, 0, 1);
         this.client.rect(this.which, { fx: round2(fx), fy: round2(fy) });
-    }
-
-    _moveRect(x, y) {
-        const d = this.drag, b = previewBox(this.which), r0 = d.r0;
-        const dx = (x - d.x0) / b.s, dy = (y - d.y0) / b.s;
-        const c = CANVAS[this.which];
-        const id = d.hit.type === 'body' ? 'move' : d.hit.id;
-        if (id === 'move') {
-            /* a move keeps the size: only the place is held inside the display */
-            this.client.rect(this.which, { x: Math.round(clamp(r0.x + dx, 0, c.w - r0.w)), y: Math.round(clamp(r0.y + dy, 0, c.h - r0.h)) });
-            return;
-        }
-        let left = r0.x, top = r0.y, right = r0.x + r0.w, bottom = r0.y + r0.h;
-        if (id.indexOf('l') >= 0) { left += dx; }
-        if (id.indexOf('r') >= 0) { right += dx; }
-        if (id === 't' || id === 'tl' || id === 'tr') { top += dy; }
-        if (id === 'b' || id === 'bl' || id === 'br') { bottom += dy; }
-        left = clamp(left, 0, c.w - 40); top = clamp(top, 0, c.h - 20);
-        right = clamp(right, left + 40, c.w); bottom = clamp(bottom, top + 20, c.h);
-        this.client.rect(this.which, { x: Math.round(left), y: Math.round(top), w: Math.round(right - left), h: Math.round(bottom - top) });
     }
 
     /* ---------------- drawing ---------------- */
@@ -374,10 +348,6 @@ class Designer {
         if (!shown) {
             V.text(cv, 'không hiện trên màn này', p.x + 12, p.y + 30, 20, C.dim);
         }
-        handles(p).forEach((h) => {
-            cv.circle(h.x, h.y, 13, '#ffffff');
-            cv.circle(h.x, h.y, 9, C.accent);
-        });
         // the focus: a ring with a cross, put on the car so the zoom keeps it in the middle
         const f = focusOnPage(p, r);
         cv.circle(f.x, f.y, 15, C.focus);
@@ -386,7 +356,7 @@ class Designer {
         cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, C.focus);
         // help and whether the settings are kept
         const ly = b.y + b.h + 34;
-        V.text(cv, 'Kéo để di chuyển, chấm trắng để đổi cỡ, dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
+        V.text(cv, 'Chạm hoặc kéo để đặt dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
         const info = this.client.info ? this.client.info() : { live: false };
         let saved = 'Chưa kết nối mgux-hud-ctl: chế độ thử', col = C.warn;
         if (info.live) {
@@ -421,4 +391,4 @@ class Designer {
     }
 }
 
-module.exports = { Designer, sliders, rows, bar, previewBox, rectOnPage, focusOnPage, handles, MODES, WHICH, PREV, LIST };
+module.exports = { Designer, sliders, rows, bar, previewBox, rectOnPage, focusOnPage, MODES, WHICH, PREV, LIST };
