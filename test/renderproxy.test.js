@@ -7,7 +7,7 @@ const fs = require('fs');
 const net = require('net');
 const os = require('os');
 const path = require('path');
-const { RenderProxy, Splitter, frame, jsonMsg, DUP } = require('../native/mgux-hud-ctl/renderproxy.js');
+const { RenderProxy, Splitter, frame, jsonMsg, DUP, pivot } = require('../native/mgux-hud-ctl/renderproxy.js');
 
 function frameMsg(ref, size, fill) {
     const body = Buffer.alloc(4 + size, fill);
@@ -159,7 +159,7 @@ test('proxy: a brightness change is a set, a move is a new layer with the last f
         layout.hud = Object.assign({}, layout.hud, { opacity: 0.5 });
         link.reconcile();
         await r.waitUp(n + 1);
-        assert.deepStrictEqual(jsonOf(r.upMsgs, n), [{ op: 'set', ref: 5, opacity: 0.4 }]);
+        assert.deepStrictEqual(jsonOf(r.upMsgs, n), [{ op: 'set', ref: 5, sx: 1, sy: 1, rotate: 0, px: 200, py: 88, opacity: 0.4 }]);
 
         n = r.upMsgs.length;
         link.reconcile();                      /* nothing changed: nothing sent */
@@ -171,6 +171,39 @@ test('proxy: a brightness change is a set, a move is a new layer with the last f
         assert.strictEqual(sent[1].x, 120);
         assert.strictEqual(sent[1].opacity, 0.4);
         assert.strictEqual(r.upMsgs[r.upMsgs.length - 1].type, 0x46, 'the last frame is replayed');
+    } finally {
+        r.close();
+    }
+});
+
+test('pivot: the focus shows in the middle when it can, and the zoomed picture still fills the rect', () => {
+    assert.strictEqual(pivot(1, 0.8), 0.5);
+    assert.strictEqual(pivot(2, 0.5), 0.5);
+    /* focus 0.67 at zoom 2.05: p = (2.05 * 0.67 - 0.5) / 1.05 */
+    const p = pivot(2.05, 0.67);
+    assert.ok(Math.abs(p + 2.05 * (0.67 - p) - 0.5) < 1e-9, 'the focus lands in the middle');
+    assert.strictEqual(pivot(1.2, 0.95), 1, 'held to the rect');
+    assert.strictEqual(pivot(1.2, 0.05), 0);
+});
+
+test('proxy: zoom, turn and focus are a set with the pivot, not a new layer', async () => {
+    const layout = { mode: 'hud', hud: { x: 0, y: 0, w: 400, h: 200, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, map: null };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'map' }));
+        await r.waitUp(1);
+        const first = jsonOf(r.upMsgs, 0)[0];
+        assert.deepStrictEqual([first.px, first.py, first.sx], [200, 100, 1]);
+        const link = Array.from(r.proxy.links)[0];
+        const n = r.upMsgs.length;
+        layout.hud = Object.assign({}, layout.hud, { zoom: 2, fx: 0.75, fy: 0.7, rot: 15 });
+        link.reconcile();
+        await r.waitUp(n + 1);
+        const sent = jsonOf(r.upMsgs, n);
+        assert.strictEqual(sent.length, 1);
+        assert.strictEqual(sent[0].op, 'set');
+        /* zoom 2, focus 0.75 -> pivot 1 (w 400), focus 0.7 -> pivot 0.9 (h 200) */
+        assert.deepStrictEqual([sent[0].sx, sent[0].sy, sent[0].rotate, sent[0].px, sent[0].py], [2, 2, 15, 400, 180]);
     } finally {
         r.close();
     }

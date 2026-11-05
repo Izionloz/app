@@ -62,3 +62,13 @@ test('Daemon: a burst of changes is saved once, after it ends', async () => {
     assert.strictEqual(saved.hud.x, d.state.hud.x);
     assert.strictEqual(d.saveTimer, null);
 });
+
+test('focus: kept, nudged, held to 0-1 and carried by centre', () => {
+    let r = ctl.normaliseRect('hud', { fx: 0.674, fy: 1.4 });
+    assert.deepStrictEqual([r.fx, r.fy], [0.67, 1]);
+    r = ctl.adjustRect('hud', r, { dfx: 0.05, dfy: -0.2 });
+    assert.deepStrictEqual([r.fx, r.fy], [0.72, 0.8]);
+    r = ctl.centredRect('hud', r);
+    assert.deepStrictEqual([r.fx, r.fy], [0.72, 0.8]);
+    assert.deepStrictEqual([ctl.defaultRect('map').fx, ctl.defaultRect('map').fy], [0.5, 0.5]);
+});

@@ -18,9 +18,9 @@ The map shows only while CarPlay is navigating (the phone draws nothing otherwis
 Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct connection.
 
 ## Releases (this repository's Store source)
-- tag `mgux-hud-ctl@2.4.1`: `mgux-hud-ctl@2.4.1.tgz`
+- tag `mgux-hud-ctl@2.5.0`: `mgux-hud-ctl@2.5.0.tgz`
 - tag `mgux_hud_map@2.3.0`: `mgux_hud_map@2.3.0.tgz`
-- tag `hud_designer@1.0.2`: `hud_designer@1.0.2.tgz`
+- tag `hud_designer@1.1.0`: `hud_designer@1.1.0.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -32,6 +32,12 @@ To release: change the code, bump the component's version (`native/<id>/componen
 missing `<id>@<version>` releases and puts `catalog.json` on the `catalog` release. CI fails when the code changed
 and the version did not. The workflow builds the designer too, with the idrive7-apps kit at a pinned commit
 (`release/designer.js`); its size and sha256 are written into the published `catalog.json`.
+
+### Zoom focus
+CarPlay's cluster map has the car below and right of the middle, so a zoom about the middle pushes the car to the
+edge. Each map has a focus (`fx`, `fy`, 0-1 of the picture, the middle by default): the zoom keeps that point in the
+middle of the map's rectangle, as far as the zoomed picture still fills it. In the designer, set the zoom to 100 %,
+drag the orange + onto the car, then zoom in. The helper sends it as cluster-render's pivot (`px`, `py`).
 
 ### Moving the map without a blink (to try)
 A brightness change is sent to cluster-render as a `set`. A move, resize, zoom or turn drops the layer and makes it
