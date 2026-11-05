@@ -101,3 +101,11 @@ test('settings: a file that cannot be read is not overwritten with the defaults 
     fs.unlinkSync(file);
     fs.unlinkSync(`${file}.bak`);
 });
+
+test('soft edges: 0.15 on the HUD by default, none on the cluster, held to 0-0.45', () => {
+    assert.strictEqual(ctl.defaultRect('hud').fe, 0.15);
+    assert.strictEqual(ctl.normaliseRect('hud', {}).fe, 0.15);
+    assert.strictEqual(ctl.normaliseRect('map', { fe: 0.3 }).fe, 0);
+    assert.strictEqual(ctl.normaliseRect('hud', { fe: 0.9 }).fe, 0.45);
+    assert.strictEqual(ctl.adjustRect('hud', ctl.normaliseRect('hud', { fe: 0.2 }), { dfe: -0.05 }).fe, 0.15);
+});

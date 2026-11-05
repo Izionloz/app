@@ -15,7 +15,8 @@
  *   {"cmd":"adjust","which":"hud"|"map","dw":px,"dh":px,"dx":px,"dy":px,"dop":0.1,"dz":0.1,"drot":5,"el":px,"er":px,"et":px,"eb":px}  (deltas; dop = brightness 0.1-1, dz = zoom 0.3-3,
  *   drot = degrees, el/er/et/eb = how far the left/right/top/bottom edge moves outward)
  *   {"cmd":"rect","which":"hud"|"map","x":..,"y":..,"w":..,"h":..,"opacity":..,"zoom":..,"rot":..,"fx":..,"fy":..}  (absolute, any subset;
- *   fx/fy = the focus, 0-1: the point of the picture the zoom keeps in the middle; adjust takes dfx/dfy)
+ *   fx/fy = the focus, 0-1: the point of the picture the zoom keeps in the middle; adjust takes dfx/dfy;
+ *   fe = the HUD map's soft edges, 0-0.45 of its shorter side; adjust takes dfe)
  *   {"cmd":"centre","which":...}   {"cmd":"reset","which":...|"all"}
  * and gets {"ev":"state",...} after every command. Settings are kept in
  * /var/opt/mgux-hud/state.json and survive a head-unit restart.
@@ -40,6 +41,7 @@ const ENV_FILE = path.join(STATE_DIR, 'args.env');
 /* the targets' pixels (cluster-render.conf: map 1088x480, hud 800x480) */
 const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
 const MIN_W = 40, MIN_H = 20;
+const FEATHER_HUD = 0.15, FEATHER_MAX = 0.45;    /* the HUD map's soft edges: default and most */
 const MAP_ASPECT = 1088 / 480;
 
 /* mkdir -p for Node 8, whose mkdirSync has no recursive option. */
@@ -74,9 +76,9 @@ function defaultRect(which) {
     const c = CANVAS[which];
     if (which === 'hud') {
         const w = 456, h = even(w / MAP_ASPECT);
-        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 };
+        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: FEATHER_HUD };
     }
-    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 };
+    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0 };
 }
 
 /* A rectangle with valid even integers, inside its canvas. */
@@ -95,6 +97,8 @@ function normaliseRect(which, r) {
          * cluster map has the car below and right of the middle, so a zoom about the middle pushes it out */
         fx: clamp(Math.round(num(src.fx, 0.5) * 100) / 100, 0, 1),
         fy: clamp(Math.round(num(src.fy, 0.5) * 100) / 100, 0, 1),
+        /* soft edges (HUD only): how far in the map fades out at its four sides, as a part of its shorter side */
+        fe: which === 'hud' ? clamp(Math.round(num(src.fe, FEATHER_HUD) * 100) / 100, 0, FEATHER_MAX) : 0,
         w, h,
         x: clamp(even(num(src.x, (c.w - w) / 2)), 0, c.w - w),
         y: clamp(even(num(src.y, (c.h - h) / 2)), 0, c.h - h)
@@ -125,12 +129,12 @@ function adjustRect(which, r0, a) {
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     const w = clamp(r.w + num(a.dw, 0), MIN_W, c.w);
     const h = clamp(r.h + num(a.dh, 0), MIN_H, c.h);
-    return normaliseRect(which, { custom: true, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
+    return normaliseRect(which, { custom: true, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), fe: num(r.fe, FEATHER_HUD) + num(a.dfe, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
 }
 
 function centredRect(which, r) {
     const c = CANVAS[which];
-    return normaliseRect(which, { custom: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
+    return normaliseRect(which, { custom: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, fe: r.fe, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
 }
 
 function writeAtomic(file, data) {
@@ -193,6 +197,7 @@ function rectView(which, r) {
     return { custom: r.custom, w: r.w, h: r.h, x: r.x, y: r.y, canvasW: c.w, canvasH: c.h,
         opacity: r.opacity, bright: Math.round(r.opacity * 100), zoom: r.zoom, zoomPct: Math.round(r.zoom * 100), rot: r.rot,
         fx: r.fx, fy: r.fy, focusX: Math.round(r.fx * 100), focusY: Math.round(r.fy * 100),
+        fe: r.fe, featherPct: Math.round(r.fe * 100),
         pct: Math.round(100 * r.w / c.w),
         dx: Math.round(r.x + r.w / 2 - c.w / 2), dy: Math.round(r.y + r.h / 2 - c.h / 2),
         defaultW: full };
@@ -288,7 +293,7 @@ class Daemon {
             /* absolute values from the graphical designer: any of x, y, w, h, opacity, zoom, rot */
             const cur = this.state[which];
             const next = Object.assign({}, cur, { custom: true });
-            ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy'].forEach((k) => {
+            ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy', 'fe'].forEach((k) => {
                 if (msg[k] !== undefined) {
                     next[k] = num(msg[k], cur[k]);
                 }
