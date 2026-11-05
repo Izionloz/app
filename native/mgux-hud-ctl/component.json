@@ -1,0 +1,43 @@
+{
+  "id": "mgux-hud-ctl",
+  "kind": "tool",
+  "version": "2.4.1",
+  "title": "HUD map settings",
+  "description": "Puts the CarPlay map on the cluster, the HUD or both and moves it live, by sitting between waze-on-cluster and cluster-render; the HUD map app talks to it",
+  "files": [
+    {
+      "path": "hudctl.js",
+      "mode": "0644"
+    },
+    {
+      "path": "renderproxy.js",
+      "mode": "0644"
+    }
+  ],
+  "units": [
+    {
+      "name": "mgux-hud-ctl.service"
+    }
+  ],
+  "dropins": [
+    {
+      "unit": "waze-on-cluster.service",
+      "name": "zz-mgux-hud-ctl.conf"
+    }
+  ],
+  "enable": [
+    {
+      "unit": "mgux-hud-ctl.service",
+      "target": "multi-user.target"
+    }
+  ],
+  "recmgr": [
+    "mgux-hud-ctl"
+  ],
+  "restart": [
+    "mgux-hud-ctl.service"
+  ],
+  "mguHmi": [
+    "ID7"
+  ]
+}

@@ -18,12 +18,31 @@ The map shows only while CarPlay is navigating (the phone draws nothing otherwis
 Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct connection.
 
 ## Releases (this repository's Store source)
-- tag `mgux-hud-ctl@2.4.0`: `mgux-hud-ctl@2.4.0.tgz`
+- tag `mgux-hud-ctl@2.4.1`: `mgux-hud-ctl@2.4.1.tgz`
 - tag `mgux_hud_map@2.3.0`: `mgux_hud_map@2.3.0.tgz`
-- tag `hud_designer@1.0.1`: `hud_designer@1.0.1.tgz`
+- tag `hud_designer@1.0.2`: `hud_designer@1.0.2.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
+
+To release: change the code, bump the component's version (`native/<id>/component.json` or
+`apps/<id>/mgu-app.json` or `designer/app/app.json`), run `node release/catalog.js --out dist` and commit
+`catalog.json`. On `main`, the
+`release` workflow then builds the artifacts (reproducibly: the same bytes as `catalog.json` names), makes the
+missing `<id>@<version>` releases and puts `catalog.json` on the `catalog` release. CI fails when the code changed
+and the version did not. The workflow builds the designer too, with the idrive7-apps kit at a pinned commit
+(`release/designer.js`); its size and sha256 are written into the published `catalog.json`.
+
+### Moving the map without a blink (to try)
+A brightness change is sent to cluster-render as a `set`. A move, resize, zoom or turn drops the layer and makes it
+again (with the last frame replayed). To try sending those as a `set` too, on the head unit:
+```
+mkdir -p /etc/systemd/system/mgux-hud-ctl.service.d
+printf '[Service]\nEnvironment=HUDCTL_LIVE_SET=1\n' > /etc/systemd/system/mgux-hud-ctl.service.d/live-set.conf
+systemctl daemon-reload && systemctl restart mgux-hud-ctl
+```
+If the map then does not move when you move it, cluster-render does not take a place in a `set`: remove the file
+and restart the helper again.
 
 ## Build
 ```
@@ -31,6 +50,13 @@ node release/tool_artifact.js native/mgux-hud-ctl --out dist
 cd apps/mgux_hud_map && node tools/build.js
 ```
 The designer is built with the idrive7-apps kit: see `designer/README.md`.
+
+## Tests
+```
+npm test
+```
+Runs the tests in `test/` (Node 18 or newer; the shipped code itself stays Node 8 compatible). CI runs them on every
+push. `mgux-hud-map-source.zip` is built from this tree with `npm run zip`: change the files here, not in the zip.
 
 GPL-3.0-or-later (the kit patches and the designer app follow the kit's MIT license). The HMI app is derived from
 robertn_waze_cluster by Robert Nisipeanu.
