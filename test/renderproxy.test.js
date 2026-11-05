@@ -306,3 +306,39 @@ test('proxy: soft edges are an effect layer above the HUD map that follows it, s
         r.close();
     }
 });
+
+test('proxy: with waze-on-cluster 0.9.0 its HUD layer is placed and looked after, nothing is copied to another display', async () => {
+    const layout = { mode: 'both', native: true,
+        hud: { x: 150, y: 90, w: 300, h: 150, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0 },
+        map: { x: 10, y: 20, w: 900, h: 400, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0, custom: true } };
+    const hudRig = await rig(layout);
+    const mapRig = await rig(layout);
+    try {
+        /* the HUD feed: its own connection, the frame already scaled (vw x vh) */
+        hudRig.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'hud', x: 200, y: 140, w: 400, h: 176, vw: 400, vh: 176 }));
+        hudRig.waze.write(frameMsg(2, 64, 5));
+        await hudRig.waitUp(2);
+        let msgs = jsonOf(hudRig.upMsgs, 0);
+        const layers = msgs.filter((j) => j.op === 'layer');
+        assert.strictEqual(layers.length, 1, 'one layer, no copy for another display');
+        assert.deepStrictEqual([layers[0].ref, layers[0].target, layers[0].x, layers[0].y, layers[0].w, layers[0].h, layers[0].vw],
+            [2, 'hud', 150, 90, 300, 150, 400]);
+        assert.ok(hudRig.upMsgs.filter((m) => m.type === 0x46).every((m) => m.body.readUInt32LE(0) === 2));
+
+        /* the cluster feed, on its own connection: placed as the cluster map is, not copied to the HUD */
+        mapRig.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 1, target: 'map' }));
+        await mapRig.waitUp(1);
+        const m = jsonOf(mapRig.upMsgs, 0).filter((j) => j.op === 'layer');
+        assert.strictEqual(m.length, 1);
+        assert.deepStrictEqual([m[0].target, m[0].x, m[0].y, m[0].w, m[0].h], ['map', 10, 20, 900, 400]);
+
+        /* the layout turning to an older waze-on-cluster (no HUD feed of its own) goes back to copying */
+        layout.native = false;
+        Array.from(mapRig.proxy.links)[0].reconcile();
+        await mapRig.waitUp(4);
+        assert.ok(jsonOf(mapRig.upMsgs, 0).some((j) => j.op === 'layer' && j.ref === 1 + DUP && j.target === 'hud'));
+    } finally {
+        hudRig.close();
+        mapRig.close();
+    }
+});

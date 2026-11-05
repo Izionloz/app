@@ -195,24 +195,16 @@ test('designer knob: a press on a choice or a command runs it', () => {
 
 test('designer: the map line says what waze-on-cluster and the service report', () => {
     const { statusLine } = require('../designer/app/designer.js');
-    assert.deepStrictEqual(statusLine({ live: true, connections: 1, map: { state: 'showing' } }), { text: 'Bản đồ: đang hiện', warn: false });
-    assert.strictEqual(statusLine({ live: true, connections: 0, map: { state: 'showing' } }).warn, true);
-    assert.ok(statusLine({ live: true, connections: 0, map: { state: 'showing' } }).text.includes('khởi động lại head unit'));
-    assert.deepStrictEqual(statusLine({ live: false, map: null }), { text: 'Bản đồ: chưa thấy waze-on-cluster', warn: true });
-    assert.strictEqual(statusLine({ live: true, connections: 1, map: { state: 'frozen' } }).warn, true);
-});
-
-test('designer: waze-on-cluster\'s status is read from its socket', async () => {
-    const net = require('net'), fs = require('fs'), os = require('os'), path = require('path');
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woc-'));
-    const sock = path.join(dir, 'ctl.sock');
-    const srv = net.createServer((c) => c.write('{"ev":"status","state":"showing","page":"map"}\n'));
-    await new Promise((res) => srv.listen(sock, res));
-    const c = new HudClient({ path: path.join(dir, 'none.sock'), wazePath: sock });
-    c.open();
-    await new Promise((res) => setTimeout(res, 150));
-    assert.strictEqual(c.info().map.state, 'showing');
-    c.close();
-    srv.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    const w = (o) => Object.assign({ connected: true, busy: false, native: true, state: 'showing', hudState: 'showing', cluster: 1, hud: 1 }, o);
+    assert.deepStrictEqual(statusLine({ live: true, connections: 2, waze: w() }), { text: 'Bản đồ: đồng hồ đang hiện, HUD đang hiện', warn: false });
+    assert.deepStrictEqual(statusLine({ live: true, connections: 1, waze: w({ cluster: 0 }) }), { text: 'Bản đồ: HUD đang hiện', warn: false });
+    assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hud: 0, cluster: 0 }) }).text, 'Bản đồ: đang tắt');
+    assert.strictEqual(statusLine({ live: true, connections: 0, waze: w() }).warn, true);
+    assert.ok(statusLine({ live: true, connections: 0, waze: w() }).text.includes('khởi động lại head unit'));
+    assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hudState: 'disabled' }) }).warn, true);
+    assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ state: 'frozen' }) }).warn, true);
+    assert.ok(statusLine({ live: true, connections: 1, waze: w({ native: false }) }).text.includes('0.9.0'));
+    assert.ok(statusLine({ live: true, connections: 1, waze: { connected: false, busy: true } }).text.includes('app khác'));
+    assert.ok(statusLine({ live: true, connections: 1, waze: null }).text.includes('chưa thấy waze-on-cluster'));
+    assert.deepStrictEqual(statusLine({ live: false, waze: null }), { text: 'Bản đồ: chưa có dịch vụ nền', warn: true });
 });

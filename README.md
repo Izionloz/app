@@ -26,8 +26,8 @@ keeps every `requires` on a component of this repository at its current version.
 controller included (turn to move the red row, press to change a setting and turn to step it, press or push left
 to end) and the map's state from waze-on-cluster under the preview.
 
-- tag `mgux-hud-ctl@2.7.0`: `mgux-hud-ctl@2.7.0.tgz`
-- tag `hud_designer@1.4.0`: `hud_designer@1.4.0.tgz`
+- tag `mgux-hud-ctl@2.8.0`: `mgux-hud-ctl@2.8.0.tgz`
+- tag `hud_designer@1.5.0`: `hud_designer@1.5.0.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -55,6 +55,22 @@ rộng, Chiều cao (each on its own), Độ sáng, Độ cao, Vị trí ngang, 
 − ▬▬ + bars and the row in use lit red. On the preview on the right, drag the map to move it and drag the orange +
 (the zoom focus) onto the car; the size is set in the list. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.
+
+### The HUD map's background (waze-on-cluster 0.9.0 or later)
+A HUD shows black as nothing. waze-on-cluster 0.9.0 (source `robertnisipeanu/idrive-apps`, with cluster-render 0.4.0:
+Store -> Settings -> Add source -> `robertnisipeanu/idrive-apps`) draws the map on the cluster and on the HUD each as a
+feed of its own, and the HUD's is scaled to the size it is shown at with a **black background** (a night map's field
+fades to black, so the HUD shows the roads, route and labels), rounded corners and, if asked, feathered edges
+(`hud_black_background = 1`, `hud_round_corners = 1` in its conf; `hud_fps` is the HUD's frame rate, 10 by default).
+mgux-hud-ctl works with it:
+- it holds waze-on-cluster's control socket (one owner: do not use `robertn_waze_cluster` beside it) and sends
+  `cluster` / `hud` on or off for the mode (Đồng hồ, HUD, Cả hai), again after each start of waze-on-cluster;
+- it sends `hud_width_pct` so the frame waze scales is as wide as the map is shown (20-100 % of the HUD), a moment
+  after the size stops changing;
+- the proxy places and looks after each feed's layer (position, size, brightness, zoom, rotation, soft edges), and
+  copies no frame to another display.
+With an older waze-on-cluster (its status has no `hud_state`) the proxy copies the cluster feed to the HUD as before:
+the HUD then shows Waze's own background. HUD map says which of the two it is under the preview.
 
 ### Soft edges (HUD)
 So the HUD map does not end in a square, its four sides fade out (`fe`: how far in, as a part of its shorter side;

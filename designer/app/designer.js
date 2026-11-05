@@ -114,25 +114,39 @@ function focusOnPage(p, r) {
     return { x: p.x + fx * p.w, y: p.y + fy * p.h };
 }
 
-/* the map's state in one line: waze-on-cluster's status, and whether it goes through the service */
+/* waze-on-cluster's state of one feed (state for the cluster's, hud_state for the HUD's) in words */
+function feedText(st) {
+    switch (st) {
+    case 'showing': return 'đang hiện';
+    case 'starting': return 'đang khởi động';
+    case 'frozen': return 'bị đứng, hãy kết nối lại CarPlay';
+    case 'error': return 'lỗi';
+    case 'disabled': return 'bị cluster-render chặn';
+    case 'off': return 'tắt';
+    default: return 'chờ CarPlay dẫn đường';
+    }
+}
+
+/* the map's state in one line (what the button app showed) from the helper's report of waze-on-cluster */
 function statusLine(info) {
-    const m = info.map;
+    const w = info.waze;
     let text, warn = false;
-    if (!m) {
-        text = 'Bản đồ: chưa thấy waze-on-cluster';
+    if (!info.live) {
+        text = 'Bản đồ: chưa có dịch vụ nền';
         warn = true;
-    } else if (m.state === 'showing') {
-        text = 'Bản đồ: đang hiện';
-    } else if (m.state === 'starting') {
-        text = 'Bản đồ: đang khởi động';
-    } else if (m.state === 'frozen') {
-        text = 'Bản đồ: bị đứng, hãy kết nối lại CarPlay';
+    } else if (!w || !w.connected) {
+        text = w && w.busy ? 'Bản đồ: waze-on-cluster đang do app khác điều khiển, hãy đóng app đó'
+            : 'Bản đồ: chưa thấy waze-on-cluster';
         warn = true;
-    } else if (m.state === 'error') {
-        text = `Bản đồ: lỗi ${m.reason || ''}`.trim();
-        warn = true;
+    } else if (!w.native) {
+        text = `Bản đồ: ${feedText(w.state)}. waze-on-cluster cũ, cập nhật lên 0.9.0 để HUD có nền đen`;
+        warn = w.state === 'frozen' || w.state === 'error';
     } else {
-        text = 'Bản đồ: chờ CarPlay dẫn đường';
+        const parts = [];
+        if (w.cluster) { parts.push(`đồng hồ ${feedText(w.state)}`); }
+        if (w.hud) { parts.push(`HUD ${feedText(w.hudState)}`); }
+        text = `Bản đồ: ${parts.join(', ') || 'đang tắt'}`;
+        warn = w.state === 'frozen' || w.state === 'error' || w.hudState === 'frozen' || w.hudState === 'error' || w.hudState === 'disabled';
     }
     if (info.live && info.connections === 0) {
         text += ', chưa liên kết: khởi động lại head unit một lần';

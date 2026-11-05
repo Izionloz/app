@@ -349,6 +349,12 @@ class Link {
         const L = this.getLayout();
         const one = (ref, target, rect) => ({ ref, target, rect, opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
             fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0 });
+        if (L.native) {
+            /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
+             * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
+             * no frame is copied to another display */
+            return this.base.target === HUD ? [one(this.ref, HUD, L.hud)] : [one(this.ref, MAP, L.map)];
+        }
         if (L.mode === HUD) {
             return [one(this.ref, HUD, L.hud)];
         }

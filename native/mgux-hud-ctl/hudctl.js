@@ -28,11 +28,17 @@ const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const { RenderProxy } = require('./renderproxy.js');
+const { WazeLink } = require('./wazelink.js');
 
 const env = process.env;
 const SOCK = env.HUDCTL_SOCK || '/dev/shm/mgux-hud/ctl.sock';
 const PROXY_SOCK = env.HUDCTL_PROXY_SOCK || '/dev/shm/mgux-hud/render.sock';
 const REAL_RENDER = env.HUDCTL_RENDER || '/dev/shm/cluster-render/render.sock';
+const WAZE_SOCK = env.HUDCTL_WAZE_SOCK || '/dev/shm/waze-on-cluster/ctl.sock';
+/* what the mode asks waze-on-cluster (0.9.0 and later) to draw: the cluster's map, the HUD's, or both */
+const WAZE_MODE = { map: { cluster: 1, hud: 0 }, hud: { cluster: 0, hud: 1 }, both: { cluster: 1, hud: 1 } };
+const RESEND_MS = 2000;              /* the same command to waze at most this often */
+const WIDTH_MS = 600;                /* the HUD size is sent this long after the last change */
 const STATE_DIR = env.HUDCTL_STATE_DIR || '/var/opt/mgux-hud';
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 const BACKUP_FILE = path.join(STATE_DIR, 'state.json.bak');
@@ -213,6 +219,10 @@ class Daemon {
         this.note = '';
         this.saveError = '';
         this.saveTimer = null;
+        this.sent = {};                /* command -> { v, at }: what waze-on-cluster was last asked, and when */
+        this.widthTimer = null;
+        this.wasNative = false;
+        this.waze = new WazeLink({ path: WAZE_SOCK, log: (m) => console.log(m), onChange: () => this.wazeChanged() });
         this.proxy = new RenderProxy({
             sock: PROXY_SOCK, upstream: REAL_RENDER, log: (m) => console.log(m),
             getLayout: () => this.layout()
@@ -222,7 +232,63 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null };
+        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native() };
+    }
+
+    /* ---- waze-on-cluster 0.9.0 and later: the cluster's and the HUD's feeds are its own ---- */
+    wazeSend(key, obj, value) {
+        const prev = this.sent[key];
+        const now = Date.now();
+        if (prev && prev.v === value && now - prev.at < RESEND_MS) {
+            return;
+        }
+        if (this.waze.send(obj)) {
+            this.sent[key] = { v: value, at: now };
+        }
+    }
+
+    /* the HUD map's width in percent of the HUD's (20-100): the frame waze scales for the HUD is as wide as the
+     * map is shown, or as tall (its shape is the picture's), so it is not stretched up */
+    hudWidthPct() {
+        const r = this.state.hud;
+        return clamp(Math.round(Math.max(r.w, r.h * MAP_ASPECT) / CANVAS.hud.w * 100), 20, 100);
+    }
+
+    syncWaze() {
+        if (!this.waze.native()) {
+            return;
+        }
+        const st = this.waze.status;
+        const want = WAZE_MODE[this.state.mode] || WAZE_MODE.map;
+        if (Number(st.cluster) !== want.cluster) {
+            this.wazeSend('cluster', { cmd: 'cluster', on: String(want.cluster) }, want.cluster);
+        }
+        if (Number(st.hud) !== want.hud) {
+            this.wazeSend('hud', { cmd: 'hud', on: String(want.hud) }, want.hud);
+        }
+        if (want.hud && !this.widthTimer && (!this.sent.width || this.sent.width.v !== this.hudWidthPct())) {
+            this.widthTimer = setTimeout(() => {
+                this.widthTimer = null;
+                const pct = this.hudWidthPct();
+                if (this.waze.native() && (!this.sent.width || this.sent.width.v !== pct)) {
+                    this.sent.width = { v: pct, at: Date.now() };
+                    this.waze.send({ cmd: 'hud', hud_width_pct: String(pct) });
+                }
+            }, WIDTH_MS);
+        }
+    }
+
+    wazeChanged() {
+        if (!this.waze.ready) {
+            this.sent = {};            /* a fresh waze-on-cluster: ask again */
+        }
+        this.syncWaze();
+        const native = this.waze.native();
+        if (native !== this.wasNative) {
+            this.wasNative = native;
+            try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
+        }
+        this.broadcast();
     }
 
     /* saves SAVE_MS after the last change, so a drag does not write (and fsync) on every step */
@@ -265,7 +331,7 @@ class Daemon {
         const s = this.state;
         return { ev: 'state', mode: s.mode, hud: rectView('hud', s.hud), map: rectView('map', s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
-            loaded: this.loaded, savedAt: this.savedAt || null };
+            loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary() };
     }
 
     broadcast() {
@@ -321,6 +387,7 @@ class Daemon {
 
     changed() {
         this.saveSoon();
+        this.syncWaze();
         try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
     }
 
@@ -373,6 +440,7 @@ class Daemon {
         } catch (e) { console.error(`hudctl: ${e.message}`); }
         mkdirp(path.dirname(PROXY_SOCK), 0o755);
         this.proxy.start(gidOf('tm_oap_app'));
+        this.waze.open();
         this.listen();
     }
 }
