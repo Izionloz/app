@@ -2,7 +2,7 @@
   "id": "hud_designer",
   "title": "HUD map designer",
   "description": "Drag, resize, dim, zoom and rotate the CarPlay map on the HUD and the cluster with your finger",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "vendor": "custom",
   "loggingId": "OA9H",
   "iconGlyph": "HUD",

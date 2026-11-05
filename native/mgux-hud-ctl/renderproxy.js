@@ -143,6 +143,9 @@ class Link {
         this.actual = {};                  /* ref -> { target, rect: key } */
         this.lastFrame = null;
         this.closed = false;
+        this.reapplyOnFrame = false;       /* send the whole layout again with the next frame */
+        this.layerStates = {};             /* ref -> the renderer's last layer state, to see it change */
+        this.timers = [];
         this.fromClient = new Splitter((m) => this.onClient(m), (e) => this.fail(e));
         this.fromUp = new Splitter((m) => this.onUp(m), (e) => this.fail(e));
         this.up.on('connect', () => {
@@ -174,6 +177,8 @@ class Link {
             return;
         }
         this.closed = true;
+        this.timers.forEach((t) => clearTimeout(t));
+        this.timers = [];
         try { this.client.destroy(); } catch (e) { /* gone */ }
         try { this.up.destroy(); } catch (e) { /* gone */ }
         if (this.onClose) {
@@ -225,6 +230,12 @@ class Link {
         if (m.type === 0x4A) {
             let j = null;
             try { j = JSON.parse(m.body.toString('utf8')); } catch (e) { j = null; }
+            if (j && typeof j.ref === 'number' && this.actual[j.ref] && typeof j.state === 'string'
+                && this.layerStates[j.ref] !== j.state) {
+                /* one of our layers changed state (made, shown, the slot taken back...): the layout again */
+                this.layerStates[j.ref] = j.state;
+                this.reapplySoon(150);
+            }
             if (j && typeof j.ref === 'number' && j.ref >= DUP) {
                 return;                               /* the extra layer is ours */
             }
@@ -237,6 +248,10 @@ class Link {
         if (m.type === 0x46 && this.ref !== null && m.body.length >= 4 && m.body.readUInt32LE(0) === this.ref) {
             this.lastFrame = m.raw;
             Object.keys(this.actual).forEach((r) => this.sendFrame(Number(r), m.raw));
+            if (this.reapplyOnFrame) {
+                this.reapplyOnFrame = false;
+                this.reapply();
+            }
             return;
         }
         if (m.type !== 0x4A) {
@@ -285,6 +300,9 @@ class Link {
                         this.toUp(jsonMsg(m2));
                     });
                 }
+                /* waze shows or hides the map (the stream came or went): our place and look go with it */
+                this.reapply();
+                this.reapplyOnFrame = true;
                 return;
             }
         }
@@ -358,6 +376,7 @@ class Link {
             return;
         }
         const want = this.desired();
+        let made = false;
         const wantRefs = {};
         want.forEach((d) => { wantRefs[d.ref] = true; });
         Object.keys(this.actual).forEach((r) => {
@@ -396,9 +415,48 @@ class Link {
             }
             this.toUp(jsonMsg(this.layerMessage(d)));
             this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: !!d.rect, opacity: d.opacity };
+            delete this.layerStates[d.ref];
             if (this.lastFrame) {
                 this.sendFrame(d.ref, this.lastFrame);
             }
+            made = true;
+        });
+        if (made) {
+            /* a layer made at start-up could keep only part of its place (seen on the car: the height was the
+             * default until any setting was touched): the whole layout is sent again as a `set` with the first
+             * frame and a little later, as a touch of the settings would */
+            this.reapplyOnFrame = true;
+            this.reapplySoon(1500);
+            this.reapplySoon(5000);
+        }
+    }
+
+    reapplySoon(ms) {
+        if (this.closed) {
+            return;
+        }
+        const t = setTimeout(() => {
+            this.timers = this.timers.filter((x) => x !== t);
+            this.reapply();
+        }, ms);
+        this.timers.push(t);
+    }
+
+    /* Every layer gets its whole place (when it has a rectangle) and look again in one `set`. */
+    reapply() {
+        if (this.ref === null || !this.base || this.closed) {
+            return;
+        }
+        this.desired().forEach((d) => {
+            const a = this.actual[d.ref];
+            if (!a || a.target !== d.target) {
+                return;
+            }
+            const msg = Object.assign({ op: 'set', ref: d.ref }, this.look(d), { opacity: this.layerOpacity(d) });
+            if (d.rect) {
+                Object.assign(msg, { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h });
+            }
+            this.toUp(jsonMsg(msg));
         });
     }
 

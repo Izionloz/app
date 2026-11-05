@@ -106,7 +106,7 @@ test('proxy: mode both makes a cluster and a HUD layer and sends each frame to b
         r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 3, target: 'map', x: 0, y: 0, w: 1088, h: 480 }));
         r.waze.write(frameMsg(3, 1000, 9));
         await r.waitUp(4);
-        const layers = r.upMsgs.filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString()));
+        const layers = r.upMsgs.filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString())).filter((j) => j.op === 'layer');
         assert.strictEqual(layers.length, 2);
         assert.deepStrictEqual(layers.map((l) => [l.ref, l.target]), [[3, 'map'], [3 + DUP, 'hud']]);
         assert.strictEqual(layers[0].w, 1088);
@@ -215,6 +215,43 @@ test('proxy: zoom, turn and focus are a set with the pivot, not a new layer', as
         assert.strictEqual(sent[0].op, 'set');
         /* zoom 2, focus 0.75 -> pivot 1 (w 400), focus 0.7 -> pivot 0.9 (h 200) */
         assert.deepStrictEqual([sent[0].sx, sent[0].sy, sent[0].rotate, sent[0].px, sent[0].py], [2, 2, 15, 400, 180]);
+    } finally {
+        r.close();
+    }
+});
+
+test('proxy: the whole layout is sent again with the first frame, on a renderer state change and after waze\'s set', async () => {
+    const layout = { mode: 'hud', hud: { x: 300, y: 120, w: 240, h: 300, opacity: 1, zoom: 2, rot: 0, fx: 0.6, fy: 0.7 }, map: null };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 4, target: 'map' }));
+        await r.waitUp(1);
+        let n = r.upMsgs.length;
+        r.waze.write(frameMsg(4, 64, 3));                      /* the first frame: then the layout again */
+        await r.waitUp(n + 2);
+        let sets = jsonOf(r.upMsgs, n).filter((j) => j.op === 'set');
+        assert.strictEqual(sets.length, 1);
+        assert.deepStrictEqual([sets[0].x, sets[0].y, sets[0].w, sets[0].h, sets[0].sx], [300, 120, 240, 300, 2]);
+        const link = Array.from(r.proxy.links)[0];
+        n = r.upMsgs.length;
+        r.waze.write(frameMsg(4, 64, 3));                      /* later frames: nothing more */
+        await r.waitUp(n + 1);
+        assert.strictEqual(jsonOf(r.upMsgs, n).length, 0);
+        /* the renderer says the layer changed state: the layout again, once per change */
+        n = r.upMsgs.length;
+        link.onUp({ type: 0x4A, body: Buffer.from(JSON.stringify({ ev: 'layer', ref: 4, state: 'shown' })), raw: jsonMsg({}) });
+        link.onUp({ type: 0x4A, body: Buffer.from(JSON.stringify({ ev: 'layer', ref: 4, state: 'shown' })), raw: jsonMsg({}) });
+        await new Promise((res) => setTimeout(res, 300));
+        sets = jsonOf(r.upMsgs, n).filter((j) => j.op === 'set');
+        assert.strictEqual(sets.length, 1);
+        assert.strictEqual(sets[0].h, 300);
+        /* waze shows the map: its set goes on, then ours with the whole place */
+        n = r.upMsgs.length;
+        r.waze.write(jsonMsg({ op: 'set', ref: 4, visible: 1, x: 0, y: 0, w: 1088, h: 480 }));
+        await r.waitUp(n + 2);
+        sets = jsonOf(r.upMsgs, n);
+        assert.deepStrictEqual(sets[0], { op: 'set', ref: 4, visible: 1 });
+        assert.deepStrictEqual([sets[1].x, sets[1].y, sets[1].w, sets[1].h], [300, 120, 240, 300]);
     } finally {
         r.close();
     }
