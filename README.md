@@ -26,8 +26,8 @@ keeps every `requires` on a component of this repository at its current version.
 controller included (turn to move the red row, press to change a setting and turn to step it, press or push left
 to end) and the map's state from waze-on-cluster under the preview.
 
-- tag `mgux-hud-ctl@2.6.1`: `mgux-hud-ctl@2.6.1.tgz`
-- tag `hud_designer@1.3.0`: `hud_designer@1.3.0.tgz`
+- tag `mgux-hud-ctl@2.7.0`: `mgux-hud-ctl@2.7.0.tgz`
+- tag `hud_designer@1.4.0`: `hud_designer@1.4.0.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -55,6 +55,14 @@ rộng, Chiều cao (each on its own), Độ sáng, Độ cao, Vị trí ngang, 
 − ▬▬ + bars and the row in use lit red. On the preview on the right, drag the map to move it and drag the orange +
 (the zoom focus) onto the car; the size is set in the list. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.
+
+### Soft edges (HUD)
+So the HUD map does not end in a square, its four sides fade out (`fe`: how far in, as a part of its shorter side;
+0.15 by default, 0 to 0.45; "Làm mờ viền" in HUD map). The proxy puts an effect layer just above the HUD map, at its
+place and turn, showing and hiding with it: black, opaque at the sides and clear inside (`FEATHER_FS`, GLSL ES 1.00,
+`u_f` the fade's width as a part of the width and height). cluster-render blends quads with their alpha and black is
+no light on the HUD, so the map fades into the glass. A change of `fe` is a `uniform`, not a new layer. Not on the
+cluster, where the fade would be a black frame.
 
 ### Zoom focus
 CarPlay's cluster map has the car below and right of the middle, so a zoom about the middle pushes the car to the

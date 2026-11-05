@@ -256,3 +256,53 @@ test('proxy: the whole layout is sent again with the first frame, on a renderer 
         r.close();
     }
 });
+
+test('proxy: soft edges are an effect layer above the HUD map that follows it, shows with it and goes with it', async () => {
+    const { FX, FEATHER_FS } = require('../native/mgux-hud-ctl/renderproxy.js');
+    const layout = { mode: 'hud', hud: { x: 200, y: 100, w: 400, h: 200, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0.2 }, map: null };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 6, target: 'map', z: 3, visible: 0 }));
+        await r.waitUp(3);
+        let msgs = jsonOf(r.upMsgs, 0);
+        const fxl = msgs.find((j) => j.ref === 6 + FX && j.op === 'layer');
+        assert.ok(fxl, 'an effect layer is made');
+        assert.deepStrictEqual([fxl.kind, fxl.target, fxl.z, fxl.visible, fxl.x, fxl.y, fxl.w, fxl.h], ['effect', 'hud', 4, 0, 200, 100, 400, 200]);
+        assert.strictEqual(fxl.fs, FEATHER_FS);
+        /* the fade is 0.2 of the shorter side (200 px = 40 px): 40/400 of the width, 40/200 of the height */
+        assert.deepStrictEqual(msgs.find((j) => j.op === 'uniform'), { op: 'uniform', ref: 6 + FX, name: 'u_f', v: '0.1 0.2' });
+
+        /* frames go to the map only */
+        let n = r.upMsgs.length;
+        r.waze.write(frameMsg(6, 16, 1));
+        await r.waitUp(n + 1);
+        assert.ok(r.upMsgs.slice(n).filter((m) => m.type === 0x46).every((m) => m.body.readUInt32LE(0) === 6));
+
+        /* waze shows the map: the edges show too */
+        n = r.upMsgs.length;
+        r.waze.write(jsonMsg({ op: 'set', ref: 6, visible: 1 }));
+        await r.waitUp(n + 2);
+        assert.ok(jsonOf(r.upMsgs, n).some((j) => j.ref === 6 + FX && j.op === 'set' && j.visible === 1));
+
+        /* a move moves the edges; a softer edge is a uniform, not a new layer */
+        const link = Array.from(r.proxy.links)[0];
+        n = r.upMsgs.length;
+        layout.hud = Object.assign({}, layout.hud, { x: 240, fe: 0.1 });
+        link.reconcile();
+        await r.waitUp(n + 3);
+        msgs = jsonOf(r.upMsgs, n);
+        assert.ok(msgs.some((j) => j.ref === 6 + FX && j.op === 'set' && j.x === 240));
+        assert.ok(msgs.some((j) => j.ref === 6 + FX && j.op === 'uniform' && j.v === '0.05 0.1'));
+        assert.ok(!msgs.some((j) => j.ref === 6 + FX && (j.op === 'layer' || j.op === 'drop')));
+
+        /* no soft edges, or the map off the HUD: the effect layer is dropped */
+        n = r.upMsgs.length;
+        layout.hud = Object.assign({}, layout.hud, { fe: 0 });
+        link.reconcile();
+        await r.waitUp(n + 1);
+        assert.ok(jsonOf(r.upMsgs, n).some((j) => j.ref === 6 + FX && j.op === 'drop'));
+        assert.deepStrictEqual(link.fx, {});
+    } finally {
+        r.close();
+    }
+});

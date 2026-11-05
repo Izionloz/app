@@ -37,6 +37,9 @@ const round2 = (v) => Math.round(v * 100) / 100;
 /* the settings rows of one display: value <-> rect; lim(r) gives [min, max]; `sym` fills the bar from the middle */
 function sliders(which) {
     const c = CANVAS[which];
+    /* soft edges: the HUD only (on the cluster the fade would be a black frame) */
+    const soft = which === 'hud' ? [{ key: 'fe', label: 'Làm mờ viền', lim: () => [0, 0.45], def: 0.15, step: 0.03, show: pct,
+        get: (r) => (typeof r.fe === 'number' ? r.fe : 0.15), put: (v) => ({ fe: round2(v) }) }] : [];
     return [
         { key: 'width', label: 'Chiều rộng', lim: () => [40, c.w], def: which === 'hud' ? 456 : c.w, step: 4,
             show: (v) => `${Math.round(v)} px`, get: (r) => r.w,
@@ -52,6 +55,7 @@ function sliders(which) {
             } },
         { key: 'bright', label: 'Độ sáng', lim: () => [0.1, 1], def: 1, step: 0.05, show: pct,
             get: (r) => r.opacity, put: (v) => ({ opacity: round2(v) }) },
+        ...soft,
         { key: 'height', label: 'Độ cao', sym: true, step: 4, show: (v) => `${Math.round(v)} px`,
             lim: (r) => [-(c.h - r.h) / 2, (c.h - r.h) / 2], def: 0,
             get: (r) => c.h / 2 - (r.y + r.h / 2), put: (v, r) => ({ y: Math.round(c.h / 2 - v - r.h / 2) }) },
@@ -437,6 +441,9 @@ class Designer {
         cv.clip(p.x, p.y, p.w, p.h);
         this._roads(cv, p, r, shown);
         cv.noclip();
+        if (this.which === 'hud' && shown) {
+            this._softEdges(cv, p, r);
+        }
         cv.strokeRoundRect(p.x, p.y, p.w, p.h, 6, 3, shown ? C.accent : C.dim);
         if (!shown) {
             V.text(cv, 'không hiện trên màn này', p.x + 12, p.y + 30, 20, C.dim);
@@ -463,6 +470,26 @@ class Designer {
             if (info.note) { saved = info.note; col = C.warn; }
         }
         V.text(cv, saved, PREV.x + 20, ly + 56, 20, col);
+    }
+
+    /* the soft edges as the HUD shows them: black bands, darker towards the sides (black is no light there) */
+    _softEdges(cv, p, r) {
+        const fe = typeof r.fe === 'number' ? r.fe : 0.15;
+        const side = Math.min(p.w, p.h) * fe;
+        const N = 10;
+        if (side < 1) {
+            return;
+        }
+        for (let i = 0; i < N; i++) {
+            const t = (i + 0.5) / N;                       /* 0 at the side, 1 inside */
+            const a = Math.round(255 * (1 - t * t * (3 - 2 * t)));
+            const inset = side * i / N, w = Math.max(1, side / N);
+            const col = `#000000${(a < 16 ? '0' : '') + a.toString(16)}`;
+            cv.fillRect(p.x + inset, p.y + inset, p.w - 2 * inset, w, col);
+            cv.fillRect(p.x + inset, p.y + p.h - inset - w, p.w - 2 * inset, w, col);
+            cv.fillRect(p.x + inset, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
+            cv.fillRect(p.x + p.w - inset - w, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
+        }
     }
 
     _roads(cv, p, r, shown) {

@@ -25,6 +25,21 @@ const net = require('net');
 const fs = require('fs');
 
 const DUP = 1000000;                 /* the second layer's ref = the map's ref + DUP */
+const FX = 2 * DUP;                  /* a map layer's soft-edge layer: its ref + FX */
+/* The soft edges: an effect layer just above the HUD map, black, opaque at the map's sides and clear inside it
+ * (u_f: the fade's width as a part of the width and height). The renderer blends quads with their alpha, and
+ * black is no light on the HUD, so the map fades into the glass instead of ending in a square. */
+const FEATHER_FS = [
+    'precision mediump float;',
+    'varying vec2 v_uv;',
+    'uniform vec2 u_f;',
+    'void main() {',
+    '    vec2 f = max(u_f, vec2(0.0001));',
+    '    float ax = min(smoothstep(0.0, f.x, v_uv.x), smoothstep(0.0, f.x, 1.0 - v_uv.x));',
+    '    float ay = min(smoothstep(0.0, f.y, v_uv.y), smoothstep(0.0, f.y, 1.0 - v_uv.y));',
+    '    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - ax * ay);',
+    '}'
+].join('\n');
 const MAX_MSG = 5529664 + 64;
 const HIGH_WATER = 2 * MAX_MSG;      /* bytes queued for cluster-render before waze is paused */
 const HUD = 'hud', MAP = 'map';
@@ -145,6 +160,7 @@ class Link {
         this.closed = false;
         this.reapplyOnFrame = false;       /* send the whole layout again with the next frame */
         this.layerStates = {};             /* ref -> the renderer's last layer state, to see it change */
+        this.fx = {};                      /* soft-edge layers: ref -> { target, place, uf } */
         this.timers = [];
         this.fromClient = new Splitter((m) => this.onClient(m), (e) => this.fail(e));
         this.fromUp = new Splitter((m) => this.onUp(m), (e) => this.fail(e));
@@ -276,6 +292,8 @@ class Link {
         if (this.ref !== null && j.ref === this.ref) {
             if (j.op === 'drop') {
                 Object.keys(this.actual).forEach((r) => this.toUp(jsonMsg({ op: 'drop', ref: Number(r) })));
+                Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'drop', ref: Number(r) })));
+                this.fx = {};
                 this.actual = {};
                 this.base = null;
                 this.cur = null;
@@ -289,6 +307,10 @@ class Link {
                         this.cur[k] = j[k];
                     }
                 });
+                if (j.visible !== undefined) {
+                    /* the soft edges show and hide with the map (a black frame must not hold the HUD alone) */
+                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: j.visible })));
+                }
                 const rest = Object.assign({}, j);
                 ['x', 'y', 'w', 'h'].forEach((k) => { delete rest[k]; });
                 if (Object.keys(rest).length > 2) {   /* op and ref only: nothing left */
@@ -326,7 +348,7 @@ class Link {
     desired() {
         const L = this.getLayout();
         const one = (ref, target, rect) => ({ ref, target, rect, opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
-            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy') });
+            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0 });
         if (L.mode === HUD) {
             return [one(this.ref, HUD, L.hud)];
         }
@@ -421,6 +443,7 @@ class Link {
             }
             made = true;
         });
+        this.syncFx(want, false);
         if (made) {
             /* a layer made at start-up could keep only part of its place (seen on the car: the height was the
              * default until any setting was touched): the whole layout is sent again as a `set` with the first
@@ -457,6 +480,56 @@ class Link {
                 Object.assign(msg, { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h });
             }
             this.toUp(jsonMsg(msg));
+        });
+        this.syncFx(this.desired(), true);
+    }
+
+    /* The soft-edge layer of each HUD map that has soft edges: made, moved, changed or dropped with it. */
+    syncFx(want, again) {
+        const keep = {};
+        want.forEach((d) => {
+            const e = d.ref + FX;
+            const a = this.actual[d.ref];
+            if (!(d.fe > 0.001) || !d.rect || !a || a.target !== d.target) {
+                return;
+            }
+            keep[e] = true;
+            const r = d.rect, side = Math.max(1, Math.min(r.w, r.h)) * d.fe;
+            const uf = `${Math.round(side / r.w * 1000) / 1000} ${Math.round(side / r.h * 1000) / 1000}`;
+            const look = this.look(d);
+            const fields = { x: r.x, y: r.y, w: r.w, h: r.h, rotate: look.rotate, px: look.px, py: look.py };
+            const place = JSON.stringify(fields);
+            const cur = this.fx[e];
+            if (cur && cur.target !== d.target) {
+                this.toUp(jsonMsg({ op: 'drop', ref: e }));
+                delete this.fx[e];
+            }
+            if (!this.fx[e]) {
+                const msg = Object.assign({ op: 'layer', ref: e, target: d.target, kind: 'effect', fs: FEATHER_FS,
+                    class: typeof this.cur.class === 'string' ? this.cur.class : 'content',
+                    z: Math.min(1000, (typeof this.cur.z === 'number' ? this.cur.z : 0) + 1) }, fields);
+                if (this.cur.visible !== undefined) {
+                    msg.visible = this.cur.visible;
+                }
+                this.toUp(jsonMsg(msg));
+                this.toUp(jsonMsg({ op: 'uniform', ref: e, name: 'u_f', v: uf }));
+                this.fx[e] = { target: d.target, place, uf };
+                return;
+            }
+            if (again || this.fx[e].place !== place) {
+                this.toUp(jsonMsg(Object.assign({ op: 'set', ref: e }, fields)));
+                this.fx[e].place = place;
+            }
+            if (again || this.fx[e].uf !== uf) {
+                this.toUp(jsonMsg({ op: 'uniform', ref: e, name: 'u_f', v: uf }));
+                this.fx[e].uf = uf;
+            }
+        });
+        Object.keys(this.fx).forEach((e) => {
+            if (!keep[e]) {
+                this.toUp(jsonMsg({ op: 'drop', ref: Number(e) }));
+                delete this.fx[e];
+            }
         });
     }
 
@@ -516,4 +589,4 @@ class RenderProxy {
     }
 }
 
-module.exports = { RenderProxy, Splitter, frame, jsonMsg, DUP, pivot };
+module.exports = { RenderProxy, Splitter, frame, jsonMsg, DUP, FX, FEATHER_FS, pivot };
