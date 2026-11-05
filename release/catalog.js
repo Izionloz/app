@@ -9,16 +9,20 @@
  *   node release/catalog.js --out dist --check    build them and fail if catalog.json does not match
  *   node release/catalog.js --out dist --commit <sha> --write <file>
  *                                                 also write a copy of the catalog carrying that commit
+ *   ... --kit <idrive7-apps checkout>             also build the designer (release/designer.js)
  *
  * Tools (native/<id>) are packed with tool_artifact.js; apps built on the unit (apps/<id>, "build": "unit") are
- * their source package. Other components (the designer, built with the idrive7-apps kit and the unit's oap-sdk)
- * are left as they are. The builds are reproducible: the same tree gives the same bytes.
+ * their source package. The builds are reproducible: the same tree gives the same bytes.
+ * The designer is built with the idrive7-apps kit, only when --kit is given. Its bytes depend on the kit's commit
+ * as well, so --check checks its version against designer/app/app.json but not its artifact: the copy written with
+ * --write carries the artifact that was built.
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const cp = require('child_process');
 const { buildArtifact } = require('./tool_artifact.js');
+const designer = require('./designer.js');
 
 const ROOT = path.join(__dirname, '..');
 const CATALOG = path.join(ROOT, 'catalog.json');
@@ -35,7 +39,10 @@ function urlOf(id, version, file) {
 }
 
 /* builds one component into outDir: {version, file} or null when it is not built here */
-function build(c, outDir) {
+function build(c, outDir, kit) {
+    if (c.id === designer.ID) {
+        return kit ? { version: designer.version(), file: designer.build(kit, outDir), kit: true } : null;
+    }
     const toolDir = path.join(ROOT, 'native', c.id);
     if (c.kind === 'tool' && fs.existsSync(path.join(toolDir, 'component.json'))) {
         const version = JSON.parse(fs.readFileSync(path.join(toolDir, 'component.json'), 'utf8')).version;
@@ -59,11 +66,15 @@ function main() {
     const argv = process.argv.slice(2);
     const outDir = path.resolve(arg(argv, '--out') || 'dist');
     const check = argv.includes('--check');
+    const kit = arg(argv, '--kit');
     const catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
     const problems = [];
     const built = [];
     catalog.components.forEach((c) => {
-        const b = build(c, outDir);
+        if (c.id === designer.ID && c.version !== designer.version()) {
+            problems.push(`${c.id}: catalog has ${c.version}, designer/app/app.json ${designer.version()}`);
+        }
+        const b = build(c, outDir, kit);
         if (!b) {
             built.push({ id: c.id, version: c.version, built: false });
             return;
@@ -72,7 +83,7 @@ function main() {
         const name = path.basename(b.file);
         const artifact = { name, size: data.length, sha256: crypto.createHash('sha256').update(data).digest('hex'),
             url: urlOf(c.id, b.version, name) };
-        if (c.version !== b.version || JSON.stringify(c.artifact) !== JSON.stringify(artifact)) {
+        if (!b.kit && (c.version !== b.version || JSON.stringify(c.artifact) !== JSON.stringify(artifact))) {
             problems.push(`${c.id}: catalog has ${c.version} ${c.artifact && c.artifact.sha256}, built ${b.version} ${artifact.sha256}`);
         }
         c.version = b.version;

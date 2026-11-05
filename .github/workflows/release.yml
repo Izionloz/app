@@ -20,9 +20,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # the designer is built with the idrive7-apps kit (MIT), at the commit it was checked against
+      - uses: actions/checkout@v4
+        with:
+          repository: cauliflowermossgrape/idrive7-apps
+          ref: 990c105870edb21bd8f23796fcf95182530790e8
+          path: .kit
+          persist-credentials: false
       - run: npm test
       - name: Build and check the artifacts against catalog.json
-        run: mkdir -p dist && node release/catalog.js --out dist --check --commit "$GITHUB_SHA" --write dist/catalog.json > dist/built.json
+        run: mkdir -p dist && node release/catalog.js --out dist --check --kit .kit --commit "$GITHUB_SHA" --write dist/catalog.json > dist/built.json
       - name: Releases for new versions
         run: |
           node -e 'JSON.parse(require("fs").readFileSync("dist/built.json","utf8")).filter(b=>b.built).forEach(b=>console.log(b.tag+" "+b.file))' |
@@ -37,7 +44,7 @@ jobs:
         run: |
           node -e 'JSON.parse(require("fs").readFileSync("dist/built.json","utf8")).filter(b=>!b.built).forEach(b=>console.log(b.id+"@"+b.version))' |
           while read -r tag; do
-            gh release view "$tag" >/dev/null 2>&1 || echo "::warning::$tag is in catalog.json but has no release: build and upload it (see designer/README.md)"
+            gh release view "$tag" >/dev/null 2>&1 || echo "::warning::$tag is in catalog.json but has no release"
           done
       - name: Catalog
         run: |

@@ -20,17 +20,18 @@ Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct con
 ## Releases (this repository's Store source)
 - tag `mgux-hud-ctl@2.4.1`: `mgux-hud-ctl@2.4.1.tgz`
 - tag `mgux_hud_map@2.3.0`: `mgux_hud_map@2.3.0.tgz`
-- tag `hud_designer@1.0.1`: `hud_designer@1.0.1.tgz`
+- tag `hud_designer@1.0.2`: `hud_designer@1.0.2.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
 
 To release: change the code, bump the component's version (`native/<id>/component.json` or
-`apps/<id>/mgu-app.json`), run `node release/catalog.js --out dist` and commit `catalog.json`. On `main`, the
+`apps/<id>/mgu-app.json` or `designer/app/app.json`), run `node release/catalog.js --out dist` and commit
+`catalog.json`. On `main`, the
 `release` workflow then builds the artifacts (reproducibly: the same bytes as `catalog.json` names), makes the
 missing `<id>@<version>` releases and puts `catalog.json` on the `catalog` release. CI fails when the code changed
-and the version did not. The designer is not built in CI (it needs the kit and the unit's oap-sdk): build it as in
-`designer/README.md` and upload it to a release `hud_designer@<version>` by hand.
+and the version did not. The workflow builds the designer too, with the idrive7-apps kit at a pinned commit
+(`release/designer.js`); its size and sha256 are written into the published `catalog.json`.
 
 ### Moving the map without a blink (to try)
 A brightness change is sent to cluster-render as a `set`. A move, resize, zoom or turn drops the layer and makes it
