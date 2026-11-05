@@ -157,3 +157,62 @@ test('designer list: + on any setting changes that setting only; every other row
         });
     });
 });
+
+test('designer knob: turn moves the red row and scrolls to it; press, turn and press change a setting; push left ends', () => {
+    const { c, d } = listRig();
+    const rows = d.rows();
+    d.selected = 0;
+    assert.strictEqual(d.knob({ turn: rows.length + 5 }), true);
+    assert.strictEqual(d.selected, rows.length - 1, 'held to the last row');
+    assert.strictEqual(d.scroll, d.maxScroll(), 'scrolled to it');
+    d.knob({ turn: -100 });
+    assert.strictEqual(d.selected, 0);
+    assert.strictEqual(d.scroll, 0);
+    const bi = rows.findIndex((r) => r.id === 'bright');
+    d.knob({ turn: bi });
+    const before = c.state().hud.opacity;
+    d.knob({ press: true });
+    assert.strictEqual(d.editing, true);
+    d.knob({ turn: -2 });
+    assert.strictEqual(c.state().hud.opacity, Math.round((before - 0.1) * 100) / 100);
+    assert.strictEqual(d.selected, bi, 'turning while changing keeps the row');
+    assert.strictEqual(d.knob({ tilt: 'W' }), true, 'push left ends the change');
+    assert.strictEqual(d.editing, false);
+    assert.strictEqual(d.knob({ tilt: 'W' }), false, 'push left again is the kit\'s (leave the app)');
+});
+
+test('designer knob: a press on a choice or a command runs it', () => {
+    const { d, modes } = listRig();
+    const rows = d.rows();
+    d.select(rows.findIndex((r) => r.id === 'mode'));
+    d.knob({ press: true });
+    assert.deepStrictEqual(modes, ['both']);
+    d.select(rows.findIndex((r) => r.id === 'which'));
+    d.knob({ press: true });
+    assert.strictEqual(d.which, 'map');
+    assert.strictEqual(d.editing, false);
+});
+
+test('designer: the map line says what waze-on-cluster and the service report', () => {
+    const { statusLine } = require('../designer/app/designer.js');
+    assert.deepStrictEqual(statusLine({ live: true, connections: 1, map: { state: 'showing' } }), { text: 'Bản đồ: đang hiện', warn: false });
+    assert.strictEqual(statusLine({ live: true, connections: 0, map: { state: 'showing' } }).warn, true);
+    assert.ok(statusLine({ live: true, connections: 0, map: { state: 'showing' } }).text.includes('khởi động lại head unit'));
+    assert.deepStrictEqual(statusLine({ live: false, map: null }), { text: 'Bản đồ: chưa thấy waze-on-cluster', warn: true });
+    assert.strictEqual(statusLine({ live: true, connections: 1, map: { state: 'frozen' } }).warn, true);
+});
+
+test('designer: waze-on-cluster\'s status is read from its socket', async () => {
+    const net = require('net'), fs = require('fs'), os = require('os'), path = require('path');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woc-'));
+    const sock = path.join(dir, 'ctl.sock');
+    const srv = net.createServer((c) => c.write('{"ev":"status","state":"showing","page":"map"}\n'));
+    await new Promise((res) => srv.listen(sock, res));
+    const c = new HudClient({ path: path.join(dir, 'none.sock'), wazePath: sock });
+    c.open();
+    await new Promise((res) => setTimeout(res, 150));
+    assert.strictEqual(c.info().map.state, 'showing');
+    c.close();
+    srv.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+});

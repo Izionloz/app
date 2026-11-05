@@ -548,6 +548,12 @@ async function runInner(impl) {
          * px), where the kit runs the screen with touch routing. The page's own tap and scroll handling is then off.
          */
         onTouch(fn) { display.onTouch = fn; },
+        /**
+         * onKnob(fn): fn({turn, press, tilt}) for the iDrive controller while the kit runs the screen: turn is the
+         * detents turned (+ clockwise), press true on a push, tilt 'N', 'E', 'S' or 'W' when pushed that way. fn
+         * returns true when it used the event; otherwise the kit acts on it as usual (pushed left leaves the app).
+         */
+        onKnob(fn) { display.onKnob = fn; },
         /** onTap(fn): fn(x, y) for a tap on the page (app drawing px), where the kit runs the screen. */
         onTap(fn) { display.onTap = fn; },
         /** Show a sheet (sheet.js) over the page; false where it can't be (software path, other renderers). */

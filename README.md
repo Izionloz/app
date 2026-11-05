@@ -22,10 +22,12 @@ In the Store this is one app, **HUD map** (`hud_designer`). It requires the back
 (background service)** (`mgux-hud-ctl`, a root tool: it must run from start-up, with no app open), so the Store
 installs and updates that first; the service is marked optional, so it is not offered on its own. `release/catalog.js`
 keeps every `requires` on a component of this repository at its current version. The older button app
-(`apps/mgux_hud_map`) stays in the source but is no longer in the catalog: HUD map does all it did.
+(`apps/mgux_hud_map`) stays in the source but is no longer in the catalog: HUD map does all it did, the iDrive
+controller included (turn to move the red row, press to change a setting and turn to step it, press or push left
+to end) and the map's state from waze-on-cluster under the preview.
 
 - tag `mgux-hud-ctl@2.6.1`: `mgux-hud-ctl@2.6.1.tgz`
-- tag `hud_designer@1.2.2`: `hud_designer@1.2.2.tgz`
+- tag `hud_designer@1.3.0`: `hud_designer@1.3.0.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).

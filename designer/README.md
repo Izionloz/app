@@ -5,8 +5,9 @@ sliders for size, brightness, zoom and rotation. It is an app of the idrive7-app
 (https://github.com/cauliflowermossgrape/idrive7-apps, MIT) and talks to `mgux-hud-ctl`.
 
 - `app/` - the app (`app.json`, `main.js`, `designer.js`, `hudclient.js`, `icon.png`).
-- `kit-patch/` - three files of the kit with a small addition: `ctx.onTouch(fn)`, the page's raw touch
-  (phase 1 down, 2 move, 3 up). `mgu.js` and `display.js` replace `kit/runtime/`, `hu-stub.js` replaces `kit/tools/`.
+- `kit-patch/` - three files of the kit with two small additions: `ctx.onTouch(fn)`, the page's raw touch
+  (phase 1 down, 2 move, 3 up), and `ctx.onKnob(fn)`, the iDrive controller's turn, press and push given to the
+  app first (what it does not use goes on to the kit, so pushed left still leaves the app). `mgu.js` and `display.js` replace `kit/runtime/`, `hu-stub.js` replaces `kit/tools/`.
 
 The released `hud_designer@<version>.tgz` is this app built with the kit and **without** BMW's oap-sdk: the head unit's
 deploy tool generates that module from its own firmware when it installs the package.

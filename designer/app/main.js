@@ -16,6 +16,9 @@ mgu.run({
         const ui = new Designer(client);
         client.open();
         ctx.onTouch((phase, x, y) => ui.touch(phase, x, y));
+        if (ctx.onKnob) {
+            ctx.onKnob((e) => ui.knob(e));      // the iDrive controller: turn, press, push (kit-patch)
+        }
         ctx.loop('MAIN', 30, () => {
             const t = ctx.theme();
             const cv = ctx.canvas(1600, 520).clear(t.bg);

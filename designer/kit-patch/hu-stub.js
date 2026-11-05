@@ -86,6 +86,12 @@ function headUnit(stage, o) {
         // as kit/mgu.js: the kit's own screen (tabs, page buttons, sheets, scrolling) where the renderer has the app
         onTap(fn) { display.onTap = fn; },
         onTouch(fn) { display.onTouch = fn; },
+        /**
+         * onKnob(fn): fn({turn, press, tilt}) for the iDrive controller while the kit runs the screen: turn is the
+         * detents turned (+ clockwise), press true on a push, tilt 'N', 'E', 'S' or 'W' when pushed that way. fn
+         * returns true when it used the event; otherwise the kit acts on it as usual (pushed left leaves the app).
+         */
+        onKnob(fn) { display.onKnob = fn; },
         sheet: (sh) => display.openSheet(sh),
         hideButton(id) { display.hideButton(id); },
         onScroll(fn) { display.onScroll = fn; },

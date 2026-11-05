@@ -8,6 +8,7 @@
  *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
  *  - right, a preview of the chosen display with the map's rectangle: drag the map to move it, drag the orange +
  *    (the zoom focus: the zoom keeps that point in the middle) onto the car. Size is set in the list.
+ * The iDrive controller works the list too (knob()): turn to move, press to change a setting or run a row.
  * Every change goes to the mgux-hud-ctl helper at once; the helper saves it (it says so under the preview).
  */
 'use strict';
@@ -91,7 +92,7 @@ function bar(x, y, w) {
 
 function previewBox(which) {
     const c = CANVAS[which];
-    const maxW = PREV.w - 40, maxH = PREV.h - 130;
+    const maxW = PREV.w - 40, maxH = PREV.h - 156;
     const s = Math.min(maxW / c.w, maxH / c.h);
     const w = c.w * s, h = c.h * s;
     return { s, x: PREV.x + (PREV.w - w) / 2, y: PREV.y + 52, w, h };
@@ -109,6 +110,33 @@ function focusOnPage(p, r) {
     return { x: p.x + fx * p.w, y: p.y + fy * p.h };
 }
 
+/* the map's state in one line: waze-on-cluster's status, and whether it goes through the service */
+function statusLine(info) {
+    const m = info.map;
+    let text, warn = false;
+    if (!m) {
+        text = 'Bản đồ: chưa thấy waze-on-cluster';
+        warn = true;
+    } else if (m.state === 'showing') {
+        text = 'Bản đồ: đang hiện';
+    } else if (m.state === 'starting') {
+        text = 'Bản đồ: đang khởi động';
+    } else if (m.state === 'frozen') {
+        text = 'Bản đồ: bị đứng, hãy kết nối lại CarPlay';
+        warn = true;
+    } else if (m.state === 'error') {
+        text = `Bản đồ: lỗi ${m.reason || ''}`.trim();
+        warn = true;
+    } else {
+        text = 'Bản đồ: chờ CarPlay dẫn đường';
+    }
+    if (info.live && info.connections === 0) {
+        text += ', chưa liên kết: khởi động lại head unit một lần';
+        warn = true;
+    }
+    return { text, warn };
+}
+
 const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 
 class Designer {
@@ -117,6 +145,7 @@ class Designer {
         this.which = 'hud';
         this.drag = null;
         this.selected = 2;          /* the row lit red */
+        this.editing = false;       /* the iDrive knob changes the lit row's value (else it moves the light) */
         this.scroll = 0;
     }
 
@@ -169,6 +198,7 @@ class Designer {
         if (phase === 1) {
             const h = this.hit(x, y);
             this.drag = h ? { hit: h, x0: x, y0: y, s0: this.scroll, r0: Object.assign({}, this.rectNow()), scrolling: false } : null;
+            this.editing = false;
             if (h && h.type === 'row') {
                 this.selected = h.i;
                 if (h.part === 'track') {
@@ -199,6 +229,62 @@ class Designer {
             }
             this.drag = null;
         }
+    }
+
+    /* ---------------- the iDrive controller ----------------
+     * Like the car's own settings pages: turning moves the red row; a press on a setting starts changing it (the
+     * row gets a white frame) and turning then steps its value, a press or a push left ends that; a press on a
+     * choice or a command runs it. Pushed left with nothing being changed is left to the kit (it leaves the app). */
+    knob(e) {
+        const rs = this.rows();
+        const row = rs[this.selected];
+        if (e.tilt) {
+            if (this.editing && (e.tilt === 'W' || e.tilt === 'N' || e.tilt === 'S')) {
+                this.editing = false;
+                if (e.tilt === 'W') { return true; }
+            }
+            if (e.tilt === 'N' || e.tilt === 'S') {
+                this.select(this.selected + (e.tilt === 'N' ? -1 : 1));
+                return true;
+            }
+            if (e.tilt === 'E' && row.kind === 'slider') {
+                this.editing = true;
+                return true;
+            }
+            return false;
+        }
+        if (e.turn) {
+            if (this.editing && row.kind === 'slider') {
+                const n = Math.min(10, Math.abs(e.turn));
+                for (let i = 0; i < n; i++) { this.step(row.def, e.turn > 0 ? 1 : -1); }
+            } else {
+                this.editing = false;
+                this.select(this.selected + e.turn);
+            }
+            return true;
+        }
+        if (e.press) {
+            if (row.kind === 'slider') {
+                this.editing = !this.editing;
+            } else {
+                this._tap({ i: this.selected, part: 'row' });
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /* light row i, scrolling the list so it shows */
+    select(i) {
+        const rs = this.rows();
+        this.selected = clamp(i, 0, rs.length - 1);
+        const r = rs[this.selected];
+        if (r.top < this.scroll) {
+            this.scroll = r.top;
+        } else if (r.top + r.h > this.scroll + LIST.h) {
+            this.scroll = r.top + r.h - LIST.h;
+        }
+        this.scroll = clamp(this.scroll, 0, this.maxScroll());
     }
 
     _tap(h) {
@@ -273,6 +359,10 @@ class Designer {
                 cv.fillRect(LIST.x, y, LIST.w, row.h, C.redFill);
                 cv.fillRect(LIST.x, y, LIST.w, 3, C.redLit);
                 cv.fillRect(LIST.x, y + row.h - 3, LIST.w, 3, C.redLit);
+                if (this.editing) {
+                    /* being changed with the knob: a white frame */
+                    cv.strokeRoundRect(LIST.x + 3, y + 3, LIST.w - 6, row.h - 6, 4, 3, '#ffffff');
+                }
             } else {
                 cv.fillRect(LIST.x, y + row.h - 1, LIST.w, 1, C.line);
             }
@@ -357,19 +447,22 @@ class Designer {
         cv.circle(f.x, f.y, 11, shown ? C.map : C.off);
         cv.line(f.x - 20, f.y, f.x + 20, f.y, 3, C.focus);
         cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, C.focus);
-        // help and whether the settings are kept
-        const ly = b.y + b.h + 34;
-        V.text(cv, 'Kéo bản đồ để di chuyển, kéo dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
+        // help, the map's state (as the older button app showed it) and whether the settings are kept
+        const ly = b.y + b.h + 28;
+        V.text(cv, 'Kéo bản đồ để di chuyển, kéo dấu + cam vào vị trí xe.', PREV.x + 20, ly, 20, C.dim);
         const info = this.client.info ? this.client.info() : { live: false };
-        let saved = 'Chưa kết nối mgux-hud-ctl: chế độ thử', col = C.warn;
+        const line = statusLine(info);
+        V.text(cv, line.text, PREV.x + 20, ly + 28, 20, line.warn ? C.warn : C.dim);
+        let saved = 'Chưa kết nối dịch vụ nền: chế độ thử', col = C.warn;
         if (info.live) {
             const from = info.loaded && info.loaded.from;
             saved = from === 'saved' ? 'Tự động lưu. Đã khôi phục cài đặt đã lưu.'
                 : from === 'backup' ? 'Tự động lưu. Đã khôi phục từ bản sao lưu.'
                     : 'Tự động lưu. Lúc khởi động không có cài đặt đã lưu.';
             col = from === 'saved' || from === 'backup' ? C.dim : C.warn;
+            if (info.note) { saved = info.note; col = C.warn; }
         }
-        V.text(cv, saved, PREV.x + 20, ly + 32, 21, col);
+        V.text(cv, saved, PREV.x + 20, ly + 56, 20, col);
     }
 
     _roads(cv, p, r, shown) {
@@ -394,4 +487,4 @@ class Designer {
     }
 }
 
-module.exports = { Designer, sliders, rows, bar, previewBox, rectOnPage, focusOnPage, MODES, WHICH, PREV, LIST };
+module.exports = { Designer, sliders, rows, bar, statusLine, previewBox, rectOnPage, focusOnPage, MODES, WHICH, PREV, LIST };
