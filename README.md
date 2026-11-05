@@ -56,21 +56,25 @@ rộng, Chiều cao (each on its own), Độ sáng, Độ cao, Vị trí ngang, 
 (the zoom focus) onto the car; the size is set in the list. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.
 
-### The HUD map's background (waze-on-cluster 0.9.0 or later)
+### Beside waze-on-cluster's own app (0.9.0 or later)
 A HUD shows black as nothing. waze-on-cluster 0.9.0 (source `robertnisipeanu/idrive-apps`, with cluster-render 0.4.0:
 Store -> Settings -> Add source -> `robertnisipeanu/idrive-apps`) draws the map on the cluster and on the HUD each as a
 feed of its own, and the HUD's is scaled to the size it is shown at with a **black background** (a night map's field
 fades to black, so the HUD shows the roads, route and labels), rounded corners and, if asked, feathered edges
 (`hud_black_background = 1`, `hud_round_corners = 1` in its conf; `hud_fps` is the HUD's frame rate, 10 by default).
-mgux-hud-ctl works with it:
-- it holds waze-on-cluster's control socket (one owner: do not use `robertn_waze_cluster` beside it) and sends
-  `cluster` / `hud` on or off for the mode (Đồng hồ, HUD, Cả hai), again after each start of waze-on-cluster;
-- it sends `hud_width_pct` so the frame waze scales is as wide as the map is shown (20-100 % of the HUD), a moment
-  after the size stops changing;
-- the proxy places and looks after each feed's layer (position, size, brightness, zoom, rotation, soft edges), and
-  copies no frame to another display.
-With an older waze-on-cluster (its status has no `hud_state`) the proxy copies the cluster feed to the HUD as before:
-the HUD then shows Waze's own background. HUD map says which of the two it is under the preview.
+What that tool and its app (`robertn_waze_cluster`) have stays theirs, and HUD map does not take it over:
+- **Cluster, HUD or both**, and the HUD map's **size and place**, are chosen in `robertn_waze_cluster`. mgux-hud-ctl
+  does not touch waze-on-cluster's control socket (one owner at a time: its own app's); it only reads the status file
+  waze-on-cluster writes every second (`/run/waze-on-cluster/status.json`). HUD map has no "Hiện bản đồ trên" row then.
+- Each feed's layer is placed where waze-on-cluster puts it, and no frame is copied to another display. The HUD map's
+  place and size are **ours only after they are changed here** (width, height, height position, side, centre,
+  dragging the map); "Đặt lại bản đồ này" hands them back to waze-on-cluster's app. The preview says "(theo waze)"
+  while they are its.
+- What HUD map adds on top: brightness, zoom with its focus, rotation, soft edges (all live), width and height each
+  on their own, and the cluster map's place.
+With an older waze-on-cluster (its status has no `hud_state`) the proxy copies the cluster feed to the HUD as before and
+HUD map chooses where the map shows: the HUD then shows Waze's own background. HUD map says which of the two it is
+under the preview.
 
 ### Soft edges (HUD)
 So the HUD map does not end in a square, its four sides fade out (`fe`: how far in, as a part of its shorter side;

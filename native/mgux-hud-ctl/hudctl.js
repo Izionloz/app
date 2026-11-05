@@ -28,21 +28,18 @@ const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const { RenderProxy } = require('./renderproxy.js');
-const { WazeLink } = require('./wazelink.js');
+const { WazeStatus } = require('./wazestatus.js');
 
 const env = process.env;
 const SOCK = env.HUDCTL_SOCK || '/dev/shm/mgux-hud/ctl.sock';
 const PROXY_SOCK = env.HUDCTL_PROXY_SOCK || '/dev/shm/mgux-hud/render.sock';
 const REAL_RENDER = env.HUDCTL_RENDER || '/dev/shm/cluster-render/render.sock';
-const WAZE_SOCK = env.HUDCTL_WAZE_SOCK || '/dev/shm/waze-on-cluster/ctl.sock';
-/* what the mode asks waze-on-cluster (0.9.0 and later) to draw: the cluster's map, the HUD's, or both */
-const WAZE_MODE = { map: { cluster: 1, hud: 0 }, hud: { cluster: 0, hud: 1 }, both: { cluster: 1, hud: 1 } };
-const RESEND_MS = 2000;              /* the same command to waze at most this often */
-const WIDTH_MS = 600;                /* the HUD size is sent this long after the last change */
 const STATE_DIR = env.HUDCTL_STATE_DIR || '/var/opt/mgux-hud';
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 const BACKUP_FILE = path.join(STATE_DIR, 'state.json.bak');
 const ENV_FILE = path.join(STATE_DIR, 'args.env');
+/* waze-on-cluster's status, written every second (read only: its control socket is its own app's) */
+const WAZE_STATUS = env.HUDCTL_WAZE_STATUS || '/run/waze-on-cluster/status.json';
 
 /* the targets' pixels (cluster-render.conf: map 1088x480, hud 800x480) */
 const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
@@ -82,9 +79,9 @@ function defaultRect(which) {
     const c = CANVAS[which];
     if (which === 'hud') {
         const w = 456, h = even(w / MAP_ASPECT);
-        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: FEATHER_HUD };
+        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: FEATHER_HUD, placed: false };
     }
-    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0 };
+    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0, placed: false };
 }
 
 /* A rectangle with valid even integers, inside its canvas. */
@@ -96,6 +93,8 @@ function normaliseRect(which, r) {
     const h = clamp(even(num(src.h, d.h)), MIN_H, c.h);
     return {
         custom: src.custom === true,
+        /* the place and size were set here (else, with waze-on-cluster 0.9.0, they are its own app's) */
+        placed: src.placed === true,
         opacity: clamp(Math.round(num(src.opacity, 1) * 100) / 100, 0.1, 1),
         zoom: clamp(Math.round(num(src.zoom, 1) * 100) / 100, 0.3, 3),
         rot: wrapDeg(num(src.rot, 0)),
@@ -135,12 +134,13 @@ function adjustRect(which, r0, a) {
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     const w = clamp(r.w + num(a.dw, 0), MIN_W, c.w);
     const h = clamp(r.h + num(a.dh, 0), MIN_H, c.h);
-    return normaliseRect(which, { custom: true, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), fe: num(r.fe, FEATHER_HUD) + num(a.dfe, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
+    const moved = ['dw', 'dh', 'dx', 'dy', 'el', 'er', 'et', 'eb'].some((k) => num(a[k], 0) !== 0);
+    return normaliseRect(which, { custom: true, placed: r.placed === true || moved, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), fe: num(r.fe, FEATHER_HUD) + num(a.dfe, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
 }
 
 function centredRect(which, r) {
     const c = CANVAS[which];
-    return normaliseRect(which, { custom: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, fe: r.fe, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
+    return normaliseRect(which, { custom: true, placed: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, fe: r.fe, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
 }
 
 function writeAtomic(file, data) {
@@ -200,7 +200,7 @@ function gidOf(group) {
 function rectView(which, r) {
     const c = CANVAS[which];
     const full = which === 'hud' ? 456 : c.w;
-    return { custom: r.custom, w: r.w, h: r.h, x: r.x, y: r.y, canvasW: c.w, canvasH: c.h,
+    return { custom: r.custom, placed: r.placed, w: r.w, h: r.h, x: r.x, y: r.y, canvasW: c.w, canvasH: c.h,
         opacity: r.opacity, bright: Math.round(r.opacity * 100), zoom: r.zoom, zoomPct: Math.round(r.zoom * 100), rot: r.rot,
         fx: r.fx, fy: r.fy, focusX: Math.round(r.fx * 100), focusY: Math.round(r.fy * 100),
         fe: r.fe, featherPct: Math.round(r.fe * 100),
@@ -219,10 +219,8 @@ class Daemon {
         this.note = '';
         this.saveError = '';
         this.saveTimer = null;
-        this.sent = {};                /* command -> { v, at }: what waze-on-cluster was last asked, and when */
-        this.widthTimer = null;
         this.wasNative = false;
-        this.waze = new WazeLink({ path: WAZE_SOCK, log: (m) => console.log(m), onChange: () => this.wazeChanged() });
+        this.waze = new WazeStatus({ file: WAZE_STATUS, onChange: () => this.wazeChanged() });
         this.proxy = new RenderProxy({
             sock: PROXY_SOCK, upstream: REAL_RENDER, log: (m) => console.log(m),
             getLayout: () => this.layout()
@@ -235,54 +233,27 @@ class Daemon {
         return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native() };
     }
 
-    /* ---- waze-on-cluster 0.9.0 and later: the cluster's and the HUD's feeds are its own ---- */
-    wazeSend(key, obj, value) {
-        const prev = this.sent[key];
-        const now = Date.now();
-        if (prev && prev.v === value && now - prev.at < RESEND_MS) {
-            return;
-        }
-        if (this.waze.send(obj)) {
-            this.sent[key] = { v: value, at: now };
-        }
+    /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
+     * or both and the HUD map's size and place: while that place is not changed here (the HUD rect is not custom) the
+     * HUD map is where waze-on-cluster put it ---- */
+    wazeHudPlace() {
+        return this.waze.native() ? this.proxy.hudPlace() : null;
     }
 
-    /* the HUD map's width in percent of the HUD's (20-100): the frame waze scales for the HUD is as wide as the
-     * map is shown, or as tall (its shape is the picture's), so it is not stretched up */
-    hudWidthPct() {
-        const r = this.state.hud;
-        return clamp(Math.round(Math.max(r.w, r.h * MAP_ASPECT) / CANVAS.hud.w * 100), 20, 100);
+    /* the HUD rectangle as shown: waze-on-cluster's place until it is changed here */
+    hudRect() {
+        const r = this.state.hud, p = this.wazeHudPlace();
+        return !r.placed && p ? Object.assign({}, r, p) : r;
     }
 
-    syncWaze() {
-        if (!this.waze.native()) {
-            return;
-        }
-        const st = this.waze.status;
-        const want = WAZE_MODE[this.state.mode] || WAZE_MODE.map;
-        if (Number(st.cluster) !== want.cluster) {
-            this.wazeSend('cluster', { cmd: 'cluster', on: String(want.cluster) }, want.cluster);
-        }
-        if (Number(st.hud) !== want.hud) {
-            this.wazeSend('hud', { cmd: 'hud', on: String(want.hud) }, want.hud);
-        }
-        if (want.hud && !this.widthTimer && (!this.sent.width || this.sent.width.v !== this.hudWidthPct())) {
-            this.widthTimer = setTimeout(() => {
-                this.widthTimer = null;
-                const pct = this.hudWidthPct();
-                if (this.waze.native() && (!this.sent.width || this.sent.width.v !== pct)) {
-                    this.sent.width = { v: pct, at: Date.now() };
-                    this.waze.send({ cmd: 'hud', hud_width_pct: String(pct) });
-                }
-            }, WIDTH_MS);
+    /* a change made here starts from the place waze-on-cluster has it at */
+    adoptWazePlace(which) {
+        if (which === 'hud' && !this.state.hud.placed && this.wazeHudPlace()) {
+            this.state.hud = normaliseRect('hud', Object.assign({}, this.hudRect(), { custom: this.state.hud.custom, placed: false }));
         }
     }
 
     wazeChanged() {
-        if (!this.waze.ready) {
-            this.sent = {};            /* a fresh waze-on-cluster: ask again */
-        }
-        this.syncWaze();
         const native = this.waze.native();
         if (native !== this.wasNative) {
             this.wasNative = native;
@@ -329,7 +300,7 @@ class Daemon {
 
     view() {
         const s = this.state;
-        return { ev: 'state', mode: s.mode, hud: rectView('hud', s.hud), map: rectView('map', s.map),
+        return { ev: 'state', mode: s.mode, hud: rectView('hud', this.hudRect()), map: rectView('map', s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
             loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary() };
     }
@@ -352,13 +323,17 @@ class Daemon {
             }
             return;
         case 'adjust':
+            this.adoptWazePlace(which);
             this.state[which] = adjustRect(which, this.state[which], msg);
             this.changed();
             return;
         case 'rect': {
             /* absolute values from the graphical designer: any of x, y, w, h, opacity, zoom, rot */
+            if (['x', 'y', 'w', 'h'].some((k) => msg[k] !== undefined)) {
+                this.adoptWazePlace(which);
+            }
             const cur = this.state[which];
-            const next = Object.assign({}, cur, { custom: true });
+            const next = Object.assign({}, cur, { custom: true, placed: cur.placed || ['x', 'y', 'w', 'h'].some((k) => msg[k] !== undefined) });
             ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy', 'fe'].forEach((k) => {
                 if (msg[k] !== undefined) {
                     next[k] = num(msg[k], cur[k]);
@@ -369,6 +344,7 @@ class Daemon {
             return;
         }
         case 'centre':
+            this.adoptWazePlace(which);
             this.state[which] = centredRect(which, this.state[which]);
             this.changed();
             return;
@@ -387,7 +363,6 @@ class Daemon {
 
     changed() {
         this.saveSoon();
-        this.syncWaze();
         try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
     }
 

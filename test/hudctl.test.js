@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hudctl-'));
 process.env.HUDCTL_STATE_DIR = dir;
 process.env.HUDCTL_SOCK = path.join(dir, 'ctl.sock');
 process.env.HUDCTL_PROXY_SOCK = path.join(dir, 'render.sock');
-process.env.HUDCTL_WAZE_SOCK = path.join(dir, 'waze.sock');
+process.env.HUDCTL_WAZE_STATUS = path.join(dir, 'waze-status.json');
 const ctl = require('../native/mgux-hud-ctl/hudctl.js');
 
 test.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -111,82 +111,63 @@ test('soft edges: 0.15 on the HUD by default, none on the cluster, held to 0-0.4
     assert.strictEqual(ctl.adjustRect('hud', ctl.normaliseRect('hud', { fe: 0.2 }), { dfe: -0.05 }).fe, 0.15);
 });
 
-/* a fake waze-on-cluster 0.9.0 on the helper's control socket path */
-async function fakeWaze(status) {
-    const net = require('net');
-    const got = [];
-    const conns = [];
-    const srv = net.createServer((c) => {
-        conns.push(c);
-        c.setEncoding('utf8');
-        c.on('data', (d) => d.split('\n').filter(Boolean).forEach((l) => got.push(JSON.parse(l))));
-        c.on('error', () => {});
-        c.write(`${JSON.stringify(Object.assign({ ev: 'status' }, status))}\n`);
-    });
-    try { fs.unlinkSync(process.env.HUDCTL_WAZE_SOCK); } catch (e) { /* none */ }
-    await new Promise((res) => srv.listen(process.env.HUDCTL_WAZE_SOCK, res));
-    return { got, conns, status(st) { conns.forEach((c) => c.write(`${JSON.stringify(Object.assign({ ev: 'status' }, st))}\n`)); },
-        done() { conns.forEach((c) => c.destroy()); srv.close(); } };
-}
+/* waze-on-cluster writes its status every second to a file; the helper only reads it */
+const STATUS = process.env.HUDCTL_WAZE_STATUS;
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+const writeStatus = (st) => fs.writeFileSync(STATUS, `${JSON.stringify(Object.assign({ ev: 'status' }, st))}\n`);
 
-test('waze: the mode decides which feeds waze-on-cluster 0.9.0 draws; commands are not repeated', async () => {
-    const w = await fakeWaze({ state: 'showing', cluster: 1, hud: 0, hud_state: 'off', hud_width_pct: 0 });
-    const d = new ctl.Daemon();
-    try {
-        d.waze.open();
-        await wait(200);
-        assert.strictEqual(d.layout().native, true);
-        assert.strictEqual(d.view().waze.native, true);
-        assert.deepStrictEqual(w.got, [], 'cluster only is what it already shows: nothing to send');
-        d.handle({ cmd: 'set', mode: 'both' });
-        await wait(100);
-        assert.deepStrictEqual(w.got.filter((m) => m.cmd !== 'hud' || m.on), [{ cmd: 'hud', on: '1' }]);
-        d.handle({ cmd: 'set', mode: 'hud' });          /* waze has not answered yet: asked once, not twice */
-        d.handle({ cmd: 'set', mode: 'hud' });
-        await wait(100);
-        assert.strictEqual(w.got.filter((m) => m.cmd === 'cluster').length, 1);
-        assert.deepStrictEqual(w.got.filter((m) => m.cmd === 'cluster')[0], { cmd: 'cluster', on: '0' });
-        w.status({ state: 'idle', cluster: 0, hud: 1, hud_state: 'showing', hud_width_pct: 0 });
-        await wait(100);
-        assert.strictEqual(d.view().waze.hudState, 'showing');
-        const n = w.got.length;
-        w.status({ state: 'idle', cluster: 0, hud: 1, hud_state: 'showing', hud_width_pct: 0 });
-        await wait(100);
-        assert.strictEqual(w.got.length, n, 'what waze shows is what is wanted: nothing more is sent');
-    } finally {
-        d.waze.close();
-        w.done();
-    }
+test('waze: the status file tells a 0.9.0 (hud_state) from an older one and from none; nothing is ever sent', () => {
+    const { WazeStatus } = require('../native/mgux-hud-ctl/wazestatus.js');
+    let changes = 0;
+    const w = new WazeStatus({ file: STATUS, onChange: () => { changes++; } });
+    try { fs.unlinkSync(STATUS); } catch (e) { /* none */ }
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().connected], [false, false]);
+    writeStatus({ state: 'showing', target: 'map' });
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().connected, w.summary().state], [false, true, 'showing']);
+    writeStatus({ state: 'showing', cluster: 1, hud: 1, hud_state: 'idle', hud_width_pct: 0 });
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().hud, w.summary().hudState], [true, 1, 'idle']);
+    const n = changes;
+    w.poll();
+    assert.strictEqual(changes, n, 'no change, no report');
+    const old = new Date(Date.now() - 60000);
+    fs.utimesSync(STATUS, old, old);                  /* waze-on-cluster stopped writing it */
+    w.poll();
+    assert.strictEqual(w.native(), false);
+    assert.strictEqual(w.summary().connected, false);
+    fs.unlinkSync(STATUS);
 });
 
-test('waze: the HUD size follows the map\'s size once it settles; an older waze-on-cluster is left alone', async () => {
-    const w = await fakeWaze({ state: 'showing', cluster: 0, hud: 1, hud_state: 'showing', hud_width_pct: 0 });
+test('waze: with a 0.9.0 the HUD rect is waze-on-cluster\'s own place until a place is set here', () => {
     const d = new ctl.Daemon();
-    try {
-        d.handle({ cmd: 'set', mode: 'hud' });
-        d.handle({ cmd: 'rect', which: 'hud', w: 400, h: 100 });      /* 400 px wide = 50 % of 800 */
-        d.waze.open();
-        await wait(900);
-        assert.deepStrictEqual(w.got.filter((m) => m.hud_width_pct), [{ cmd: 'hud', hud_width_pct: '50' }]);
-        d.handle({ cmd: 'rect', which: 'hud', w: 300, h: 300 });      /* as tall as 300 x 2.27 wide = 680 px = 85 % */
-        d.handle({ cmd: 'rect', which: 'hud', w: 300, h: 320 });
-        await wait(900);
-        assert.deepStrictEqual(w.got.filter((m) => m.hud_width_pct).map((m) => m.hud_width_pct), ['50', '91']);
-    } finally {
-        d.waze.close();
-        w.done();
-    }
-    const old = await fakeWaze({ state: 'showing', target: 'map', page: 'map' });
-    const d2 = new ctl.Daemon();
-    try {
-        d2.handle({ cmd: 'set', mode: 'both' });
-        d2.waze.open();
-        await wait(300);
-        assert.strictEqual(d2.layout().native, false);
-        assert.deepStrictEqual(old.got, []);
-    } finally {
-        d2.waze.close();
-        old.done();
-    }
+    d.waze.status = { ev: 'status', hud_state: 'showing', hud: 1, cluster: 0 };
+    d.proxy.hudPlace = () => ({ x: 300, y: 120, w: 200, h: 88 });
+    assert.deepStrictEqual([d.view().hud.x, d.view().hud.y, d.view().hud.w, d.view().hud.h, d.view().hud.placed], [300, 120, 200, 88, false]);
+    /* a look change does not take the place */
+    d.handle({ cmd: 'rect', which: 'hud', zoom: 2 });
+    assert.strictEqual(d.state.hud.placed, false);
+    assert.strictEqual(d.view().hud.x, 300);
+    /* a size change starts from waze-on-cluster's place and takes it */
+    d.handle({ cmd: 'rect', which: 'hud', w: 240 });
+    assert.deepStrictEqual([d.state.hud.placed, d.state.hud.x, d.state.hud.y, d.state.hud.w, d.state.hud.h], [true, 300, 120, 240, 88]);
+    assert.strictEqual(d.state.hud.zoom, 2, 'the look is kept');
+    /* reset hands it back */
+    d.handle({ cmd: 'reset', which: 'hud' });
+    assert.strictEqual(d.state.hud.placed, false);
+    assert.strictEqual(d.view().hud.x, 300);
+    /* adjust: a move takes it, brightness does not */
+    d.handle({ cmd: 'adjust', which: 'hud', dop: -0.1 });
+    assert.strictEqual(d.state.hud.placed, false);
+    d.handle({ cmd: 'adjust', which: 'hud', dx: 10 });
+    assert.deepStrictEqual([d.state.hud.placed, d.state.hud.x], [true, 310]);
+});
+
+test('waze: an older waze-on-cluster (no hud_state) keeps the HUD rect of its own', () => {
+    const d = new ctl.Daemon();
+    d.waze.status = { ev: 'status', state: 'showing' };
+    d.proxy.hudPlace = () => ({ x: 1, y: 1, w: 1, h: 1 });
+    assert.strictEqual(d.layout().native, false);
+    assert.strictEqual(d.view().hud.x, d.state.hud.x);
 });

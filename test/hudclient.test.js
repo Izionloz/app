@@ -204,7 +204,22 @@ test('designer: the map line says what waze-on-cluster and the service report', 
     assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hudState: 'disabled' }) }).warn, true);
     assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ state: 'frozen' }) }).warn, true);
     assert.ok(statusLine({ live: true, connections: 1, waze: w({ native: false }) }).text.includes('0.9.0'));
-    assert.ok(statusLine({ live: true, connections: 1, waze: { connected: false, busy: true } }).text.includes('app khác'));
     assert.ok(statusLine({ live: true, connections: 1, waze: null }).text.includes('chưa thấy waze-on-cluster'));
     assert.deepStrictEqual(statusLine({ live: false, waze: null }), { text: 'Bản đồ: chưa có dịch vụ nền', warn: true });
+});
+
+test('designer: with waze-on-cluster 0.9.0 the choice of cluster / HUD stays in its own app; its place for the HUD is shown as its own until set here', () => {
+    const D = require('../designer/app/designer.js');
+    const c = new HudClient({ path: '/nonexistent/ctl.sock' });
+    const d = new D.Designer(c);
+    assert.strictEqual(d.rows()[0].id, 'mode', 'older waze-on-cluster: the mode is chosen here');
+    c.connected = () => true;
+    c.hs = { mode: 'hud', hud: { x: 300, y: 120, w: 200, h: 88, placed: false, canvasW: 800, canvasH: 480 }, map: c.demo.map, waze: { connected: true, native: true } };
+    assert.strictEqual(d.native(), true);
+    assert.strictEqual(d.rows()[0].id, 'which', 'no Hiện bản đồ trên row');
+    assert.ok(!d.rows().some((r) => r.id === 'mode'));
+    d.selected = 99;
+    d.draw({ fillRect() {}, clip() {}, noclip() {}, roundRect() {}, strokeRoundRect() {}, line() {}, polyline() {}, quad() {}, circle() {},
+        text() { return 10; }, textWidth() { return 10; } });
+    assert.ok(d.selected < d.rows().length, 'the lit row is held to the rows there are');
 });

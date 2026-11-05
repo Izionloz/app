@@ -303,7 +303,7 @@ class Link {
             }
             if (j.op === 'set') {
                 Object.keys(j).forEach((k) => {
-                    if (k !== 'op' && k !== 'ref' && k !== 'x' && k !== 'y' && k !== 'w' && k !== 'h') {
+                    if (k !== 'op' && k !== 'ref') {
                         this.cur[k] = j[k];
                     }
                 });
@@ -311,17 +311,19 @@ class Link {
                     /* the soft edges show and hide with the map (a black frame must not hold the HUD alone) */
                     Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: j.visible })));
                 }
-                const rest = Object.assign({}, j);
-                ['x', 'y', 'w', 'h'].forEach((k) => { delete rest[k]; });
-                if (Object.keys(rest).length > 2) {   /* op and ref only: nothing left */
-                    Object.keys(this.actual).forEach((r) => {
-                        const m2 = Object.assign({}, rest, { ref: Number(r) });
-                        if (typeof m2.opacity === 'number') {
-                            m2.opacity = Math.round(m2.opacity * this.actual[r].opacity * 1000) / 1000;
-                        }
+                Object.keys(this.actual).forEach((r) => {
+                    /* a place waze-on-cluster gives goes on while the place is not ours (its app moves the HUD map) */
+                    const m2 = Object.assign({}, j, { ref: Number(r) });
+                    if (this.actual[r].own) {
+                        ['x', 'y', 'w', 'h'].forEach((k) => { delete m2[k]; });
+                    }
+                    if (typeof m2.opacity === 'number') {
+                        m2.opacity = Math.round(m2.opacity * this.actual[r].opacity * 1000) / 1000;
+                    }
+                    if (Object.keys(m2).length > 2) {   /* op and ref only: nothing left */
                         this.toUp(jsonMsg(m2));
-                    });
-                }
+                    }
+                });
                 /* waze shows or hides the map (the stream came or went): our place and look go with it */
                 this.reapply();
                 this.reapplyOnFrame = true;
@@ -347,13 +349,16 @@ class Link {
     /* ---- what the layers should be ---- */
     desired() {
         const L = this.getLayout();
-        const one = (ref, target, rect) => ({ ref, target, rect, opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
+        /* own: the place and size are ours; else they are waze-on-cluster's (its HUD layer, while the HUD rect has not
+         * been placed here) */
+        const one = (ref, target, rect, own) => ({ ref, target, rect, own: own === undefined ? !!rect : !!own && !!rect,
+            opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
             fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0 });
         if (L.native) {
             /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
              * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
              * no frame is copied to another display */
-            return this.base.target === HUD ? [one(this.ref, HUD, L.hud)] : [one(this.ref, MAP, L.map)];
+            return this.base.target === HUD ? [one(this.ref, HUD, L.hud, !!L.hud && L.hud.placed === true)] : [one(this.ref, MAP, L.map)];
         }
         if (L.mode === HUD) {
             return [one(this.ref, HUD, L.hud)];
@@ -366,10 +371,10 @@ class Link {
 
     /* the layer's size on its target: the rect, else waze's own place, else the whole target */
     sizeOf(d) {
-        if (d.rect) {
+        if (d.own) {
             return { w: d.rect.w, h: d.rect.h };
         }
-        const b = d.target === this.base.target ? this.base : {};
+        const b = d.target === this.base.target ? Object.assign({}, this.base, this.cur) : {};
         return { w: typeof b.w === 'number' ? b.w : this.fullW(d.target), h: typeof b.h === 'number' ? b.h : this.fullH() };
     }
 
@@ -383,10 +388,10 @@ class Link {
     layerMessage(d) {
         const msg = Object.assign({}, this.cur, { ref: d.ref, target: d.target });
         /* waze's own place is kept for the target it asked for, until a rectangle is set */
-        if (d.rect || d.target !== this.base.target) {
+        if (d.own || d.target !== this.base.target) {
             ['x', 'y', 'w', 'h'].forEach((k) => { delete msg[k]; });
         }
-        if (d.rect) {
+        if (d.own) {
             msg.x = d.rect.x; msg.y = d.rect.y; msg.w = d.rect.w; msg.h = d.rect.h;
         }
         Object.assign(msg, this.look(d));
@@ -414,7 +419,7 @@ class Link {
             }
         });
         want.forEach((d) => {
-            const place = d.rect ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : '';
+            const place = d.own ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : '';
             const look = Object.assign(this.look(d), { opacity: this.layerOpacity(d) });
             const lookKey = JSON.stringify(look);
             const cur = this.actual[d.ref];
@@ -431,9 +436,9 @@ class Link {
                 }
                 return;
             }
-            if (was && liveSet() && was.rect && d.rect) {
+            if (was && liveSet() && was.own && d.own) {
                 this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h }, look)));
-                this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: true, opacity: d.opacity };
+                this.actual[d.ref] = { target: d.target, place, look: lookKey, own: true, opacity: d.opacity };
                 return;
             }
             if (was) {
@@ -442,7 +447,7 @@ class Link {
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
             }
             this.toUp(jsonMsg(this.layerMessage(d)));
-            this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: !!d.rect, opacity: d.opacity };
+            this.actual[d.ref] = { target: d.target, place, look: lookKey, own: d.own, opacity: d.opacity };
             delete this.layerStates[d.ref];
             if (this.lastFrame) {
                 this.sendFrame(d.ref, this.lastFrame);
@@ -482,7 +487,7 @@ class Link {
                 return;
             }
             const msg = Object.assign({ op: 'set', ref: d.ref }, this.look(d), { opacity: this.layerOpacity(d) });
-            if (d.rect) {
+            if (d.own) {
                 Object.assign(msg, { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h });
             }
             this.toUp(jsonMsg(msg));
@@ -496,11 +501,15 @@ class Link {
         want.forEach((d) => {
             const e = d.ref + FX;
             const a = this.actual[d.ref];
-            if (!(d.fe > 0.001) || !d.rect || !a || a.target !== d.target) {
+            if (!(d.fe > 0.001) || !a || a.target !== d.target) {
+                return;
+            }
+            const r = d.own ? d.rect : this.wazeRect();
+            if (!r) {
                 return;
             }
             keep[e] = true;
-            const r = d.rect, side = Math.max(1, Math.min(r.w, r.h)) * d.fe;
+            const side = Math.max(1, Math.min(r.w, r.h)) * d.fe;
             const uf = `${Math.round(side / r.w * 1000) / 1000} ${Math.round(side / r.h * 1000) / 1000}`;
             const look = this.look(d);
             const fields = { x: r.x, y: r.y, w: r.w, h: r.h, rotate: look.rotate, px: look.px, py: look.py };
@@ -537,6 +546,13 @@ class Link {
                 delete this.fx[e];
             }
         });
+    }
+
+    /* waze-on-cluster's own place of its layer, as it made it or moved it last */
+    wazeRect() {
+        const c = this.cur;
+        return c && typeof c.x === 'number' && typeof c.y === 'number' && typeof c.w === 'number' && typeof c.h === 'number'
+            ? { x: c.x, y: c.y, w: c.w, h: c.h } : null;
     }
 
     /* the layer's opacity: waze's own (from its `set`s) times the display's brightness setting */
@@ -592,6 +608,19 @@ class RenderProxy {
 
     stats() {
         return { connections: this.links.size };
+    }
+
+    /* where waze-on-cluster has its own HUD layer (0.9.0: its feed of its own), null when there is none */
+    hudPlace() {
+        for (const l of this.links) {
+            if (l.base && l.base.target === HUD && !l.closed) {
+                const r = l.wazeRect();
+                if (r) {
+                    return r;
+                }
+            }
+        }
+        return null;
     }
 }
 

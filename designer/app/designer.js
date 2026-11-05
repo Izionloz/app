@@ -74,11 +74,10 @@ function sliders(which) {
 }
 
 /* the list's rows, top to bottom, with their heights */
-function rows(which) {
-    const out = [
-        { kind: 'choice', id: 'mode', label: 'Hiện bản đồ trên', h: 76 },
-        { kind: 'choice', id: 'which', label: 'Đang chỉnh', h: 76 }
-    ];
+function rows(which, native) {
+    /* waze-on-cluster 0.9.0 has an app of its own that chooses the cluster, the HUD or both: that stays there */
+    const out = native ? [] : [{ kind: 'choice', id: 'mode', label: 'Hiện bản đồ trên', h: 76 }];
+    out.push({ kind: 'choice', id: 'which', label: 'Đang chỉnh', h: 76 });
     sliders(which).forEach((s) => out.push({ kind: 'slider', id: s.key, def: s, label: s.label, h: 104 }));
     out.push({ kind: 'action', id: 'centre', label: 'Căn giữa', h: 70 });
     out.push({ kind: 'action', id: 'reset', label: 'Đặt lại bản đồ này', h: 70 });
@@ -135,8 +134,7 @@ function statusLine(info) {
         text = 'Bản đồ: chưa có dịch vụ nền';
         warn = true;
     } else if (!w || !w.connected) {
-        text = w && w.busy ? 'Bản đồ: waze-on-cluster đang do app khác điều khiển, hãy đóng app đó'
-            : 'Bản đồ: chưa thấy waze-on-cluster';
+        text = 'Bản đồ: chưa thấy waze-on-cluster';
         warn = true;
     } else if (!w.native) {
         text = `Bản đồ: ${feedText(w.state)}. waze-on-cluster cũ, cập nhật lên 0.9.0 để HUD có nền đen`;
@@ -171,8 +169,14 @@ class Designer {
         return this.client.state()[this.which];
     }
 
+    /* waze-on-cluster draws the HUD itself (0.9.0 and later) */
+    native() {
+        const i = this.client.info ? this.client.info() : null;
+        return !!(i && i.live && i.waze && i.waze.native);
+    }
+
     rows() {
-        return rows(this.which);
+        return rows(this.which, this.native());
     }
 
     maxScroll() {
@@ -365,6 +369,7 @@ class Designer {
 
     _drawList(cv, st) {
         const rs = this.rows(), r = st[this.which];
+        this.selected = Math.min(this.selected, rs.length - 1);
         this.scroll = clamp(this.scroll, 0, this.maxScroll());
         cv.clip(LIST.x, LIST.y, LIST.w, LIST.h);
         rs.forEach((row, i) => {
@@ -438,8 +443,9 @@ class Designer {
         const b = previewBox(this.which), r = st[this.which];
         const c = CANVAS[this.which];
         V.text(cv, `${this.which === 'hud' ? 'HUD' : 'Đồng hồ'}  ${c.w} x ${c.h}`, PREV.x + 20, PREV.y + 32, 26, C.text, { font: 'bold' });
-        V.text(cv, `${Math.round(r.w)} x ${Math.round(r.h)} tại ${Math.round(r.x)}, ${Math.round(r.y)}`, PREV.x + PREV.w - 20, PREV.y + 32, 22,
-            C.dim, { align: 'right' });
+        const follows = this.native() && this.which === 'hud' && !r.placed;     /* the place is waze-on-cluster's */
+        V.text(cv, `${Math.round(r.w)} x ${Math.round(r.h)} tại ${Math.round(r.x)}, ${Math.round(r.y)}${follows ? ' (theo waze)' : ''}`,
+            PREV.x + PREV.w - 20, PREV.y + 32, 22, C.dim, { align: 'right' });
         // the display
         cv.roundRect(b.x, b.y, b.w, b.h, 10, '#000000');
         cv.strokeRoundRect(b.x, b.y, b.w, b.h, 10, 2, C.line);
