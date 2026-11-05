@@ -10,8 +10,8 @@
             "version": "2.6.0",
             "artifact": {
                 "name": "mgux-hud-ctl@2.6.0.tgz",
-                "size": 10843,
-                "sha256": "c3052dba342dd46dc71877b42e8e71d41d0bf75f107b20ad35111f903e8c9850",
+                "size": 10858,
+                "sha256": "5cfc60cb3e63d8252acd7aec0a2769495e93e4fa453d904403413fd486b9c684",
                 "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.6.0/mgux-hud-ctl%402.6.0.tgz"
             },
             "requires": {
