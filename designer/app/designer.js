@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * designer - the HUD map designer's page: layout, drawing and touch. Pure logic (no kit calls but the canvas
- * handed to draw), so it runs the same in a test.
+ * designer - the HUD map's page: layout, drawing and touch. Pure logic (no kit calls but the canvas handed to draw), so
+ * it runs the same in a test. It works around waze-on-cluster (0.9.0 or later) and its own app, which choose the
+ * cluster, the HUD or both and the HUD map's size and place, give the HUD map its black background and soft edges:
+ * none of that is here, only what they have not.
  *
  * Page (1600 x 520), laid out like the car's own Head-Up Display settings:
- *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting (width and height each on their own) with its name and value above a
- *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
- *  - right, a preview of the chosen display with the map's rectangle: drag the map to move it, drag the orange +
- *    (the zoom focus: the zoom keeps that point in the middle) onto the car. Size is set in the list.
+ *  - left, a list that scrolls: Adjusting (the HUD map or the cluster map), then a row per setting with its name and
+ *    value above a − ▬▬▬ + bar (tap − or +, or drag along the bar): brightness, zoom, rotation and the zoom focus on
+ *    both; width, height, place and Centre on the cluster map only. Then Reset. The row last touched is lit red.
+ *  - right, a preview of the chosen display with the map's rectangle: drag the orange + (the zoom focus: the zoom
+ *    keeps that point in the middle) onto the car; the cluster map can be dragged to move it. The HUD map's size and
+ *    place are waze-on-cluster's.
  * The iDrive controller works the list too (knob()): turn to move, press to change a setting or run a row.
  * Every change goes to the mgux-hud-ctl helper at once; the helper saves it (it says so under the preview).
  */
@@ -27,41 +31,43 @@ const C = {
     map: '#0d2a33', off: '#1a1a1a', accent: '#4fb3d9'
 };
 
-const MODES = [['map', 'Đồng hồ'], ['hud', 'HUD'], ['both', 'Cả hai']];
 const WHICH = [['hud', 'Bản đồ HUD'], ['map', 'Bản đồ đồng hồ']];
 
 const pct = (v) => `${Math.round(v * 100)} %`;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const round2 = (v) => Math.round(v * 100) / 100;
 
-/* the settings rows of one display: value <-> rect; lim(r) gives [min, max]; `sym` fills the bar from the middle */
+/* the settings rows of one display: value <-> rect; lim(r) gives [min, max]; `sym` fills the bar from the middle.
+ * The HUD map's size and place are waze-on-cluster's (its app), so only the cluster map has them here. */
 function sliders(which) {
     const c = CANVAS[which];
-    /* soft edges: the HUD only (on the cluster the fade would be a black frame) */
-    const soft = which === 'hud' ? [{ key: 'fe', label: 'Làm mờ viền', lim: () => [0, 0.45], def: 0.15, step: 0.03, show: pct,
-        get: (r) => (typeof r.fe === 'number' ? r.fe : 0.15), put: (v) => ({ fe: round2(v) }) }] : [];
-    return [
-        { key: 'width', label: 'Chiều rộng', lim: () => [40, c.w], def: which === 'hud' ? 456 : c.w, step: 4,
+    const place = which === 'hud' ? [] : [
+        { key: 'width', label: 'Chiều rộng', lim: () => [40, c.w], def: c.w, step: 4,
             show: (v) => `${Math.round(v)} px`, get: (r) => r.w,
             put: (v, r) => {
                 const w = Math.round(v);
                 return { w, x: Math.round(clamp(r.x + r.w / 2 - w / 2, 0, c.w - w)) };
             } },
-        { key: 'tall', label: 'Chiều cao', lim: () => [20, c.h], def: which === 'hud' ? 202 : c.h, step: 4,
+        { key: 'tall', label: 'Chiều cao', lim: () => [20, c.h], def: c.h, step: 4,
             show: (v) => `${Math.round(v)} px`, get: (r) => r.h,
             put: (v, r) => {
                 const h = Math.round(v);
                 return { h, y: Math.round(clamp(r.y + r.h / 2 - h / 2, 0, c.h - h)) };
-            } },
-        { key: 'bright', label: 'Độ sáng', lim: () => [0.1, 1], def: 1, step: 0.05, show: pct,
-            get: (r) => r.opacity, put: (v) => ({ opacity: round2(v) }) },
-        ...soft,
+            } }
+    ];
+    const move = which === 'hud' ? [] : [
         { key: 'height', label: 'Độ cao', sym: true, step: 4, show: (v) => `${Math.round(v)} px`,
             lim: (r) => [-(c.h - r.h) / 2, (c.h - r.h) / 2], def: 0,
             get: (r) => c.h / 2 - (r.y + r.h / 2), put: (v, r) => ({ y: Math.round(c.h / 2 - v - r.h / 2) }) },
         { key: 'side', label: 'Vị trí ngang', sym: true, step: 4, show: (v) => `${Math.round(v)} px`,
             lim: (r) => [-(c.w - r.w) / 2, (c.w - r.w) / 2], def: 0,
-            get: (r) => r.x + r.w / 2 - c.w / 2, put: (v, r) => ({ x: Math.round(c.w / 2 + v - r.w / 2) }) },
+            get: (r) => r.x + r.w / 2 - c.w / 2, put: (v, r) => ({ x: Math.round(c.w / 2 + v - r.w / 2) }) }
+    ];
+    return [
+        ...place,
+        { key: 'bright', label: 'Độ sáng', lim: () => [0.1, 1], def: 1, step: 0.05, show: pct,
+            get: (r) => r.opacity, put: (v) => ({ opacity: round2(v) }) },
+        ...move,
         { key: 'zoom', label: 'Thu phóng', lim: () => [0.3, 3], def: 1, step: 0.05, show: pct,
             get: (r) => r.zoom, put: (v) => ({ zoom: round2(v) }) },
         { key: 'rot', label: 'Xoay', sym: true, lim: () => [-180, 180], def: 0, step: 1, show: (v) => `${Math.round(v)} độ`,
@@ -74,12 +80,12 @@ function sliders(which) {
 }
 
 /* the list's rows, top to bottom, with their heights */
-function rows(which, native) {
-    /* waze-on-cluster 0.9.0 has an app of its own that chooses the cluster, the HUD or both: that stays there */
-    const out = native ? [] : [{ kind: 'choice', id: 'mode', label: 'Hiện bản đồ trên', h: 76 }];
-    out.push({ kind: 'choice', id: 'which', label: 'Đang chỉnh', h: 76 });
+function rows(which) {
+    const out = [{ kind: 'choice', id: 'which', label: 'Đang chỉnh', h: 76 }];
     sliders(which).forEach((s) => out.push({ kind: 'slider', id: s.key, def: s, label: s.label, h: 104 }));
-    out.push({ kind: 'action', id: 'centre', label: 'Căn giữa', h: 70 });
+    if (which === 'map') {
+        out.push({ kind: 'action', id: 'centre', label: 'Căn giữa', h: 70 });
+    }
     out.push({ kind: 'action', id: 'reset', label: 'Đặt lại bản đồ này', h: 70 });
     let y = 0;
     out.forEach((r) => { r.top = y; y += r.h; });
@@ -160,7 +166,7 @@ class Designer {
         this.client = client;
         this.which = 'hud';
         this.drag = null;
-        this.selected = 2;          /* the row lit red */
+        this.selected = 1;          /* the row lit red */
         this.editing = false;       /* the iDrive knob changes the lit row's value (else it moves the light) */
         this.scroll = 0;
     }
@@ -169,14 +175,8 @@ class Designer {
         return this.client.state()[this.which];
     }
 
-    /* waze-on-cluster draws the HUD itself (0.9.0 and later) */
-    native() {
-        const i = this.client.info ? this.client.info() : null;
-        return !!(i && i.live && i.waze && i.waze.native);
-    }
-
     rows() {
-        return rows(this.which, this.native());
+        return rows(this.which);
     }
 
     maxScroll() {
@@ -207,12 +207,13 @@ class Designer {
             }
             return { type: 'list' };
         }
-        /* the preview: the orange + places the zoom focus, the rest of the map moves it (its size is set in the list) */
+        /* the preview: the orange + places the zoom focus; the cluster map can be dragged to move it (the HUD map's
+         * place and size are waze-on-cluster's) */
         const st = this.client.state();
         const p = rectOnPage(this.which, st[this.which]);
         const f = focusOnPage(p, st[this.which]);
         if (Math.hypot(f.x - x, f.y - y) < FOCUS_HIT) { return { type: 'focus' }; }
-        if (inRect({ x: p.x - 10, y: p.y - 10, w: p.w + 20, h: p.h + 20 }, x, y)) { return { type: 'body' }; }
+        if (this.which === 'map' && inRect({ x: p.x - 10, y: p.y - 10, w: p.w + 20, h: p.h + 20 }, x, y)) { return { type: 'body' }; }
         return null;
     }
 
@@ -311,11 +312,7 @@ class Designer {
 
     _tap(h) {
         const r = this.rows()[h.i];
-        if (r.kind === 'choice' && r.id === 'mode') {
-            const cur = this.client.state().mode;
-            const i = MODES.findIndex((m) => m[0] === cur);
-            this.client.setMode(MODES[(i + 1) % MODES.length][0]);
-        } else if (r.kind === 'choice' && r.id === 'which') {
+        if (r.kind === 'choice' && r.id === 'which') {
             this.which = this.which === 'hud' ? 'map' : 'hud';
         } else if (r.kind === 'action') {
             if (r.id === 'centre') { this.client.centre(this.which); } else { this.client.reset(this.which); }
@@ -394,7 +391,6 @@ class Designer {
             } else {
                 V.text(cv, row.label, LIST.x + 28, y + row.h / 2 + 11, 31, C.text);
                 let value = '';
-                if (row.id === 'mode') { value = (MODES.find((m) => m[0] === st.mode) || ['', '-'])[1]; }
                 if (row.id === 'which') { value = (WHICH.find((m) => m[0] === this.which) || ['', ''])[1]; }
                 const rx = LIST.x + LIST.w - 30;
                 if (value) {
@@ -443,8 +439,7 @@ class Designer {
         const b = previewBox(this.which), r = st[this.which];
         const c = CANVAS[this.which];
         V.text(cv, `${this.which === 'hud' ? 'HUD' : 'Đồng hồ'}  ${c.w} x ${c.h}`, PREV.x + 20, PREV.y + 32, 26, C.text, { font: 'bold' });
-        const follows = this.native() && this.which === 'hud' && !r.placed;     /* the place is waze-on-cluster's */
-        V.text(cv, `${Math.round(r.w)} x ${Math.round(r.h)} tại ${Math.round(r.x)}, ${Math.round(r.y)}${follows ? ' (theo waze)' : ''}`,
+        V.text(cv, `${Math.round(r.w)} x ${Math.round(r.h)} tại ${Math.round(r.x)}, ${Math.round(r.y)}${this.which === 'hud' ? ' (theo waze)' : ''}`,
             PREV.x + PREV.w - 20, PREV.y + 32, 22, C.dim, { align: 'right' });
         // the display
         cv.roundRect(b.x, b.y, b.w, b.h, 10, '#000000');
@@ -456,14 +451,12 @@ class Designer {
             cv.line(b.x, b.y + (b.h * i) / 5, b.x + b.w, b.y + (b.h * i) / 5, 1, '#14161a');
         }
         const p = rectOnPage(this.which, r);
-        const shown = st.mode === 'both' || st.mode === this.which;
+        const w = (this.client.info ? this.client.info() : {}).waze;
+        const shown = !(w && w.connected) || !!(this.which === 'hud' ? w.hud : w.cluster);   /* is the map on this display */
         cv.roundRect(p.x, p.y, p.w, p.h, 6, shown ? C.map : C.off);
         cv.clip(p.x, p.y, p.w, p.h);
         this._roads(cv, p, r, shown);
         cv.noclip();
-        if (this.which === 'hud' && shown) {
-            this._softEdges(cv, p, r);
-        }
         cv.strokeRoundRect(p.x, p.y, p.w, p.h, 6, 3, shown ? C.accent : C.dim);
         if (!shown) {
             V.text(cv, 'không hiện trên màn này', p.x + 12, p.y + 30, 20, C.dim);
@@ -476,7 +469,8 @@ class Designer {
         cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, C.focus);
         // help, the map's state (as the older button app showed it) and whether the settings are kept
         const ly = b.y + b.h + 28;
-        V.text(cv, 'Kéo bản đồ để di chuyển, kéo dấu + cam vào vị trí xe.', PREV.x + 20, ly, 20, C.dim);
+        V.text(cv, this.which === 'hud' ? 'Kéo dấu + cam vào xe. Cỡ và vị trí HUD: app waze-on-cluster.'
+            : 'Kéo bản đồ để di chuyển, kéo dấu + cam vào vị trí xe.', PREV.x + 20, ly, 20, C.dim);
         const info = this.client.info ? this.client.info() : { live: false };
         const line = statusLine(info);
         V.text(cv, line.text, PREV.x + 20, ly + 28, 20, line.warn ? C.warn : C.dim);
@@ -490,26 +484,6 @@ class Designer {
             if (info.note) { saved = info.note; col = C.warn; }
         }
         V.text(cv, saved, PREV.x + 20, ly + 56, 20, col);
-    }
-
-    /* the soft edges as the HUD shows them: black bands, darker towards the sides (black is no light there) */
-    _softEdges(cv, p, r) {
-        const fe = typeof r.fe === 'number' ? r.fe : 0.15;
-        const side = Math.min(p.w, p.h) * fe;
-        const N = 10;
-        if (side < 1) {
-            return;
-        }
-        for (let i = 0; i < N; i++) {
-            const t = (i + 0.5) / N;                       /* 0 at the side, 1 inside */
-            const a = Math.round(255 * (1 - t * t * (3 - 2 * t)));
-            const inset = side * i / N, w = Math.max(1, side / N);
-            const col = `#000000${(a < 16 ? '0' : '') + a.toString(16)}`;
-            cv.fillRect(p.x + inset, p.y + inset, p.w - 2 * inset, w, col);
-            cv.fillRect(p.x + inset, p.y + p.h - inset - w, p.w - 2 * inset, w, col);
-            cv.fillRect(p.x + inset, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
-            cv.fillRect(p.x + p.w - inset - w, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
-        }
     }
 
     _roads(cv, p, r, shown) {
@@ -534,4 +508,4 @@ class Designer {
     }
 }
 
-module.exports = { Designer, sliders, rows, bar, statusLine, previewBox, rectOnPage, focusOnPage, MODES, WHICH, PREV, LIST };
+module.exports = { Designer, sliders, rows, bar, statusLine, previewBox, rectOnPage, focusOnPage, WHICH, PREV, LIST };

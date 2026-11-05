@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * hudctl - root helper behind the HUD map app (mgux_hud_map).
+ * hudctl - root helper behind the HUD map app (hud_designer).
  *
- * waze-on-cluster is started (drop-in of waze-on-cluster.service, through
- * $MGUX_HUD_ARGS from /var/opt/mgux-hud/args.env) with its render socket
- * pointed at renderproxy.js, which runs in this process. The proxy puts the
- * map's layer(s) on the instrument cluster ("map"), the HUD ("hud") or both,
- * in the rectangles kept here, and moves them while the map runs: nothing
- * restarts, so CarPlay's cluster stream is never cut.
+ * waze-on-cluster 0.9.0 and later draws the map on the cluster and on the HUD, each as a feed of its own connection and
+ * layer (the HUD's with a black background, scaled to its size); its own app chooses which, and the HUD map's size
+ * and place. waze-on-cluster is started (drop-in of waze-on-cluster.service, through $MGUX_HUD_ARGS from
+ * /var/opt/mgux-hud/args.env) with its render socket pointed at renderproxy.js, which runs in this process: the proxy
+ * adds to each feed's layer what waze-on-cluster has not (brightness, zoom with a focus, rotation; on the cluster also
+ * the map's place and size) and takes nothing from it. Nothing is sent to waze-on-cluster: its status is read from the
+ * file it writes (wazestatus.js).
  *
  * The app talks to /dev/shm/mgux-hud/ctl.sock (group tm_oap_app), newline JSON:
  *   {"cmd":"get"}
- *   {"cmd":"set","mode":"map"|"hud"|"both"}
- *   {"cmd":"adjust","which":"hud"|"map","dw":px,"dh":px,"dx":px,"dy":px,"dop":0.1,"dz":0.1,"drot":5,"el":px,"er":px,"et":px,"eb":px}  (deltas; dop = brightness 0.1-1, dz = zoom 0.3-3,
- *   drot = degrees, el/er/et/eb = how far the left/right/top/bottom edge moves outward)
- *   {"cmd":"rect","which":"hud"|"map","x":..,"y":..,"w":..,"h":..,"opacity":..,"zoom":..,"rot":..,"fx":..,"fy":..}  (absolute, any subset;
- *   fx/fy = the focus, 0-1: the point of the picture the zoom keeps in the middle; adjust takes dfx/dfy;
- *   fe = the HUD map's soft edges, 0-0.45 of its shorter side; adjust takes dfe)
- *   {"cmd":"centre","which":...}   {"cmd":"reset","which":...|"all"}
+ *   {"cmd":"adjust","which":"hud"|"map","dop":0.1,"dz":0.1,"drot":5,"dfx":0.05,"dfy":0.05, ...}  (deltas; dop = brightness
+ *   0.1-1, dz = zoom 0.3-3, drot = degrees, dfx/dfy = the zoom focus; for the cluster map also dw, dh, dx, dy, el, er, et, eb:
+ *   how far the left/right/top/bottom edge moves outward)
+ *   {"cmd":"rect","which":"hud"|"map","opacity":..,"zoom":..,"rot":..,"fx":..,"fy":..}  (absolute, any subset; for the
+ *   cluster map also x, y, w, h. fx/fy = the focus, 0-1: the point of the picture the zoom keeps in the middle.
+ *   The HUD map's place and size are waze-on-cluster's: they are ignored for "hud".)
+ *   {"cmd":"centre","which":"map"}   {"cmd":"reset","which":...|"all"}
  * and gets {"ev":"state",...} after every command. Settings are kept in
  * /var/opt/mgux-hud/state.json and survive a head-unit restart.
  * Node 8 compatible; the process never exits on an error.
@@ -44,7 +45,6 @@ const WAZE_STATUS = env.HUDCTL_WAZE_STATUS || '/run/waze-on-cluster/status.json'
 /* the targets' pixels (cluster-render.conf: map 1088x480, hud 800x480) */
 const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
 const MIN_W = 40, MIN_H = 20;
-const FEATHER_HUD = 0.15, FEATHER_MAX = 0.45;    /* the HUD map's soft edges: default and most */
 const MAP_ASPECT = 1088 / 480;
 
 /* mkdir -p for Node 8, whose mkdirSync has no recursive option. */
@@ -79,9 +79,9 @@ function defaultRect(which) {
     const c = CANVAS[which];
     if (which === 'hud') {
         const w = 456, h = even(w / MAP_ASPECT);
-        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: FEATHER_HUD, placed: false };
+        return { custom: false, w, h, x: even((c.w - w) / 2), y: even((c.h - h) / 2), opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 };
     }
-    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0, placed: false };
+    return { custom: false, w: c.w, h: c.h, x: 0, y: 0, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 };
 }
 
 /* A rectangle with valid even integers, inside its canvas. */
@@ -93,8 +93,6 @@ function normaliseRect(which, r) {
     const h = clamp(even(num(src.h, d.h)), MIN_H, c.h);
     return {
         custom: src.custom === true,
-        /* the place and size were set here (else, with waze-on-cluster 0.9.0, they are its own app's) */
-        placed: src.placed === true,
         opacity: clamp(Math.round(num(src.opacity, 1) * 100) / 100, 0.1, 1),
         zoom: clamp(Math.round(num(src.zoom, 1) * 100) / 100, 0.3, 3),
         rot: wrapDeg(num(src.rot, 0)),
@@ -102,8 +100,6 @@ function normaliseRect(which, r) {
          * cluster map has the car below and right of the middle, so a zoom about the middle pushes it out */
         fx: clamp(Math.round(num(src.fx, 0.5) * 100) / 100, 0, 1),
         fy: clamp(Math.round(num(src.fy, 0.5) * 100) / 100, 0, 1),
-        /* soft edges (HUD only): how far in the map fades out at its four sides, as a part of its shorter side */
-        fe: which === 'hud' ? clamp(Math.round(num(src.fe, FEATHER_HUD) * 100) / 100, 0, FEATHER_MAX) : 0,
         w, h,
         x: clamp(even(num(src.x, (c.w - w) / 2)), 0, c.w - w),
         y: clamp(even(num(src.y, (c.h - h) / 2)), 0, c.h - h)
@@ -111,13 +107,12 @@ function normaliseRect(which, r) {
 }
 
 function defaultState() {
-    return { mode: 'map', hud: defaultRect('hud'), map: defaultRect('map') };
+    return { hud: defaultRect('hud'), map: defaultRect('map') };
 }
 
 function normalise(s) {
     const src = s || {};
     return {
-        mode: src.mode === 'hud' || src.mode === 'both' ? src.mode : 'map',
         hud: normaliseRect('hud', src.hud),
         map: normaliseRect('map', src.map)
     };
@@ -134,13 +129,23 @@ function adjustRect(which, r0, a) {
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
     const w = clamp(r.w + num(a.dw, 0), MIN_W, c.w);
     const h = clamp(r.h + num(a.dh, 0), MIN_H, c.h);
-    const moved = ['dw', 'dh', 'dx', 'dy', 'el', 'er', 'et', 'eb'].some((k) => num(a[k], 0) !== 0);
-    return normaliseRect(which, { custom: true, placed: r.placed === true || moved, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), fe: num(r.fe, FEATHER_HUD) + num(a.dfe, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
+    return normaliseRect(which, { custom: true, opacity: num(r.opacity, 1) + num(a.dop, 0), zoom: num(r.zoom, 1) + num(a.dz, 0), rot: num(r.rot, 0) + num(a.drot, 0), fx: num(r.fx, 0.5) + num(a.dfx, 0), fy: num(r.fy, 0.5) + num(a.dfy, 0), w, h, x: cx - w / 2 + num(a.dx, 0), y: cy - h / 2 + num(a.dy, 0) });
+}
+
+/* the fields of an adjust that are not about place or size (the HUD map's are waze-on-cluster's) */
+function onlyLook(msg) {
+    const out = {};
+    Object.keys(msg).forEach((k) => {
+        if (['dw', 'dh', 'dx', 'dy', 'el', 'er', 'et', 'eb'].indexOf(k) < 0) {
+            out[k] = msg[k];
+        }
+    });
+    return out;
 }
 
 function centredRect(which, r) {
     const c = CANVAS[which];
-    return normaliseRect(which, { custom: true, placed: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, fe: r.fe, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
+    return normaliseRect(which, { custom: true, opacity: r.opacity, zoom: r.zoom, rot: r.rot, fx: r.fx, fy: r.fy, w: r.w, h: r.h, x: (c.w - r.w) / 2, y: (c.h - r.h) / 2 });
 }
 
 function writeAtomic(file, data) {
@@ -170,7 +175,7 @@ function parseState(text) {
         return normalise(j);
     }
     const old = (j && j.state) || j || {};
-    return normalise({ mode: old.target === 'hud' ? 'hud' : 'map',
+    return normalise({
         hud: { custom: old.custom === true, w: old.w, h: old.h, x: old.x, y: old.y } });
 }
 
@@ -200,10 +205,9 @@ function gidOf(group) {
 function rectView(which, r) {
     const c = CANVAS[which];
     const full = which === 'hud' ? 456 : c.w;
-    return { custom: r.custom, placed: r.placed, w: r.w, h: r.h, x: r.x, y: r.y, canvasW: c.w, canvasH: c.h,
+    return { custom: r.custom, w: r.w, h: r.h, x: r.x, y: r.y, canvasW: c.w, canvasH: c.h,
         opacity: r.opacity, bright: Math.round(r.opacity * 100), zoom: r.zoom, zoomPct: Math.round(r.zoom * 100), rot: r.rot,
         fx: r.fx, fy: r.fy, focusX: Math.round(r.fx * 100), focusY: Math.round(r.fy * 100),
-        fe: r.fe, featherPct: Math.round(r.fe * 100),
         pct: Math.round(100 * r.w / c.w),
         dx: Math.round(r.x + r.w / 2 - c.w / 2), dy: Math.round(r.y + r.h / 2 - c.h / 2),
         defaultW: full };
@@ -219,7 +223,6 @@ class Daemon {
         this.note = '';
         this.saveError = '';
         this.saveTimer = null;
-        this.wasNative = false;
         this.waze = new WazeStatus({ file: WAZE_STATUS, onChange: () => this.wazeChanged() });
         this.proxy = new RenderProxy({
             sock: PROXY_SOCK, upstream: REAL_RENDER, log: (m) => console.log(m),
@@ -230,35 +233,17 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native() };
+        return { hud: s.hud, map: s.map.custom ? s.map : null };
     }
 
-    /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
-     * or both and the HUD map's size and place: while that place is not changed here (the HUD rect is not custom) the
-     * HUD map is where waze-on-cluster put it ---- */
-    wazeHudPlace() {
-        return this.waze.native() ? this.proxy.hudPlace() : null;
-    }
-
-    /* the HUD rectangle as shown: waze-on-cluster's place until it is changed here */
-    hudRect() {
-        const r = this.state.hud, p = this.wazeHudPlace();
-        return !r.placed && p ? Object.assign({}, r, p) : r;
-    }
-
-    /* a change made here starts from the place waze-on-cluster has it at */
-    adoptWazePlace(which) {
-        if (which === 'hud' && !this.state.hud.placed && this.wazeHudPlace()) {
-            this.state.hud = normaliseRect('hud', Object.assign({}, this.hudRect(), { custom: this.state.hud.custom, placed: false }));
-        }
+    /* The HUD map as shown: where waze-on-cluster has its layer (its app chooses the size and the place), the look
+     * (brightness, zoom, rotation) from here. */
+    hudShown() {
+        const p = this.proxy.hudPlace();
+        return p ? Object.assign({}, this.state.hud, p) : this.state.hud;
     }
 
     wazeChanged() {
-        const native = this.waze.native();
-        if (native !== this.wasNative) {
-            this.wasNative = native;
-            try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
-        }
         this.broadcast();
     }
 
@@ -300,7 +285,7 @@ class Daemon {
 
     view() {
         const s = this.state;
-        return { ev: 'state', mode: s.mode, hud: rectView('hud', this.hudRect()), map: rectView('map', s.map),
+        return { ev: 'state', hud: rectView('hud', this.hudShown()), map: rectView('map', s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
             loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary() };
     }
@@ -316,25 +301,16 @@ class Daemon {
         switch (msg.cmd) {
         case 'get':
             return;
-        case 'set':
-            if (msg.mode === 'hud' || msg.mode === 'map' || msg.mode === 'both') {
-                this.state = normalise(Object.assign({}, this.state, { mode: msg.mode }));
-                this.changed();
-            }
-            return;
         case 'adjust':
-            this.adoptWazePlace(which);
-            this.state[which] = adjustRect(which, this.state[which], msg);
+            this.state[which] = adjustRect(which, this.state[which], which === 'hud' ? onlyLook(msg) : msg);
             this.changed();
             return;
         case 'rect': {
-            /* absolute values from the graphical designer: any of x, y, w, h, opacity, zoom, rot */
-            if (['x', 'y', 'w', 'h'].some((k) => msg[k] !== undefined)) {
-                this.adoptWazePlace(which);
-            }
+            /* absolute values from the graphical designer: any of opacity, zoom, rot, fx, fy and, for the cluster map,
+             * x, y, w, h (the HUD map's place and size are waze-on-cluster's) */
             const cur = this.state[which];
-            const next = Object.assign({}, cur, { custom: true, placed: cur.placed || ['x', 'y', 'w', 'h'].some((k) => msg[k] !== undefined) });
-            ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy', 'fe'].forEach((k) => {
+            const next = Object.assign({}, cur, { custom: true });
+            (which === 'hud' ? ['opacity', 'zoom', 'rot', 'fx', 'fy'] : ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy']).forEach((k) => {
                 if (msg[k] !== undefined) {
                     next[k] = num(msg[k], cur[k]);
                 }
@@ -344,15 +320,16 @@ class Daemon {
             return;
         }
         case 'centre':
-            this.adoptWazePlace(which);
-            this.state[which] = centredRect(which, this.state[which]);
-            this.changed();
+            if (which === 'map') {
+                this.state[which] = centredRect(which, this.state[which]);
+                this.changed();
+            }
             return;
         case 'reset':
             if (msg.which === 'hud' || msg.which === 'map') {
                 this.state[msg.which] = defaultRect(msg.which);
             } else {
-                this.state = Object.assign(defaultState(), { mode: this.state.mode });
+                this.state = defaultState();
             }
             this.changed();
             return;

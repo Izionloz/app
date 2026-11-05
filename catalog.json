@@ -6,16 +6,17 @@
             "id": "mgux-hud-ctl",
             "kind": "tool",
             "title": "HUD map (background service)",
-            "description": "Installed with HUD map: puts the CarPlay map on the cluster, the HUD or both and keeps its place, size, brightness, zoom and rotation, between waze-on-cluster and cluster-render",
+            "description": "Installed with HUD map: beside waze-on-cluster's own app, adds brightness, zoom with a focus and rotation to its HUD and cluster maps, and the cluster map's place and size",
             "version": "2.8.0",
             "artifact": {
                 "name": "mgux-hud-ctl@2.8.0.tgz",
-                "size": 14539,
-                "sha256": "4ca210f33ef21c9dd1550abd5c3e28622eb802bddda61040dc323412f5103bb3",
+                "size": 12764,
+                "sha256": "6442a661ba0957e85d78ad7106fe2c62d8a74be481508879d8cc9ad59452f1ce",
                 "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.8.0/mgux-hud-ctl%402.8.0.tgz"
             },
             "requires": {
-                "mgu-deploy": "0.4.0"
+                "mgu-deploy": "0.4.0",
+                "waze-on-cluster": "0.9.0"
             },
             "mguHmi": [
                 "ID7"
@@ -27,7 +28,7 @@
             "id": "hud_designer",
             "kind": "app",
             "title": "HUD map",
-            "description": "The CarPlay map on the HUD and the cluster: drag it, set its width, height, brightness, soft edges, zoom, rotation and zoom focus by touch or with the iDrive controller; settings kept across restarts",
+            "description": "Beside waze-on-cluster's own app: brightness, zoom with a focus and rotation for its HUD and cluster maps, and the cluster map's place and size; settings kept across restarts",
             "version": "1.5.0",
             "artifact": {
                 "name": "hud_designer@1.5.0.tgz",

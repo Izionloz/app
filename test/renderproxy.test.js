@@ -7,7 +7,7 @@ const fs = require('fs');
 const net = require('net');
 const os = require('os');
 const path = require('path');
-const { RenderProxy, Splitter, frame, jsonMsg, DUP, pivot } = require('../native/mgux-hud-ctl/renderproxy.js');
+const { RenderProxy, Splitter, frame, jsonMsg, pivot } = require('../native/mgux-hud-ctl/renderproxy.js');
 
 function frameMsg(ref, size, fill) {
     const body = Buffer.alloc(4 + size, fill);
@@ -99,22 +99,20 @@ function rig(layout) {
     }));
 }
 
-test('proxy: mode both makes a cluster and a HUD layer and sends each frame to both', async () => {
-    const hud = { x: 100, y: 50, w: 400, h: 176, opacity: 0.5, zoom: 1, rot: 10 };
-    const r = await rig({ mode: 'both', hud, map: null });
+test('proxy: a feed of waze-on-cluster is one layer with its frames; the cluster map is placed here only when set', async () => {
+    const map = { x: 100, y: 50, w: 400, h: 176, opacity: 0.5, zoom: 1, rot: 10, fx: 0.5, fy: 0.5, custom: true };
+    const r = await rig({ hud: null, map });
     try {
         r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 3, target: 'map', x: 0, y: 0, w: 1088, h: 480 }));
         r.waze.write(frameMsg(3, 1000, 9));
-        await r.waitUp(4);
-        const layers = r.upMsgs.filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString())).filter((j) => j.op === 'layer');
-        assert.strictEqual(layers.length, 2);
-        assert.deepStrictEqual(layers.map((l) => [l.ref, l.target]), [[3, 'map'], [3 + DUP, 'hud']]);
-        assert.strictEqual(layers[0].w, 1088);
-        assert.deepStrictEqual([layers[1].x, layers[1].y, layers[1].w, layers[1].h], [100, 50, 400, 176]);
-        assert.strictEqual(layers[1].opacity, 0.5);
-        assert.strictEqual(layers[1].rotate, 10);
+        await r.waitUp(2);
+        const layers = jsonOf(r.upMsgs, 0).filter((j) => j.op === 'layer');
+        assert.strictEqual(layers.length, 1, 'one layer, nothing copied to another display');
+        assert.deepStrictEqual([layers[0].ref, layers[0].target, layers[0].x, layers[0].y, layers[0].w, layers[0].h], [3, 'map', 100, 50, 400, 176]);
+        assert.strictEqual(layers[0].opacity, 0.5);
+        assert.strictEqual(layers[0].rotate, 10);
         const frames = r.upMsgs.filter((m) => m.type === 0x46);
-        assert.deepStrictEqual(frames.map((f) => f.body.readUInt32LE(0)).sort(), [3, 3 + DUP].sort());
+        assert.deepStrictEqual(frames.map((f) => f.body.readUInt32LE(0)), [3]);
         frames.forEach((f) => {
             assert.strictEqual(f.body.length, 1004);
             assert.ok(f.body.slice(4).every((b) => b === 9));
@@ -125,7 +123,7 @@ test('proxy: mode both makes a cluster and a HUD layer and sends each frame to b
 });
 
 test('proxy: waze is paused while cluster-render is behind, and resumed when it drains', async () => {
-    const r = await rig({ mode: 'map', hud: null, map: null });
+    const r = await rig({ hud: null, map: null });
     try {
         r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 1, target: 'map' }));
         await r.waitUp(1);
@@ -146,8 +144,8 @@ function jsonOf(msgs, from) {
     return msgs.slice(from).filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString()));
 }
 
-test('proxy: a brightness change and a move are a set (no blink); HUDCTL_LIVE_SET=0 re-makes the layer', async () => {
-    const layout = { mode: 'hud', hud: { x: 100, y: 50, w: 400, h: 176, opacity: 1, zoom: 1, rot: 0 }, map: null };
+test('proxy: a brightness change and a move of the cluster map are a set (no blink); HUDCTL_LIVE_SET=0 re-makes the layer', async () => {
+    const layout = { hud: null, map: { x: 100, y: 50, w: 400, h: 176, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, custom: true } };
     const r = await rig(layout);
     try {
         r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 5, target: 'map', opacity: 0.8 }));
@@ -156,7 +154,7 @@ test('proxy: a brightness change and a move are a set (no blink); HUDCTL_LIVE_SE
         const link = Array.from(r.proxy.links)[0];
 
         let n = r.upMsgs.length;
-        layout.hud = Object.assign({}, layout.hud, { opacity: 0.5 });
+        layout.map = Object.assign({}, layout.map, { opacity: 0.5 });
         link.reconcile();
         await r.waitUp(n + 1);
         assert.deepStrictEqual(jsonOf(r.upMsgs, n), [{ op: 'set', ref: 5, sx: 1, sy: 1, rotate: 0, px: 200, py: 88, opacity: 0.4 }]);
@@ -164,7 +162,7 @@ test('proxy: a brightness change and a move are a set (no blink); HUDCTL_LIVE_SE
         /* a move: one set with the new place, no drop (no blink) */
         n = r.upMsgs.length;
         link.reconcile();                      /* nothing changed: nothing sent */
-        layout.hud = Object.assign({}, layout.hud, { x: 120 });
+        layout.map = Object.assign({}, layout.map, { x: 120 });
         link.reconcile();
         await r.waitUp(n + 1);
         let sent = jsonOf(r.upMsgs, n);
@@ -174,7 +172,7 @@ test('proxy: a brightness change and a move are a set (no blink); HUDCTL_LIVE_SE
         /* HUDCTL_LIVE_SET=0: a drop and a new layer with the last frame replayed */
         process.env.HUDCTL_LIVE_SET = '0';
         n = r.upMsgs.length;
-        layout.hud = Object.assign({}, layout.hud, { x: 140 });
+        layout.map = Object.assign({}, layout.map, { x: 140 });
         link.reconcile();
         await r.waitUp(n + 3);
         sent = jsonOf(r.upMsgs, n);
@@ -197,14 +195,15 @@ test('pivot: the focus shows in the middle when it can, and the zoomed picture s
     assert.strictEqual(pivot(1.2, 0.05), 0);
 });
 
-test('proxy: zoom, turn and focus are a set with the pivot, not a new layer', async () => {
-    const layout = { mode: 'hud', hud: { x: 0, y: 0, w: 400, h: 200, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, map: null };
+test('proxy: zoom, turn and focus of waze-on-cluster\'s HUD layer are a set with the pivot, about its own size', async () => {
+    const layout = { map: null, hud: { x: 0, y: 0, w: 99, h: 99, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 } };
     const r = await rig(layout);
     try {
-        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'map' }));
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'hud', x: 200, y: 140, w: 400, h: 200, vw: 400, vh: 200 }));
         await r.waitUp(1);
         const first = jsonOf(r.upMsgs, 0)[0];
-        assert.deepStrictEqual([first.px, first.py, first.sx], [200, 100, 1]);
+        assert.deepStrictEqual([first.target, first.x, first.y, first.w, first.h, first.px, first.py, first.sx], ['hud', 200, 140, 400, 200, 200, 100, 1],
+            'its own place and size, whatever the HUD rect here says');
         const link = Array.from(r.proxy.links)[0];
         const n = r.upMsgs.length;
         layout.hud = Object.assign({}, layout.hud, { zoom: 2, fx: 0.75, fy: 0.7, rot: 15 });
@@ -213,6 +212,7 @@ test('proxy: zoom, turn and focus are a set with the pivot, not a new layer', as
         const sent = jsonOf(r.upMsgs, n);
         assert.strictEqual(sent.length, 1);
         assert.strictEqual(sent[0].op, 'set');
+        assert.strictEqual(sent[0].x, undefined, 'its place is not touched');
         /* zoom 2, focus 0.75 -> pivot 1 (w 400), focus 0.7 -> pivot 0.9 (h 200) */
         assert.deepStrictEqual([sent[0].sx, sent[0].sy, sent[0].rotate, sent[0].px, sent[0].py], [2, 2, 15, 400, 180]);
     } finally {
@@ -221,7 +221,7 @@ test('proxy: zoom, turn and focus are a set with the pivot, not a new layer', as
 });
 
 test('proxy: the whole layout is sent again with the first frame, on a renderer state change and after waze\'s set', async () => {
-    const layout = { mode: 'hud', hud: { x: 300, y: 120, w: 240, h: 300, opacity: 1, zoom: 2, rot: 0, fx: 0.6, fy: 0.7 }, map: null };
+    const layout = { hud: null, map: { x: 300, y: 120, w: 240, h: 300, opacity: 1, zoom: 2, rot: 0, fx: 0.6, fy: 0.7, custom: true } };
     const r = await rig(layout);
     try {
         r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 4, target: 'map' }));
@@ -245,7 +245,7 @@ test('proxy: the whole layout is sent again with the first frame, on a renderer 
         sets = jsonOf(r.upMsgs, n).filter((j) => j.op === 'set');
         assert.strictEqual(sets.length, 1);
         assert.strictEqual(sets[0].h, 300);
-        /* waze shows the map: its set goes on, then ours with the whole place */
+        /* waze shows the map: its set goes on (the place of the cluster map is ours, so not its), then ours */
         n = r.upMsgs.length;
         r.waze.write(jsonMsg({ op: 'set', ref: 4, visible: 1, x: 0, y: 0, w: 1088, h: 480 }));
         await r.waitUp(n + 2);
@@ -257,117 +257,42 @@ test('proxy: the whole layout is sent again with the first frame, on a renderer 
     }
 });
 
-test('proxy: soft edges are an effect layer above the HUD map that follows it, shows with it and goes with it', async () => {
-    const { FX, FEATHER_FS } = require('../native/mgux-hud-ctl/renderproxy.js');
-    const layout = { mode: 'hud', hud: { x: 200, y: 100, w: 400, h: 200, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0.2 }, map: null };
-    const r = await rig(layout);
-    try {
-        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 6, target: 'map', z: 3, visible: 0 }));
-        await r.waitUp(3);
-        let msgs = jsonOf(r.upMsgs, 0);
-        const fxl = msgs.find((j) => j.ref === 6 + FX && j.op === 'layer');
-        assert.ok(fxl, 'an effect layer is made');
-        assert.deepStrictEqual([fxl.kind, fxl.target, fxl.z, fxl.visible, fxl.x, fxl.y, fxl.w, fxl.h], ['effect', 'hud', 4, 0, 200, 100, 400, 200]);
-        assert.strictEqual(fxl.fs, FEATHER_FS);
-        /* the fade is 0.2 of the shorter side (200 px = 40 px): 40/400 of the width, 40/200 of the height */
-        assert.deepStrictEqual(msgs.find((j) => j.op === 'uniform'), { op: 'uniform', ref: 6 + FX, name: 'u_f', v: '0.1 0.2' });
-
-        /* frames go to the map only */
-        let n = r.upMsgs.length;
-        r.waze.write(frameMsg(6, 16, 1));
-        await r.waitUp(n + 1);
-        assert.ok(r.upMsgs.slice(n).filter((m) => m.type === 0x46).every((m) => m.body.readUInt32LE(0) === 6));
-
-        /* waze shows the map: the edges show too */
-        n = r.upMsgs.length;
-        r.waze.write(jsonMsg({ op: 'set', ref: 6, visible: 1 }));
-        await r.waitUp(n + 2);
-        assert.ok(jsonOf(r.upMsgs, n).some((j) => j.ref === 6 + FX && j.op === 'set' && j.visible === 1));
-
-        /* a move moves the edges; a softer edge is a uniform, not a new layer */
-        const link = Array.from(r.proxy.links)[0];
-        n = r.upMsgs.length;
-        layout.hud = Object.assign({}, layout.hud, { x: 240, fe: 0.1 });
-        link.reconcile();
-        await r.waitUp(n + 3);
-        msgs = jsonOf(r.upMsgs, n);
-        assert.ok(msgs.some((j) => j.ref === 6 + FX && j.op === 'set' && j.x === 240));
-        assert.ok(msgs.some((j) => j.ref === 6 + FX && j.op === 'uniform' && j.v === '0.05 0.1'));
-        assert.ok(!msgs.some((j) => j.ref === 6 + FX && (j.op === 'layer' || j.op === 'drop')));
-
-        /* no soft edges, or the map off the HUD: the effect layer is dropped */
-        n = r.upMsgs.length;
-        layout.hud = Object.assign({}, layout.hud, { fe: 0 });
-        link.reconcile();
-        await r.waitUp(n + 1);
-        assert.ok(jsonOf(r.upMsgs, n).some((j) => j.ref === 6 + FX && j.op === 'drop'));
-        assert.deepStrictEqual(link.fx, {});
-    } finally {
-        r.close();
-    }
-});
-
-test('proxy: with waze-on-cluster 0.9.0 its HUD layer keeps its place until one is set here; nothing is copied', async () => {
-    const { FX } = require('../native/mgux-hud-ctl/renderproxy.js');
-    const layout = { mode: 'both', native: true,
-        hud: { x: 150, y: 90, w: 300, h: 150, opacity: 1, zoom: 2, rot: 0, fx: 0.5, fy: 0.5, fe: 0.2, placed: false },
-        map: { x: 10, y: 20, w: 900, h: 400, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0, custom: true, placed: true } };
+test('proxy: waze-on-cluster\'s HUD layer keeps its place and its moves go on; the cluster map is ours when set; nothing is copied', async () => {
+    const layout = { hud: { x: 1, y: 1, w: 1, h: 1, opacity: 1, zoom: 2, rot: 0, fx: 0.5, fy: 0.5 },
+        map: { x: 10, y: 20, w: 900, h: 400, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, custom: true } };
     const hudRig = await rig(layout);
     const mapRig = await rig(layout);
     try {
         /* the HUD feed: its own connection, the frame already scaled (vw x vh), placed by waze-on-cluster's app */
         hudRig.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'hud', x: 200, y: 140, w: 400, h: 176, vw: 400, vh: 176 }));
         hudRig.waze.write(frameMsg(2, 64, 5));
-        await hudRig.waitUp(4);
+        await hudRig.waitUp(3);
         let msgs = jsonOf(hudRig.upMsgs, 0);
-        const layers = msgs.filter((j) => j.op === 'layer' && j.kind === 'video');
-        assert.strictEqual(layers.length, 1, 'one video layer, no copy for another display');
+        const layers = msgs.filter((j) => j.op === 'layer');
+        assert.strictEqual(layers.length, 1, 'one layer, nothing copied to another display');
         assert.deepStrictEqual([layers[0].ref, layers[0].target, layers[0].x, layers[0].y, layers[0].w, layers[0].h, layers[0].vw],
             [2, 'hud', 200, 140, 400, 176, 400], 'its own place');
         assert.deepStrictEqual([layers[0].sx, layers[0].px, layers[0].py], [2, 200, 88], 'our zoom about the middle of waze\'s size');
         assert.ok(hudRig.upMsgs.filter((m) => m.type === 0x46).every((m) => m.body.readUInt32LE(0) === 2));
-        const fx = msgs.find((j) => j.op === 'layer' && j.ref === 2 + FX);
-        assert.deepStrictEqual([fx.x, fx.y, fx.w, fx.h], [200, 140, 400, 176], 'the soft edges are where waze put the map');
-        const link = Array.from(hudRig.proxy.links)[0];
         assert.deepStrictEqual(hudRig.proxy.hudPlace(), { x: 200, y: 140, w: 400, h: 176 });
 
-        /* its app moves the HUD map (a set with the new place): it goes on, and the soft edges follow */
-        let n = hudRig.upMsgs.length;
+        /* its app moves the HUD map (a set with the new place): it goes on */
+        const n = hudRig.upMsgs.length;
         hudRig.waze.write(jsonMsg({ op: 'set', ref: 2, x: 220, y: 150, w: 400, h: 176 }));
-        await hudRig.waitUp(n + 3);
+        await hudRig.waitUp(n + 2);
         msgs = jsonOf(hudRig.upMsgs, n);
         const moved = msgs.filter((j) => j.op === 'set' && j.ref === 2 && j.x !== undefined);
         assert.ok(moved.length >= 1);
-        assert.deepStrictEqual([moved[0].x, moved[0].y], [220, 150]);
-        assert.ok(msgs.some((j) => j.op === 'set' && j.ref === 2 + FX && j.x === 220 && j.y === 150));
+        assert.deepStrictEqual([moved[0].x, moved[0].y, moved[0].w, moved[0].h], [220, 150, 400, 176]);
         assert.deepStrictEqual(hudRig.proxy.hudPlace(), { x: 220, y: 150, w: 400, h: 176 });
 
-        /* a place set here takes over: our rect, and waze's moves are not passed on */
-        n = hudRig.upMsgs.length;
-        layout.hud = Object.assign({}, layout.hud, { placed: true });
-        link.reconcile();
-        await hudRig.waitUp(n + 3);
-        assert.ok(jsonOf(hudRig.upMsgs, n).some((j) => (j.op === 'layer' || j.op === 'set') && j.ref === 2 && j.x === 150 && j.y === 90 && j.w === 300));
-        n = hudRig.upMsgs.length;
-        hudRig.waze.write(jsonMsg({ op: 'set', ref: 2, x: 500, y: 300, visible: 1 }));
-        await hudRig.waitUp(n + 2);
-        const after = jsonOf(hudRig.upMsgs, n).filter((j) => j.op === 'set' && j.ref === 2);
-        assert.ok(after.length >= 1);
-        assert.ok(after.every((j) => j.x === undefined || j.x === 150), 'waze\'s x is not passed on');
-        assert.ok(after.some((j) => j.visible === 1));
-
-        /* the cluster feed, on its own connection: placed as the cluster map is, not copied to the HUD */
+        /* the cluster feed, on its own connection: our place when it was set, not copied to the HUD */
         mapRig.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 1, target: 'map' }));
         await mapRig.waitUp(1);
         const m = jsonOf(mapRig.upMsgs, 0).filter((j) => j.op === 'layer');
         assert.strictEqual(m.length, 1);
         assert.deepStrictEqual([m[0].target, m[0].x, m[0].y, m[0].w, m[0].h], ['map', 10, 20, 900, 400]);
-
-        /* the layout turning to an older waze-on-cluster (no HUD feed of its own) goes back to copying */
-        layout.native = false;
-        Array.from(mapRig.proxy.links)[0].reconcile();
-        await mapRig.waitUp(4);
-        assert.ok(jsonOf(mapRig.upMsgs, 0).some((j) => j.op === 'layer' && j.ref === 1 + DUP && j.target === 'hud'));
+        assert.strictEqual(mapRig.proxy.hudPlace(), null, 'no HUD layer on that connection');
     } finally {
         hudRig.close();
         mapRig.close();
