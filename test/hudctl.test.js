@@ -72,3 +72,32 @@ test('focus: kept, nudged, held to 0-1 and carried by centre', () => {
     assert.deepStrictEqual([r.fx, r.fy], [0.72, 0.8]);
     assert.deepStrictEqual([ctl.defaultRect('map').fx, ctl.defaultRect('map').fy], [0.5, 0.5]);
 });
+
+test('settings: saved with a backup, read back after a restart, the backup used when the file is bad', () => {
+    const file = path.join(dir, 'state.json');
+    const d = new ctl.Daemon();
+    d.handle({ cmd: 'rect', which: 'hud', x: 300, y: 100, w: 300, h: 132, zoom: 2, fx: 0.67, fy: 0.72 });
+    d.save();
+    assert.ok(fs.existsSync(`${file}.bak`));
+    let l = ctl.loadState();
+    assert.strictEqual(l.from, 'saved');
+    assert.deepStrictEqual([l.state.hud.x, l.state.hud.zoom, l.state.hud.fx], [300, 2, 0.67]);
+    fs.writeFileSync(file, '{"hud":');                 /* a file cut short */
+    l = ctl.loadState();
+    assert.strictEqual(l.from, 'backup');
+    assert.strictEqual(l.state.hud.x, 300);
+    assert.strictEqual(new ctl.Daemon().view().loaded.from, 'backup');
+});
+
+test('settings: a file that cannot be read is not overwritten with the defaults at start', () => {
+    const file = path.join(dir, 'state.json');
+    fs.writeFileSync(file, 'not json');
+    fs.writeFileSync(`${file}.bak`, 'not json either');
+    const d = new ctl.Daemon();
+    assert.strictEqual(d.loaded.from, 'defaults');
+    assert.strictEqual(d.noSavedFiles(), false);
+    /* what start() decides: nothing is written */
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), 'not json');
+    fs.unlinkSync(file);
+    fs.unlinkSync(`${file}.bak`);
+});

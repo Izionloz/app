@@ -3,50 +3,93 @@
  * designer - the HUD map designer's page: layout, drawing and touch. Pure logic (no kit calls but the canvas
  * handed to draw), so it runs the same in a test.
  *
- * Page (1600 x 520): left, a preview of the chosen display (HUD 800 x 480 or the cluster 1088 x 480) with the map's
- * rectangle: drag inside it to move, drag a corner or an edge handle to resize. Right: Show map on (Cluster, HUD,
- * both), Adjusting (HUD map, Cluster map), sliders (size, brightness, zoom, rotate) that follow the finger, and
- * Centre / Reset. Changes go to the helper as the finger moves.
+ * Page (1600 x 520), laid out like the car's own Head-Up Display settings:
+ *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting with its name and value above a
+ *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
+ *  - right, a preview of the chosen display with the map's rectangle: drag inside it to move, a white dot to
+ *    resize, the orange + onto the car (the zoom keeps that point in the middle).
+ * Every change goes to the mgux-hud-ctl helper at once; the helper saves it (it says so under the preview).
  */
 'use strict';
 
 const { CANVAS } = require('./hudclient');
+const V = require('./viet');
 
-const PREV = { x: 24, y: 56, w: 704, h: 452 };      /* the preview panel */
-const RIGHT_X = 756, RIGHT_W = 820;
+const LIST = { x: 24, y: 60, w: 760, h: 452 };     /* the list's window */
+const PREV = { x: 808, y: 60, w: 768, h: 452 };     /* the preview panel */
 const HANDLE_HIT = 38;                              /* touch target radius, px of the page */
-const FOCUS_HIT = 28;                               /* the focus mark's */
-const FOCUS_COLOUR = '#ff9f1a';
+const FOCUS_HIT = 28;
+const SCROLL_START = 14;                            /* a finger moving this far up or down scrolls the list */
 const MAP_ASPECT = 1088 / 480;
 
-const MODES = [['map', 'Cluster'], ['hud', 'HUD'], ['both', 'Cluster + HUD']];
-const WHICH = [['hud', 'HUD map'], ['map', 'Cluster map']];
+const C = {
+    bg: '#0b0c0f', row: '#121318', line: '#2a2c33', text: '#f2f2f2', dim: '#9a9ca3', warn: '#ffb020',
+    red: '#d7141e', redLit: '#ff2f3a', redFill: '#a10f18', track: '#3a3c44', thumb: '#ffffff', focus: '#ff9f1a',
+    map: '#0d2a33', off: '#1a1a1a', accent: '#4fb3d9'
+};
 
-/* sliders: value <-> track fraction; `get` reads the rect, `put` returns the rect patch for a fraction */
+const MODES = [['map', 'Đồng hồ'], ['hud', 'HUD'], ['both', 'Cả hai']];
+const WHICH = [['hud', 'Bản đồ HUD'], ['map', 'Bản đồ đồng hồ']];
+
+const pct = (v) => `${Math.round(v * 100)} %`;
+const round2 = (v) => Math.round(v * 100) / 100;
+
+/* the settings rows of one display: value <-> rect; lim(r) gives [min, max]; `sym` fills the bar from the middle */
 function sliders(which) {
     const c = CANVAS[which];
     return [
-        { key: 'size', label: 'Size', min: 0.1, max: 1, def: which === 'hud' ? 456 / 800 : 1, unit: '%',
-            get: (r) => r.w / c.w, show: (v) => `${Math.round(v * 100)} %`,
-            put: (f, r) => {
-                const w = Math.max(40, Math.round(f * c.w)), h = Math.max(20, Math.round(w / MAP_ASPECT));
+        { key: 'size', label: 'Kích thước', lim: () => [0.1, 1], def: which === 'hud' ? 456 / 800 : 1, step: 0.02, show: pct,
+            get: (r) => r.w / c.w,
+            put: (v, r) => {
+                const w = Math.max(40, Math.round(v * c.w)), h = Math.max(20, Math.round(w / MAP_ASPECT));
                 return { w, h, x: Math.round(r.x + r.w / 2 - w / 2), y: Math.round(r.y + r.h / 2 - h / 2) };
             } },
-        { key: 'bright', label: 'Brightness', min: 0.1, max: 1, def: 1, get: (r) => r.opacity, show: (v) => `${Math.round(v * 100)} %`,
-            put: (f) => ({ opacity: Math.round(f * 100) / 100 }) },
-        { key: 'zoom', label: 'Zoom', min: 0.3, max: 3, def: 1, get: (r) => r.zoom, show: (v) => `${Math.round(v * 100)} %`,
-            put: (f) => ({ zoom: Math.round(f * 100) / 100 }) },
-        { key: 'rot', label: 'Rotate', min: -180, max: 180, def: 0, get: (r) => r.rot, show: (v) => `${Math.round(v)} deg`,
-            put: (f) => ({ rot: Math.round(f) }) }
+        { key: 'bright', label: 'Độ sáng', lim: () => [0.1, 1], def: 1, step: 0.05, show: pct,
+            get: (r) => r.opacity, put: (v) => ({ opacity: round2(v) }) },
+        { key: 'height', label: 'Độ cao', sym: true, step: 4, show: (v) => `${Math.round(v)} px`,
+            lim: (r) => [-(c.h - r.h) / 2, (c.h - r.h) / 2], def: 0,
+            get: (r) => c.h / 2 - (r.y + r.h / 2), put: (v, r) => ({ y: Math.round(c.h / 2 - v - r.h / 2) }) },
+        { key: 'side', label: 'Vị trí ngang', sym: true, step: 4, show: (v) => `${Math.round(v)} px`,
+            lim: (r) => [-(c.w - r.w) / 2, (c.w - r.w) / 2], def: 0,
+            get: (r) => r.x + r.w / 2 - c.w / 2, put: (v, r) => ({ x: Math.round(c.w / 2 + v - r.w / 2) }) },
+        { key: 'zoom', label: 'Thu phóng', lim: () => [0.3, 3], def: 1, step: 0.05, show: pct,
+            get: (r) => r.zoom, put: (v) => ({ zoom: round2(v) }) },
+        { key: 'rot', label: 'Xoay', sym: true, lim: () => [-180, 180], def: 0, step: 1, show: (v) => `${Math.round(v)} độ`,
+            get: (r) => r.rot, put: (v) => ({ rot: Math.round(v) }) },
+        { key: 'fx', label: 'Tâm thu phóng (ngang)', lim: () => [0, 1], def: 0.5, step: 0.02, show: pct,
+            get: (r) => (typeof r.fx === 'number' ? r.fx : 0.5), put: (v) => ({ fx: round2(v) }) },
+        { key: 'fy', label: 'Tâm thu phóng (dọc)', lim: () => [0, 1], def: 0.5, step: 0.02, show: pct,
+            get: (r) => (typeof r.fy === 'number' ? r.fy : 0.5), put: (v) => ({ fy: round2(v) }) }
     ];
+}
+
+/* the list's rows, top to bottom, with their heights */
+function rows(which) {
+    const out = [
+        { kind: 'choice', id: 'mode', label: 'Hiện bản đồ trên', h: 76 },
+        { kind: 'choice', id: 'which', label: 'Đang chỉnh', h: 76 }
+    ];
+    sliders(which).forEach((s) => out.push({ kind: 'slider', id: s.key, def: s, label: s.label, h: 104 }));
+    out.push({ kind: 'action', id: 'centre', label: 'Căn giữa', h: 70 });
+    out.push({ kind: 'action', id: 'reset', label: 'Đặt lại bản đồ này', h: 70 });
+    let y = 0;
+    out.forEach((r) => { r.top = y; y += r.h; });
+    return out;
+}
+
+/* a slider row's bar: − and + targets and the track, page px */
+function bar(x, y, w) {
+    const cy = y + 76;
+    return { cy, minus: { x, y: y + 48, w: 86, h: 56 }, plus: { x: x + w - 86, y: y + 48, w: 86, h: 56 },
+        trackX: x + 92, trackW: w - 184 };
 }
 
 function previewBox(which) {
     const c = CANVAS[which];
-    const maxW = PREV.w - 48, maxH = PREV.h - 96;
+    const maxW = PREV.w - 40, maxH = PREV.h - 130;
     const s = Math.min(maxW / c.w, maxH / c.h);
     const w = c.w * s, h = c.h * s;
-    return { s, x: PREV.x + (PREV.w - w) / 2, y: PREV.y + 58 + (maxH - h) / 2, w, h };
+    return { s, x: PREV.x + (PREV.w - w) / 2, y: PREV.y + 52, w, h };
 }
 
 /* the rectangle's place on the page */
@@ -70,61 +113,55 @@ function handles(p) {
     ];
 }
 
-/* right-hand layout */
-function layout() {
-    const modeW = 262, gap = 17;
-    const L = { modes: [], which: [], sliders: [], buttons: [] };
-    MODES.forEach((m, i) => L.modes.push({ id: m[0], label: m[1], x: RIGHT_X + i * (modeW + gap), y: 92, w: modeW, h: 46 }));
-    WHICH.forEach((m, i) => L.which.push({ id: m[0], label: m[1], x: RIGHT_X + i * (400 + 20), y: 184, w: 400, h: 46 }));
-    for (let i = 0; i < 4; i++) {
-        L.sliders.push({ x: RIGHT_X + 8, y: 246 + i * 52, w: RIGHT_W - 16, h: 48, trackX: RIGHT_X + 230, trackW: RIGHT_W - 230 - 150 });
-    }
-    L.buttons.push({ id: 'centre', label: 'Centre', x: RIGHT_X, y: 462, w: 262, h: 46 });
-    L.buttons.push({ id: 'reset', label: 'Reset this map', x: RIGHT_X + 279, y: 462, w: 262, h: 46 });
-    return L;
-}
-
-/* black or white text, whichever reads on the colour */
-function onColour(c) {
-    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(String(c));
-    if (!m) {
-        return '#ffffff';
-    }
-    const lum = (0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16)) / 255;
-    return lum > 0.6 ? '#101216' : '#ffffff';
-}
-
 const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 class Designer {
     constructor(client) {
         this.client = client;
         this.which = 'hud';
         this.drag = null;
-        this.pressed = null;
-        this.L = layout();
+        this.selected = 2;          /* the row lit red */
+        this.scroll = 0;
     }
 
     rectNow() {
         return this.client.state()[this.which];
     }
 
+    rows() {
+        return rows(this.which);
+    }
+
+    maxScroll() {
+        const rs = this.rows(), last = rs[rs.length - 1];
+        return Math.max(0, last.top + last.h - LIST.h);
+    }
+
+    /* a row's top on the page */
+    rowY(r) {
+        return LIST.y + r.top - this.scroll;
+    }
+
     /* what is under the finger */
     hit(x, y) {
+        if (inRect(LIST, x, y)) {
+            const rs = this.rows();
+            for (let i = 0; i < rs.length; i++) {
+                const r = rs[i], ry = this.rowY(r);
+                if (y >= ry && y < ry + r.h) {
+                    if (r.kind === 'slider') {
+                        const b = bar(LIST.x, ry, LIST.w);
+                        if (inRect(b.minus, x, y)) { return { type: 'row', i, part: 'minus' }; }
+                        if (inRect(b.plus, x, y)) { return { type: 'row', i, part: 'plus' }; }
+                        if (y >= ry + 48 && x >= b.trackX - 16 && x <= b.trackX + b.trackW + 16) { return { type: 'row', i, part: 'track' }; }
+                    }
+                    return { type: 'row', i, part: 'row' };
+                }
+            }
+            return { type: 'list' };
+        }
         const st = this.client.state();
-        for (const m of this.L.modes) {
-            if (inRect(m, x, y)) { return { type: 'mode', id: m.id }; }
-        }
-        for (const w of this.L.which) {
-            if (inRect(w, x, y)) { return { type: 'which', id: w.id }; }
-        }
-        for (const b of this.L.buttons) {
-            if (inRect(b, x, y)) { return { type: 'button', id: b.id }; }
-        }
-        for (let i = 0; i < this.L.sliders.length; i++) {
-            const s = this.L.sliders[i];
-            if (x >= s.trackX - 30 && x <= s.trackX + s.trackW + 30 && y >= s.y && y < s.y + s.h) { return { type: 'slider', i }; }
-        }
         const p = rectOnPage(this.which, st[this.which]);
         const f = focusOnPage(p, st[this.which]);
         if (Math.hypot(f.x - x, f.y - y) < FOCUS_HIT) { return { type: 'focus' }; }
@@ -141,15 +178,22 @@ class Designer {
     touch(phase, x, y) {
         if (phase === 1) {
             const h = this.hit(x, y);
-            this.drag = h ? { hit: h, x0: x, y0: y, r0: Object.assign({}, this.rectNow()) } : null;
-            this.pressed = h && (h.type === 'mode' || h.type === 'which' || h.type === 'button') ? h : null;
-            if (this.drag && this.drag.hit.type === 'slider') {
-                this._slider(this.drag.hit.i, x);
+            this.drag = h ? { hit: h, x0: x, y0: y, s0: this.scroll, r0: Object.assign({}, this.rectNow()), scrolling: false } : null;
+            if (h && h.type === 'row') {
+                this.selected = h.i;
+                if (h.part === 'track') {
+                    this._slider(h.i, x);
+                }
             }
         } else if (phase === 2 && this.drag) {
-            const t = this.drag.hit.type;
-            if (t === 'slider') {
-                this._slider(this.drag.hit.i, x);
+            const d = this.drag, t = d.hit.type;
+            if (t === 'row' && d.hit.part === 'track') {
+                this._slider(d.hit.i, x);
+            } else if (t === 'row' || t === 'list') {
+                if (d.scrolling || Math.abs(y - d.y0) > SCROLL_START) {
+                    d.scrolling = true;
+                    this.scroll = clamp(d.s0 - (y - d.y0), 0, this.maxScroll());
+                }
             } else if (t === 'body' || t === 'handle') {
                 this._moveRect(x, y);
             } else if (t === 'focus') {
@@ -157,42 +201,57 @@ class Designer {
             }
         } else if (phase === 3) {
             const d = this.drag;
-            if (d && this.pressed) {
+            if (d && d.hit.type === 'row' && !d.scrolling) {
                 const h = this.hit(x, y);
-                if (h && h.type === this.pressed.type && h.id === this.pressed.id) {
+                if (h && h.type === 'row' && h.i === d.hit.i && h.part === d.hit.part) {
                     this._tap(h);
                 }
             }
             this.drag = null;
-            this.pressed = null;
         }
     }
 
     _tap(h) {
-        if (h.type === 'mode') {
-            this.client.setMode(h.id);
-        } else if (h.type === 'which') {
-            this.which = h.id;
-        } else if (h.id === 'centre') {
-            this.client.centre(this.which);
-        } else if (h.id === 'reset') {
-            this.client.reset(this.which);
+        const r = this.rows()[h.i];
+        if (r.kind === 'choice' && r.id === 'mode') {
+            const cur = this.client.state().mode;
+            const i = MODES.findIndex((m) => m[0] === cur);
+            this.client.setMode(MODES[(i + 1) % MODES.length][0]);
+        } else if (r.kind === 'choice' && r.id === 'which') {
+            this.which = this.which === 'hud' ? 'map' : 'hud';
+        } else if (r.kind === 'action') {
+            if (r.id === 'centre') { this.client.centre(this.which); } else { this.client.reset(this.which); }
+        } else if (r.kind === 'slider' && (h.part === 'minus' || h.part === 'plus')) {
+            this.step(r.def, h.part === 'plus' ? 1 : -1);
         }
     }
 
-    _slider(i, x) {
-        const s = this.L.sliders[i], def = sliders(this.which)[i];
-        const f = Math.max(0, Math.min(1, (x - s.trackX) / s.trackW));
-        const v = def.min + f * (def.max - def.min);
-        // a small pull to the default, so it is easy to hit
-        const value = Math.abs(v - def.def) < (def.max - def.min) * 0.015 ? def.def : v;
-        this.client.rect(this.which, def.put(value, this.client.state()[this.which]));
+    /* − or + on a setting: one step */
+    step(def, dir) {
+        const cur = this.rectNow();
+        const lim = def.lim(cur);
+        this.client.rect(this.which, def.put(clamp(def.get(cur) + dir * def.step, lim[0], lim[1]), cur));
     }
+
+    _slider(i, x) {
+        const r = this.rows()[i];
+        if (r.kind !== 'slider') {
+            return;
+        }
+        const def = r.def, cur = this.rectNow(), lim = def.lim(cur);
+        const b = bar(LIST.x, this.rowY(r), LIST.w);
+        const f = clamp((x - b.trackX) / b.trackW, 0, 1);
+        const v = lim[0] + f * (lim[1] - lim[0]);
+        // a small pull to the default, so it is easy to hit
+        const value = Math.abs(v - def.def) < (lim[1] - lim[0]) * 0.015 ? def.def : v;
+        this.client.rect(this.which, def.put(value, cur));
+    }
+
     /* the focus follows the finger, held inside the map's rectangle */
     _moveFocus(x, y) {
         const p = rectOnPage(this.which, this.rectNow());
-        const fx = Math.max(0, Math.min(1, (x - p.x) / p.w)), fy = Math.max(0, Math.min(1, (y - p.y) / p.h));
-        this.client.rect(this.which, { fx: Math.round(fx * 100) / 100, fy: Math.round(fy * 100) / 100 });
+        const fx = clamp((x - p.x) / p.w, 0, 1), fy = clamp((y - p.y) / p.h, 0, 1);
+        this.client.rect(this.which, { fx: round2(fx), fy: round2(fy) });
     }
 
     _moveRect(x, y) {
@@ -202,74 +261,103 @@ class Designer {
         const id = d.hit.type === 'body' ? 'move' : d.hit.id;
         if (id === 'move') {
             /* a move keeps the size: only the place is held inside the display */
-            this.client.rect(this.which, { x: Math.round(Math.max(0, Math.min(r0.x + dx, c.w - r0.w))), y: Math.round(Math.max(0, Math.min(r0.y + dy, c.h - r0.h))) });
+            this.client.rect(this.which, { x: Math.round(clamp(r0.x + dx, 0, c.w - r0.w)), y: Math.round(clamp(r0.y + dy, 0, c.h - r0.h)) });
             return;
         }
         let left = r0.x, top = r0.y, right = r0.x + r0.w, bottom = r0.y + r0.h;
-        {
-            if (id.indexOf('l') >= 0) { left += dx; }
-            if (id.indexOf('r') >= 0) { right += dx; }
-            if (id === 't' || id === 'tl' || id === 'tr') { top += dy; }
-            if (id === 'b' || id === 'bl' || id === 'br') { bottom += dy; }
-        }
-        left = Math.max(0, Math.min(left, c.w - 40)); top = Math.max(0, Math.min(top, c.h - 20));
-        right = Math.max(left + 40, Math.min(right, c.w)); bottom = Math.max(top + 20, Math.min(bottom, c.h));
+        if (id.indexOf('l') >= 0) { left += dx; }
+        if (id.indexOf('r') >= 0) { right += dx; }
+        if (id === 't' || id === 'tl' || id === 'tr') { top += dy; }
+        if (id === 'b' || id === 'bl' || id === 'br') { bottom += dy; }
+        left = clamp(left, 0, c.w - 40); top = clamp(top, 0, c.h - 20);
+        right = clamp(right, left + 40, c.w); bottom = clamp(bottom, top + 20, c.h);
         this.client.rect(this.which, { x: Math.round(left), y: Math.round(top), w: Math.round(right - left), h: Math.round(bottom - top) });
     }
 
     /* ---------------- drawing ---------------- */
-    draw(cv, t, G) {
+    draw(cv) {
         const st = this.client.state();
-        const live = this.client.connected();
-        G.panel(cv, t, PREV.x, PREV.y, PREV.w, PREV.h, this.which === 'hud' ? 'HUD  800 x 480' : 'Cluster  1088 x 480');
-        this._drawPreview(cv, t, st);
-        // right side
-        cv.text('SHOW MAP ON', RIGHT_X, 80, 22, t.dim, { literal: true, font: 'bold', spacing: 2 });
-        this.L.modes.forEach((m) => this._pill(cv, t, m, st.mode === m.id, this.pressed && this.pressed.type === 'mode' && this.pressed.id === m.id));
-        cv.text('ADJUSTING', RIGHT_X, 174, 22, t.dim, { literal: true, font: 'bold', spacing: 2 });
-        this.L.which.forEach((m) => this._pill(cv, t, m, this.which === m.id, this.pressed && this.pressed.type === 'which' && this.pressed.id === m.id));
-        const r = st[this.which];
-        sliders(this.which).forEach((def, i) => this._slider_draw(cv, t, this.L.sliders[i], def, def.get(r)));
-        this.L.buttons.forEach((b) => this._button(cv, t, b, this.pressed && this.pressed.type === 'button' && this.pressed.id === b.id));
-        const msg = live ? `${r.w} x ${r.h}  at ${Math.round(r.x)}, ${Math.round(r.y)}` : 'DEMO - helper offline';
-        cv.text(msg, RIGHT_X + 566, 492, 24, live ? t.dim : t.warn, { literal: true });
+        cv.fillRect(0, LIST.y - 4, 1600, 520 - LIST.y + 4, C.bg);
+        this._drawList(cv, st);
+        this._drawPreview(cv, st);
     }
 
-    _pill(cv, t, b, on, down) {
-        cv.roundRect(b.x, b.y, b.w, b.h, 12, on ? t.accent : down ? '#2c2e36' : t.panelTop || '#17181c');
-        cv.strokeRoundRect(b.x, b.y, b.w, b.h, 12, 2, on ? t.accent : t.panelEdge || '#2a2b31');
-        const w = cv.textWidth(b.label, 28, { literal: true, font: 'bold' });
-        cv.text(b.label, b.x + (b.w - w) / 2, b.y + 33, 28, on ? onColour(t.accent) : t.text, { literal: true, font: 'bold' });
+    _drawList(cv, st) {
+        const rs = this.rows(), r = st[this.which];
+        this.scroll = clamp(this.scroll, 0, this.maxScroll());
+        cv.clip(LIST.x, LIST.y, LIST.w, LIST.h);
+        rs.forEach((row, i) => {
+            const y = this.rowY(row);
+            if (y + row.h < LIST.y || y > LIST.y + LIST.h) {
+                return;
+            }
+            const lit = i === this.selected;
+            if (lit) {
+                cv.fillRect(LIST.x, y, LIST.w, row.h, C.redFill);
+                cv.fillRect(LIST.x, y, LIST.w, 3, C.redLit);
+                cv.fillRect(LIST.x, y + row.h - 3, LIST.w, 3, C.redLit);
+            } else {
+                cv.fillRect(LIST.x, y + row.h - 1, LIST.w, 1, C.line);
+            }
+            if (row.kind === 'slider') {
+                this._drawSlider(cv, row, y, r, lit);
+            } else {
+                V.text(cv, row.label, LIST.x + 28, y + row.h / 2 + 11, 31, C.text);
+                let value = '';
+                if (row.id === 'mode') { value = (MODES.find((m) => m[0] === st.mode) || ['', '-'])[1]; }
+                if (row.id === 'which') { value = (WHICH.find((m) => m[0] === this.which) || ['', ''])[1]; }
+                const rx = LIST.x + LIST.w - 30;
+                if (value) {
+                    V.text(cv, value, rx - 26, y + row.h / 2 + 10, 28, lit ? C.text : C.dim, { align: 'right' });
+                }
+                const cy = y + row.h / 2;
+                cv.polyline([[rx - 8, cy - 11], [rx + 3, cy], [rx - 8, cy + 11]], 3, lit ? C.text : C.dim);
+            }
+        });
+        cv.noclip();
+        // scroll bar, as the car's own lists have
+        const max = this.maxScroll();
+        if (max > 0) {
+            const bh = LIST.h * LIST.h / (LIST.h + max), by = LIST.y + (LIST.h - bh) * (this.scroll / max);
+            cv.fillRect(LIST.x + LIST.w + 6, LIST.y, 2, LIST.h, C.line);
+            cv.fillRect(LIST.x + LIST.w + 4, by, 6, bh, C.text);
+        }
     }
 
-    _button(cv, t, b, down) {
-        cv.roundRect(b.x, b.y, b.w, b.h, 12, down ? '#2c2e36' : t.panelTop || '#17181c');
-        cv.strokeRoundRect(b.x, b.y, b.w, b.h, 12, 2, t.panelEdge || '#2a2b31');
-        const w = cv.textWidth(b.label, 26, { literal: true, font: 'bold' });
-        cv.text(b.label, b.x + (b.w - w) / 2, b.y + 32, 26, t.text, { literal: true, font: 'bold' });
+    _drawSlider(cv, row, y, r, lit) {
+        const def = row.def, v = def.get(r), lim = def.lim(r);
+        V.text(cv, row.label, LIST.x + 28, y + 40, 31, C.text);
+        V.text(cv, def.show(v), LIST.x + LIST.w - 30, y + 38, 26, lit ? C.text : C.dim, { align: 'right' });
+        const b = bar(LIST.x, y, LIST.w);
+        // − and +
+        const mx = LIST.x + 44, px = LIST.x + LIST.w - 44;
+        cv.line(mx - 11, b.cy, mx + 11, b.cy, 3, C.text);
+        cv.line(px - 11, b.cy, px + 11, b.cy, 3, C.text);
+        cv.line(px, b.cy - 11, px, b.cy + 11, 3, C.text);
+        // the track: a thin line, the value as red segments (from the middle for a setting about 0), a white thumb
+        const span = lim[1] - lim[0] || 1;
+        const f = clamp((v - lim[0]) / span, 0, 1);
+        cv.fillRect(b.trackX, b.cy - 1, b.trackW, 2, C.track);
+        const from = def.sym ? 0.5 : 0;
+        const a = b.trackX + b.trackW * Math.min(from, f), e = b.trackX + b.trackW * Math.max(from, f);
+        for (let sx = a; sx < e - 1; sx += 20) {
+            cv.fillRect(sx, b.cy - 5, Math.min(16, e - sx), 10, C.red);
+        }
+        const df = clamp((def.def - lim[0]) / span, 0, 1);
+        cv.fillRect(b.trackX + b.trackW * df - 1, b.cy - 12, 2, 24, C.dim);
+        const tx = b.trackX + b.trackW * f;
+        cv.quad([[tx - 9, b.cy + 7], [tx - 3, b.cy - 7], [tx + 13, b.cy - 7], [tx + 7, b.cy + 7]], C.thumb);
     }
 
-    _slider_draw(cv, t, s, def, v) {
-        const f = Math.max(0, Math.min(1, (v - def.min) / (def.max - def.min)));
-        const cy = s.y + s.h / 2;
-        cv.text(def.label, s.x, cy + 9, 28, t.text, { literal: true, font: 'bold' });
-        cv.roundRect(s.trackX, cy - 5, s.trackW, 10, 5, t.track || '#222329');
-        cv.roundRect(s.trackX, cy - 5, Math.max(10, s.trackW * f), 10, 5, t.accent);
-        const df = (def.def - def.min) / (def.max - def.min);
-        cv.fillRect(s.trackX + s.trackW * df - 1.5, cy - 14, 3, 28, t.dim);
-        cv.circle(s.trackX + s.trackW * f, cy, 20, '#ffffff');
-        cv.circle(s.trackX + s.trackW * f, cy, 14, t.accent);
-        const txt = def.show(v);
-        const w = cv.textWidth(txt, 28, { literal: true, font: 'bold' });
-        cv.text(txt, s.trackX + s.trackW + 150 - 20 - w, cy + 9, 28, t.text, { literal: true, font: 'bold' });
-    }
-
-    _drawPreview(cv, t, st) {
+    _drawPreview(cv, st) {
         const b = previewBox(this.which), r = st[this.which];
+        const c = CANVAS[this.which];
+        V.text(cv, `${this.which === 'hud' ? 'HUD' : 'Đồng hồ'}  ${c.w} x ${c.h}`, PREV.x + 20, PREV.y + 32, 26, C.text, { font: 'bold' });
+        V.text(cv, `${Math.round(r.w)} x ${Math.round(r.h)} tại ${Math.round(r.x)}, ${Math.round(r.y)}`, PREV.x + PREV.w - 20, PREV.y + 32, 22,
+            C.dim, { align: 'right' });
         // the display
         cv.roundRect(b.x, b.y, b.w, b.h, 10, '#000000');
-        cv.strokeRoundRect(b.x, b.y, b.w, b.h, 10, 2, t.panelEdge || '#2a2b31');
-        // faint grid
+        cv.strokeRoundRect(b.x, b.y, b.w, b.h, 10, 2, C.line);
         for (let i = 1; i < 8; i++) {
             cv.line(b.x + (b.w * i) / 8, b.y, b.x + (b.w * i) / 8, b.y + b.h, 1, '#14161a');
         }
@@ -278,76 +366,59 @@ class Designer {
         }
         const p = rectOnPage(this.which, r);
         const shown = st.mode === 'both' || st.mode === this.which;
-        // the map: a drawn sample, zoomed and turned like the real one, clipped to its rectangle
-        cv.roundRect(p.x, p.y, p.w, p.h, 6, shown ? '#0d2a33' : '#1a1a1a');
-        cv.alpha(shown ? Math.max(0.25, r.opacity) : 0.35);
-        this._roads(cv, p, r);
-        cv.alpha(1);
-        cv.strokeRoundRect(p.x, p.y, p.w, p.h, 6, 3, shown ? t.accent : t.dim);
+        cv.roundRect(p.x, p.y, p.w, p.h, 6, shown ? C.map : C.off);
+        cv.clip(p.x, p.y, p.w, p.h);
+        this._roads(cv, p, r, shown);
+        cv.noclip();
+        cv.strokeRoundRect(p.x, p.y, p.w, p.h, 6, 3, shown ? C.accent : C.dim);
         if (!shown) {
-            cv.text('not shown on this display', p.x + 12, p.y + 30, 22, t.dim, { literal: true });
+            V.text(cv, 'không hiện trên màn này', p.x + 12, p.y + 30, 20, C.dim);
         }
-        // handles
         handles(p).forEach((h) => {
             cv.circle(h.x, h.y, 13, '#ffffff');
-            cv.circle(h.x, h.y, 9, t.accent);
+            cv.circle(h.x, h.y, 9, C.accent);
         });
         // the focus: a ring with a cross, put on the car so the zoom keeps it in the middle
         const f = focusOnPage(p, r);
-        cv.circle(f.x, f.y, 15, FOCUS_COLOUR);
-        cv.circle(f.x, f.y, 11, shown ? '#0d2a33' : '#1a1a1a');
-        cv.line(f.x - 20, f.y, f.x + 20, f.y, 3, FOCUS_COLOUR);
-        cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, FOCUS_COLOUR);
-        cv.text('Drag the map to move it, a dot to resize, the orange + onto the car.', PREV.x + 24, PREV.y + PREV.h - 14, 22, t.dim, { literal: true });
-    }
-
-    _roads(cv, p, r) {
-        const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
-        const z = r.zoom, ang = (r.rot * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
-        const k = Math.min(p.w, p.h) / 2;
-        const pt = (ux, uy) => [cx + (ux * ca - uy * sa) * k * z * 1.4, cy + (ux * sa + uy * ca) * k * z * 1.4];
-        const road = (pts, w, c) => {
-            for (let i = 0; i + 1 < pts.length; i++) {
-                const seg = clipSegment(pt(pts[i][0], pts[i][1]), pt(pts[i + 1][0], pts[i + 1][1]), p);
-                if (seg) {
-                    cv.line(seg[0], seg[1], seg[2], seg[3], w, c);
-                }
-            }
-        };
-        road([[-2, -0.55], [-0.6, -0.3], [0.3, -0.35], [2, 0.1]], 7, '#2f6f82');
-        road([[-1.6, 0.7], [-0.4, 0.25], [0.5, 0.2], [1.8, 0.8]], 6, '#2f6f82');
-        road([[-0.5, -2], [-0.3, -0.5], [-0.35, 0.4], [-0.1, 2]], 5, '#245a6a');
-        road([[0.9, -2], [0.6, -0.4], [0.5, 0.5], [0.8, 2]], 5, '#245a6a');
-        road([[-2, 0], [2, 0]], 2, '#3a8aa0');
-        road([[0, -2], [0, 2]], 2, '#3a8aa0');
-        // our position: a bright arrow that stays upright on the map
-        cv.quad([[cx, cy - 16], [cx + 11, cy + 12], [cx, cy + 6], [cx - 11, cy + 12]], '#ffffff');
-    }
-}
-
-/* Liang-Barsky: the part of segment a-b inside rectangle p, as [x1, y1, x2, y2], or null */
-function clipSegment(a, b, p) {
-    let t0 = 0, t1 = 1;
-    const dx = b[0] - a[0], dy = b[1] - a[1];
-    const tests = [[-dx, a[0] - p.x], [dx, p.x + p.w - a[0]], [-dy, a[1] - p.y], [dy, p.y + p.h - a[1]]];
-    for (let i = 0; i < 4; i++) {
-        const q = tests[i][0], v = tests[i][1];
-        if (q === 0) {
-            if (v < 0) {
-                return null;
-            }
-        } else {
-            const t = v / q;
-            if (q < 0) {
-                if (t > t1) { return null; }
-                if (t > t0) { t0 = t; }
-            } else {
-                if (t < t0) { return null; }
-                if (t < t1) { t1 = t; }
-            }
+        cv.circle(f.x, f.y, 15, C.focus);
+        cv.circle(f.x, f.y, 11, shown ? C.map : C.off);
+        cv.line(f.x - 20, f.y, f.x + 20, f.y, 3, C.focus);
+        cv.line(f.x, f.y - 20, f.x, f.y + 20, 3, C.focus);
+        // help and whether the settings are kept
+        const ly = b.y + b.h + 34;
+        V.text(cv, 'Kéo để di chuyển, chấm trắng để đổi cỡ, dấu + cam vào vị trí xe.', PREV.x + 20, ly, 21, C.dim);
+        const info = this.client.info ? this.client.info() : { live: false };
+        let saved = 'Chưa kết nối mgux-hud-ctl: chế độ thử', col = C.warn;
+        if (info.live) {
+            const from = info.loaded && info.loaded.from;
+            saved = from === 'saved' ? 'Tự động lưu. Đã khôi phục cài đặt đã lưu.'
+                : from === 'backup' ? 'Tự động lưu. Đã khôi phục từ bản sao lưu.'
+                    : 'Tự động lưu. Lúc khởi động không có cài đặt đã lưu.';
+            col = from === 'saved' || from === 'backup' ? C.dim : C.warn;
         }
+        V.text(cv, saved, PREV.x + 20, ly + 32, 21, col);
     }
-    return [a[0] + t0 * dx, a[1] + t0 * dy, a[0] + t1 * dx, a[1] + t1 * dy];
+
+    _roads(cv, p, r, shown) {
+        const z = r.zoom, ang = (r.rot * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
+        const f = focusOnPage(p, r);
+        /* a sample map, zoomed about the focus like the real one */
+        const k = Math.min(p.w, p.h) / 2;
+        const ox = p.x + p.w / 2, oy = p.y + p.h / 2;
+        const pt = (ux, uy) => {
+            const bx = ox + ux * k * 1.4, by = oy + uy * k * 1.4;
+            const dx = (bx - f.x) * z, dy = (by - f.y) * z;
+            return [f.x + dx * ca - dy * sa, f.y + dx * sa + dy * ca];
+        };
+        const col = shown ? ['#2f6f82', '#245a6a', '#3a8aa0'] : ['#3a3a3a', '#333333', '#444444'];
+        const road = (pts, w, c) => cv.polyline(pts.map((q) => pt(q[0], q[1])), w, c);
+        road([[-2, -0.55], [-0.6, -0.3], [0.3, -0.35], [2, 0.1]], 7, col[0]);
+        road([[-1.6, 0.7], [-0.4, 0.25], [0.5, 0.2], [1.8, 0.8]], 6, col[0]);
+        road([[-0.5, -2], [-0.3, -0.5], [-0.35, 0.4], [-0.1, 2]], 5, col[1]);
+        road([[0.9, -2], [0.6, -0.4], [0.5, 0.5], [0.8, 2]], 5, col[1]);
+        road([[-2, 0], [2, 0]], 2, col[2]);
+        road([[0, -2], [0, 2]], 2, col[2]);
+    }
 }
 
-module.exports = { Designer, sliders, previewBox, rectOnPage, focusOnPage, handles, layout, MODES, WHICH, PREV };
+module.exports = { Designer, sliders, rows, bar, previewBox, rectOnPage, focusOnPage, handles, MODES, WHICH, PREV, LIST };

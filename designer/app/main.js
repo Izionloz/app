@@ -20,7 +20,7 @@ mgu.run({
             const t = ctx.theme();
             const cv = ctx.canvas(1600, 520).clear(t.bg);
             G.frame(cv, t, ['HUD map'], 0, []);
-            ui.draw(cv, t, G);
+            ui.draw(cv);
             return ctx.ui.image('MAIN_GFX', cv);
         });
     },
