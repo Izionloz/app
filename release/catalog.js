@@ -90,6 +90,18 @@ function main() {
         c.artifact = artifact;
         built.push({ id: c.id, version: b.version, built: true, file: path.relative(ROOT, b.file), tag: `${c.id}@${b.version}` });
     });
+    /* a component that requires another built here requires its current version, so installing or updating it
+     * brings that one up to date first (the Store installs what `requires` names first) */
+    const versions = {};
+    catalog.components.forEach((c) => { versions[c.id] = c.version; });
+    catalog.components.forEach((c) => {
+        Object.keys(c.requires || {}).forEach((id) => {
+            if (versions[id] && c.requires[id] !== versions[id]) {
+                problems.push(`${c.id}: requires ${id} ${c.requires[id]}, the catalog has ${versions[id]}`);
+                c.requires[id] = versions[id];
+            }
+        });
+    });
     if (check && problems.length) {
         problems.forEach((p) => console.error(`catalog: ${p}`));
         console.error('catalog: run `node release/catalog.js --out dist` and commit catalog.json');

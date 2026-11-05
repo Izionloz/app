@@ -10,6 +10,8 @@
 const net = require('net');
 
 const HELPER_PATH = '/dev/shm/mgux-hud/ctl.sock';
+/* waze-on-cluster's status (as the older button app showed it): read only, nothing is sent there */
+const WAZE_PATH = '/dev/shm/waze-on-cluster/ctl.sock';
 const RETRY_MS = 1000;
 const SEND_MS = 60;
 const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
@@ -40,11 +42,55 @@ class HudClient {
             try { const o = JSON.parse(process.env.HUDD_DEMO); this.demo = Object.assign(this.demo, o); } catch (e) { /* a preview aid only */ }
         }
         this.onChange = null;
+        this.wazePath = o.wazePath || WAZE_PATH;
+        this.waze = null;              /* waze-on-cluster's socket */
+        this.wazeStatus = null;        /* its last {"ev":"status"} */
+        this.wazeTimer = null;
     }
 
     open() {
         this.wanted = true;
         this._connect();
+        this._connectWaze();
+    }
+
+    _connectWaze() {
+        if (!this.wanted || this.waze) {
+            return;
+        }
+        const s = net.connect(this.wazePath);
+        this.waze = s;
+        let buf = '';
+        s.setEncoding('utf8');
+        s.on('data', (d) => {
+            buf += d;
+            if (buf.length > 65536 && buf.indexOf('\n') < 0) {
+                buf = '';
+            }
+            let i;
+            while ((i = buf.indexOf('\n')) >= 0) {
+                const line = buf.slice(0, i);
+                buf = buf.slice(i + 1);
+                try {
+                    const m = JSON.parse(line);
+                    if (m.ev === 'status') {
+                        this.wazeStatus = m;
+                        this._changed();
+                    }
+                } catch (e) { /* ignored */ }
+            }
+        });
+        s.on('error', () => {});
+        s.on('close', () => {
+            if (this.waze === s) {
+                this.waze = null;
+                this.wazeStatus = null;
+                this._changed();
+                if (this.wanted && !this.wazeTimer) {
+                    this.wazeTimer = setTimeout(() => { this.wazeTimer = null; this._connectWaze(); }, RETRY_MS);
+                }
+            }
+        });
     }
 
     close() {
@@ -53,6 +99,15 @@ class HudClient {
         clearTimeout(this.sendTimer);
         this.sendTimer = null;
         this.pend = { hud: null, map: null };
+        clearTimeout(this.wazeTimer);
+        this.wazeTimer = null;
+        if (this.waze) {
+            const w = this.waze;
+            this.waze = null;
+            w.removeAllListeners('data');
+            w.destroy();
+        }
+        this.wazeStatus = null;
         const s = this.sock;
         this.sock = null;
         this.ready = false;
@@ -70,7 +125,8 @@ class HudClient {
     /* whether the helper is there, and what it says about the saved settings */
     info() {
         const live = this.connected();
-        return { live, loaded: live ? this.hs.loaded : null, savedAt: live ? this.hs.savedAt : null };
+        return { live, loaded: live ? this.hs.loaded : null, savedAt: live ? this.hs.savedAt : null,
+            connections: live ? this.hs.connections : null, note: live ? this.hs.note : '', map: this.wazeStatus };
     }
 
     /* the state to draw: the helper's, else the local demo */

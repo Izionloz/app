@@ -321,6 +321,13 @@ class Display {
         const down = (x) => x === 1 || x === 2;
         const press = down(pb) && !(L && down(L.pb));
         const tilt = TILT[df] && !(L && TILT[L.df] === TILT[df]) ? TILT[df] : null;
+        // an app that takes the controller itself (ctx.onKnob) gets the turn, press and tilt first; what it
+        // does not use (fn returns false) goes on as below (pushed left with nothing there leaves the app)
+        if (this.onKnob && !this.sheet && (d || press || tilt)) {
+            let used = false;
+            try { used = !!this.onKnob({ turn: d, press, tilt }); } catch (e) { this.log.error('knob', e); }
+            if (used) { this.tickHandlers.forEach((fn) => fn()); return; }
+        }
         const tl = this._tabList(), here = Math.max(0, tl.sel >= 0 ? tl.sel : tl.settings);
         if (this.sheet) {
             // pushed up: the header's tabs (the knob along them, press opens one); pushed down: back to the sheet
