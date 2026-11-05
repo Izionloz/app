@@ -146,7 +146,7 @@ function jsonOf(msgs, from) {
     return msgs.slice(from).filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString()));
 }
 
-test('proxy: a brightness change is a set, a move is a new layer with the last frame', async () => {
+test('proxy: a brightness change and a move are a set (no blink); HUDCTL_LIVE_SET=0 re-makes the layer', async () => {
     const layout = { mode: 'hud', hud: { x: 100, y: 50, w: 400, h: 176, opacity: 1, zoom: 1, rot: 0 }, map: null };
     const r = await rig(layout);
     try {
@@ -161,17 +161,28 @@ test('proxy: a brightness change is a set, a move is a new layer with the last f
         await r.waitUp(n + 1);
         assert.deepStrictEqual(jsonOf(r.upMsgs, n), [{ op: 'set', ref: 5, sx: 1, sy: 1, rotate: 0, px: 200, py: 88, opacity: 0.4 }]);
 
+        /* a move: one set with the new place, no drop (no blink) */
         n = r.upMsgs.length;
         link.reconcile();                      /* nothing changed: nothing sent */
         layout.hud = Object.assign({}, layout.hud, { x: 120 });
         link.reconcile();
+        await r.waitUp(n + 1);
+        let sent = jsonOf(r.upMsgs, n);
+        assert.deepStrictEqual(sent.map((j) => j.op), ['set']);
+        assert.deepStrictEqual([sent[0].x, sent[0].y, sent[0].w, sent[0].h, sent[0].opacity], [120, 50, 400, 176, 0.4]);
+
+        /* HUDCTL_LIVE_SET=0: a drop and a new layer with the last frame replayed */
+        process.env.HUDCTL_LIVE_SET = '0';
+        n = r.upMsgs.length;
+        layout.hud = Object.assign({}, layout.hud, { x: 140 });
+        link.reconcile();
         await r.waitUp(n + 3);
-        const sent = jsonOf(r.upMsgs, n);
+        sent = jsonOf(r.upMsgs, n);
         assert.deepStrictEqual(sent.map((j) => j.op), ['drop', 'layer']);
-        assert.strictEqual(sent[1].x, 120);
-        assert.strictEqual(sent[1].opacity, 0.4);
+        assert.strictEqual(sent[1].x, 140);
         assert.strictEqual(r.upMsgs[r.upMsgs.length - 1].type, 0x46, 'the last frame is replayed');
     } finally {
+        delete process.env.HUDCTL_LIVE_SET;
         r.close();
     }
 });

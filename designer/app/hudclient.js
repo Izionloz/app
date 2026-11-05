@@ -67,6 +67,12 @@ class HudClient {
         return this.ready && !!this.hs;
     }
 
+    /* whether the helper is there, and what it says about the saved settings */
+    info() {
+        const live = this.connected();
+        return { live, loaded: live ? this.hs.loaded : null, savedAt: live ? this.hs.savedAt : null };
+    }
+
     /* the state to draw: the helper's, else the local demo */
     state() {
         const s = this.connected() ? this.hs : this.demo;

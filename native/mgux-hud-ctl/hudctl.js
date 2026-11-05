@@ -34,6 +34,7 @@ const PROXY_SOCK = env.HUDCTL_PROXY_SOCK || '/dev/shm/mgux-hud/render.sock';
 const REAL_RENDER = env.HUDCTL_RENDER || '/dev/shm/cluster-render/render.sock';
 const STATE_DIR = env.HUDCTL_STATE_DIR || '/var/opt/mgux-hud';
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
+const BACKUP_FILE = path.join(STATE_DIR, 'state.json.bak');
 const ENV_FILE = path.join(STATE_DIR, 'args.env');
 
 /* the targets' pixels (cluster-render.conf: map 1088x480, hud 800x480) */
@@ -65,8 +66,9 @@ const wrapDeg = (d) => {
     const r = ((Math.round(d) % 360) + 360) % 360;
     return r > 180 ? r - 360 : r;
 };
-/* a burst of changes (a slider drag) is written to flash once, this long after the last one */
-const SAVE_MS = 1000;
+/* a burst of changes (a slider drag) is written to flash once, this long after the last one: short, as the
+ * head unit may lose power soon after the car is switched off */
+const SAVE_MS = 300;
 
 function defaultRect(which) {
     const c = CANVAS[which];
@@ -141,21 +143,39 @@ function writeAtomic(file, data) {
         fs.closeSync(fd);
     }
     fs.renameSync(tmp, file);
+    /* the rename is only on flash once the folder is: without this a power cut soon after a change could
+     * bring the old settings back at the next start */
+    const dfd = fs.openSync(path.dirname(file), 'r');
+    try {
+        fs.fsyncSync(dfd);
+    } finally {
+        fs.closeSync(dfd);
+    }
 }
 
 /* 1.x kept {state: {target, custom, w, h, x, y, ...}, applied}: the HUD part carries over. */
-function loadState() {
-    try {
-        const j = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-        if (j && j.hud && j.map) {
-            return normalise(j);
-        }
-        const old = (j && j.state) || j || {};
-        return normalise({ mode: old.target === 'hud' ? 'hud' : 'map',
-            hud: { custom: old.custom === true, w: old.w, h: old.h, x: old.x, y: old.y } });
-    } catch (e) {
-        return defaultState();
+function parseState(text) {
+    const j = JSON.parse(text);
+    if (j && j.hud && j.map) {
+        return normalise(j);
     }
+    const old = (j && j.state) || j || {};
+    return normalise({ mode: old.target === 'hud' ? 'hud' : 'map',
+        hud: { custom: old.custom === true, w: old.w, h: old.h, x: old.x, y: old.y } });
+}
+
+/* The saved settings, else the backup copy, else the defaults; `from` says which (shown by the apps). */
+function loadState() {
+    const tried = [];
+    for (const [file, from] of [[STATE_FILE, 'saved'], [BACKUP_FILE, 'backup']]) {
+        try {
+            const state = parseState(fs.readFileSync(file, 'utf8'));
+            return { state, from, at: fs.statSync(file).mtime.toISOString() };
+        } catch (e) {
+            tried.push(`${path.basename(file)}: ${e.code || e.message}`);
+        }
+    }
+    return { state: defaultState(), from: 'defaults', at: null, why: tried.join(', ') };
 }
 
 function gidOf(group) {
@@ -180,7 +200,10 @@ function rectView(which, r) {
 
 class Daemon {
     constructor() {
-        this.state = loadState();
+        const loaded = loadState();
+        this.state = loaded.state;
+        this.loaded = { from: loaded.from, at: loaded.at };
+        console.log(`hudctl: settings from ${loaded.from}${loaded.at ? ` (${loaded.at})` : ''}${loaded.why ? `: ${loaded.why}` : ''}`);
         this.clients = new Set();
         this.note = '';
         this.saveError = '';
@@ -211,7 +234,10 @@ class Daemon {
         this.saveTimer = null;
         try {
             mkdirp(STATE_DIR, 0o755);
-            writeAtomic(STATE_FILE, `${JSON.stringify(this.state, null, 2)}\n`);
+            const text = `${JSON.stringify(this.state, null, 2)}\n`;
+            writeAtomic(STATE_FILE, text);
+            writeAtomic(BACKUP_FILE, text);
+            this.savedAt = new Date().toISOString();
             if (this.saveError) {
                 this.saveError = '';
                 this.broadcast();
@@ -233,7 +259,8 @@ class Daemon {
     view() {
         const s = this.state;
         return { ev: 'state', mode: s.mode, hud: rectView('hud', s.hud), map: rectView('map', s.map),
-            connections: this.proxy.stats().connections, note: this.note || this.saveError };
+            connections: this.proxy.stats().connections, note: this.note || this.saveError,
+            loaded: this.loaded, savedAt: this.savedAt || null };
     }
 
     broadcast() {
@@ -325,8 +352,20 @@ class Daemon {
         });
     }
 
+    noSavedFiles() {
+        return !fs.existsSync(STATE_FILE) && !fs.existsSync(BACKUP_FILE);
+    }
+
     start() {
-        try { mkdirp(STATE_DIR, 0o755); this.save(); this.writeArgs(); } catch (e) { console.error(`hudctl: ${e.message}`); }
+        try {
+            mkdirp(STATE_DIR, 0o755);
+            /* the settings file is written now only when that loses nothing: when there was none, or to put the
+             * backup back. A file that could not be read is kept as it is until the next change. */
+            if (this.loaded.from === 'backup' || (this.loaded.from === 'defaults' && this.noSavedFiles())) {
+                this.save();
+            }
+            this.writeArgs();
+        } catch (e) { console.error(`hudctl: ${e.message}`); }
         mkdirp(path.dirname(PROXY_SOCK), 0o755);
         this.proxy.start(gidOf('tm_oap_app'));
         this.listen();
@@ -347,4 +386,4 @@ if (require.main === module) {
     daemon.start();
 }
 
-module.exports = { wrapDeg, normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS };
+module.exports = { wrapDeg, loadState, parseState, normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS };

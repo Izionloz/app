@@ -28,10 +28,10 @@ const DUP = 1000000;                 /* the second layer's ref = the map's ref +
 const MAX_MSG = 5529664 + 64;
 const HIGH_WATER = 2 * MAX_MSG;      /* bytes queued for cluster-render before waze is paused */
 const HUD = 'hud', MAP = 'map';
-/* HUDCTL_LIVE_SET=1: a moved, resized, zoomed or turned layer gets a `set` with its new place instead of
- * being dropped and made again. Off by default until cluster-render is seen to take x/y/w/h, sx/sy and
- * rotate in a `set` (it takes opacity, which is always sent as a `set`). */
-const LIVE_SET = process.env.HUDCTL_LIVE_SET === '1';
+/* A moved or resized layer gets a `set` with its new place: cluster-render's `set` takes x/y/w/h and re-places
+ * the layer (server.cpp apply() -> Compositor::changed() -> VideoLayer::place()), so the map follows a drag
+ * without a blink. HUDCTL_LIVE_SET=0 (an older cluster-render that does not) drops and re-makes it instead. */
+const liveSet = () => process.env.HUDCTL_LIVE_SET !== '0';
 
 /* the layer's brightness: a display's opacity setting, 1 when it has none */
 function opacityOf(rect) {
@@ -351,8 +351,8 @@ class Link {
     }
 
     /* Brings the real layers to the wanted ones. A changed target is a drop and a new layer (with the last
-     * frame replayed), a changed rectangle too (unless HUDCTL_LIVE_SET); zoom, turn, focus and brightness are
-     * a `set` (cluster-render takes any layer field in a `set`), so the map does not blink while they move. */
+     * frame replayed). A changed rectangle, zoom, turn, focus or brightness is a `set` (cluster-render takes any
+     * layer field in a `set`), so the map does not blink while they move. */
     reconcile() {
         if (this.ref === null || !this.base || this.closed) {
             return;
@@ -384,14 +384,14 @@ class Link {
                 }
                 return;
             }
-            if (was && LIVE_SET && was.rect && d.rect) {
+            if (was && liveSet() && was.rect && d.rect) {
                 this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h }, look)));
                 this.actual[d.ref] = { target: d.target, place, look: lookKey, rect: true, opacity: d.opacity };
                 return;
             }
             if (was) {
-                /* cluster-render takes a video layer's place from its `layer` message: a changed
-                 * rectangle is a drop and a new layer with the last frame replayed, which shows at once */
+                /* from waze's own place to a rectangle (or back), or HUDCTL_LIVE_SET=0: a drop and a new
+                 * layer with the last frame replayed, which shows at once */
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
             }
             this.toUp(jsonMsg(this.layerMessage(d)));
