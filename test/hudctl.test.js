@@ -11,6 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hudctl-'));
 process.env.HUDCTL_STATE_DIR = dir;
 process.env.HUDCTL_SOCK = path.join(dir, 'ctl.sock');
 process.env.HUDCTL_PROXY_SOCK = path.join(dir, 'render.sock');
+process.env.HUDCTL_WAZE_STATUS = path.join(dir, 'waze-status.json');
 const ctl = require('../native/mgux-hud-ctl/hudctl.js');
 
 test.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -76,16 +77,16 @@ test('focus: kept, nudged, held to 0-1 and carried by centre', () => {
 test('settings: saved with a backup, read back after a restart, the backup used when the file is bad', () => {
     const file = path.join(dir, 'state.json');
     const d = new ctl.Daemon();
-    d.handle({ cmd: 'rect', which: 'hud', x: 300, y: 100, w: 300, h: 132, zoom: 2, fx: 0.67, fy: 0.72 });
+    d.handle({ cmd: 'rect', which: 'map', x: 300, y: 100, w: 300, h: 132, zoom: 2, fx: 0.67, fy: 0.72 });
     d.save();
     assert.ok(fs.existsSync(`${file}.bak`));
     let l = ctl.loadState();
     assert.strictEqual(l.from, 'saved');
-    assert.deepStrictEqual([l.state.hud.x, l.state.hud.zoom, l.state.hud.fx], [300, 2, 0.67]);
+    assert.deepStrictEqual([l.state.map.x, l.state.map.zoom, l.state.map.fx], [300, 2, 0.67]);
     fs.writeFileSync(file, '{"hud":');                 /* a file cut short */
     l = ctl.loadState();
     assert.strictEqual(l.from, 'backup');
-    assert.strictEqual(l.state.hud.x, 300);
+    assert.strictEqual(l.state.map.x, 300);
     assert.strictEqual(new ctl.Daemon().view().loaded.from, 'backup');
 });
 
@@ -102,10 +103,59 @@ test('settings: a file that cannot be read is not overwritten with the defaults 
     fs.unlinkSync(`${file}.bak`);
 });
 
-test('soft edges: 0.15 on the HUD by default, none on the cluster, held to 0-0.45', () => {
-    assert.strictEqual(ctl.defaultRect('hud').fe, 0.15);
-    assert.strictEqual(ctl.normaliseRect('hud', {}).fe, 0.15);
-    assert.strictEqual(ctl.normaliseRect('map', { fe: 0.3 }).fe, 0);
-    assert.strictEqual(ctl.normaliseRect('hud', { fe: 0.9 }).fe, 0.45);
-    assert.strictEqual(ctl.adjustRect('hud', ctl.normaliseRect('hud', { fe: 0.2 }), { dfe: -0.05 }).fe, 0.15);
+/* waze-on-cluster writes its status every second to a file; the helper only reads it */
+const STATUS = process.env.HUDCTL_WAZE_STATUS;
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+const writeStatus = (st) => fs.writeFileSync(STATUS, `${JSON.stringify(Object.assign({ ev: 'status' }, st))}\n`);
+
+test('waze: the status file tells a 0.9.0 (hud_state) from an older one and from none; nothing is ever sent', () => {
+    const { WazeStatus } = require('../native/mgux-hud-ctl/wazestatus.js');
+    let changes = 0;
+    const w = new WazeStatus({ file: STATUS, onChange: () => { changes++; } });
+    try { fs.unlinkSync(STATUS); } catch (e) { /* none */ }
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().connected], [false, false]);
+    writeStatus({ state: 'showing', target: 'map' });
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().connected, w.summary().state], [false, true, 'showing']);
+    writeStatus({ state: 'showing', cluster: 1, hud: 1, hud_state: 'idle', hud_width_pct: 0 });
+    w.poll();
+    assert.deepStrictEqual([w.native(), w.summary().hud, w.summary().hudState], [true, 1, 'idle']);
+    const n = changes;
+    w.poll();
+    assert.strictEqual(changes, n, 'no change, no report');
+    const old = new Date(Date.now() - 60000);
+    fs.utimesSync(STATUS, old, old);                  /* waze-on-cluster stopped writing it */
+    w.poll();
+    assert.strictEqual(w.native(), false);
+    assert.strictEqual(w.summary().connected, false);
+    fs.unlinkSync(STATUS);
 });
+
+test('waze: the HUD map is shown where waze-on-cluster has it; its place and size are not ours to change, its look is', () => {
+    const d = new ctl.Daemon();
+    d.proxy.hudPlace = () => ({ x: 300, y: 120, w: 200, h: 88 });
+    assert.deepStrictEqual([d.view().hud.x, d.view().hud.y, d.view().hud.w, d.view().hud.h], [300, 120, 200, 88]);
+    /* a place or size sent for the HUD is ignored, a look is kept */
+    d.handle({ cmd: 'rect', which: 'hud', x: 10, y: 10, w: 500, h: 300, zoom: 2 });
+    assert.strictEqual(d.state.hud.zoom, 2);
+    assert.deepStrictEqual([d.view().hud.x, d.view().hud.w], [300, 200]);
+    assert.notStrictEqual(d.state.hud.w, 500);
+    d.handle({ cmd: 'adjust', which: 'hud', dx: 40, dw: 40, dop: -0.1, drot: 5 });
+    assert.deepStrictEqual([d.state.hud.opacity, d.state.hud.rot], [0.9, 5]);
+    assert.deepStrictEqual([d.state.hud.x, d.state.hud.w], [ctl.defaultRect('hud').x, ctl.defaultRect('hud').w]);
+    d.handle({ cmd: 'centre', which: 'hud' });          /* nothing for the HUD: its own app has Centre */
+    assert.strictEqual(d.state.hud.x, ctl.defaultRect('hud').x);
+    /* the cluster map's place is ours */
+    d.handle({ cmd: 'rect', which: 'map', x: 100, y: 20, w: 600, h: 300 });
+    assert.deepStrictEqual([d.state.map.x, d.state.map.w, d.state.map.custom], [100, 600, true]);
+    assert.strictEqual(d.layout().map.x, 100);
+    assert.strictEqual(d.layout().hud.zoom, 2);
+    d.handle({ cmd: 'reset', which: 'hud' });
+    assert.strictEqual(d.state.hud.zoom, 1);
+    /* there is no mode any more, and no command to set one */
+    assert.strictEqual(d.view().mode, undefined);
+    d.handle({ cmd: 'set', mode: 'hud' });
+    assert.ok(d.note);
+});
+

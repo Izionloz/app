@@ -1,8 +1,8 @@
 {
   "id": "hud_designer",
   "title": "HUD map",
-  "description": "The CarPlay map on the HUD and the cluster: drag it, set its width, height, brightness, soft edges, zoom, rotation and zoom focus by touch or with the iDrive controller; settings kept across restarts",
-  "version": "1.4.0",
+  "description": "Beside waze-on-cluster's own app: brightness, zoom with a focus and rotation for its HUD and cluster maps, and the cluster map's place and size; settings kept across restarts",
+  "version": "1.5.0",
   "vendor": "custom",
   "loggingId": "OA9H",
   "iconGlyph": "HUD",
