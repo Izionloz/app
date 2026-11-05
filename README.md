@@ -18,12 +18,30 @@ The map shows only while CarPlay is navigating (the phone draws nothing otherwis
 Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct connection.
 
 ## Releases (this repository's Store source)
-- tag `mgux-hud-ctl@2.4.0`: `mgux-hud-ctl@2.4.0.tgz`
+- tag `mgux-hud-ctl@2.4.1`: `mgux-hud-ctl@2.4.1.tgz`
 - tag `mgux_hud_map@2.3.0`: `mgux_hud_map@2.3.0.tgz`
 - tag `hud_designer@1.0.1`: `hud_designer@1.0.1.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
+
+To release: change the code, bump the component's version (`native/<id>/component.json` or
+`apps/<id>/mgu-app.json`), run `node release/catalog.js --out dist` and commit `catalog.json`. On `main`, the
+`release` workflow then builds the artifacts (reproducibly: the same bytes as `catalog.json` names), makes the
+missing `<id>@<version>` releases and puts `catalog.json` on the `catalog` release. CI fails when the code changed
+and the version did not. The designer is not built in CI (it needs the kit and the unit's oap-sdk): build it as in
+`designer/README.md` and upload it to a release `hud_designer@<version>` by hand.
+
+### Moving the map without a blink (to try)
+A brightness change is sent to cluster-render as a `set`. A move, resize, zoom or turn drops the layer and makes it
+again (with the last frame replayed). To try sending those as a `set` too, on the head unit:
+```
+mkdir -p /etc/systemd/system/mgux-hud-ctl.service.d
+printf '[Service]\nEnvironment=HUDCTL_LIVE_SET=1\n' > /etc/systemd/system/mgux-hud-ctl.service.d/live-set.conf
+systemctl daemon-reload && systemctl restart mgux-hud-ctl
+```
+If the map then does not move when you move it, cluster-render does not take a place in a `set`: remove the file
+and restart the helper again.
 
 ## Build
 ```

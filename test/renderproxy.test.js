@@ -141,3 +141,37 @@ test('proxy: waze is paused while cluster-render is behind, and resumed when it 
         r.close();
     }
 });
+
+function jsonOf(msgs, from) {
+    return msgs.slice(from).filter((m) => m.type === 0x4A).map((m) => JSON.parse(m.body.toString()));
+}
+
+test('proxy: a brightness change is a set, a move is a new layer with the last frame', async () => {
+    const layout = { mode: 'hud', hud: { x: 100, y: 50, w: 400, h: 176, opacity: 1, zoom: 1, rot: 0 }, map: null };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 5, target: 'map', opacity: 0.8 }));
+        r.waze.write(frameMsg(5, 100, 1));
+        await r.waitUp(2);
+        const link = Array.from(r.proxy.links)[0];
+
+        let n = r.upMsgs.length;
+        layout.hud = Object.assign({}, layout.hud, { opacity: 0.5 });
+        link.reconcile();
+        await r.waitUp(n + 1);
+        assert.deepStrictEqual(jsonOf(r.upMsgs, n), [{ op: 'set', ref: 5, opacity: 0.4 }]);
+
+        n = r.upMsgs.length;
+        link.reconcile();                      /* nothing changed: nothing sent */
+        layout.hud = Object.assign({}, layout.hud, { x: 120 });
+        link.reconcile();
+        await r.waitUp(n + 3);
+        const sent = jsonOf(r.upMsgs, n);
+        assert.deepStrictEqual(sent.map((j) => j.op), ['drop', 'layer']);
+        assert.strictEqual(sent[1].x, 120);
+        assert.strictEqual(sent[1].opacity, 0.4);
+        assert.strictEqual(r.upMsgs[r.upMsgs.length - 1].type, 0x46, 'the last frame is replayed');
+    } finally {
+        r.close();
+    }
+});

@@ -1,0 +1,49 @@
+name: release
+# Publishes what catalog.json names: for each component built from this repository whose release
+# (tag <id>@<version>) is not there yet, a release with its artifact; then catalog.json, with this
+# commit, on the `catalog` release the Store reads. Runs on main, by hand, or on a pushed tag release-*.
+on:
+  push:
+    branches: [main]
+    tags: ['release-*']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: release
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Build and check the artifacts against catalog.json
+        run: mkdir -p dist && node release/catalog.js --out dist --check --commit "$GITHUB_SHA" --write dist/catalog.json > dist/built.json
+      - name: Releases for new versions
+        run: |
+          node -e 'JSON.parse(require("fs").readFileSync("dist/built.json","utf8")).filter(b=>b.built).forEach(b=>console.log(b.tag+" "+b.file))' |
+          while read -r tag file; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "$tag: already released"
+            else
+              gh release create "$tag" "$file" --target "$GITHUB_SHA" --title "$tag" --notes "Built from $GITHUB_SHA by the release workflow."
+            fi
+          done
+      - name: Components not built here must already be released
+        run: |
+          node -e 'JSON.parse(require("fs").readFileSync("dist/built.json","utf8")).filter(b=>!b.built).forEach(b=>console.log(b.id+"@"+b.version))' |
+          while read -r tag; do
+            gh release view "$tag" >/dev/null 2>&1 || echo "::warning::$tag is in catalog.json but has no release: build and upload it (see designer/README.md)"
+          done
+      - name: Catalog
+        run: |
+          if gh release view catalog >/dev/null 2>&1; then
+            gh release upload catalog dist/catalog.json --clobber
+            gh release edit catalog --draft=false
+          else
+            gh release create catalog dist/catalog.json --title Catalog --notes "The Store's catalog of this repository."
+          fi

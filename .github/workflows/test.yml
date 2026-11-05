@@ -16,3 +16,5 @@ jobs:
       - run: npx --yes acorn@8.11.3 --ecma2017 --silent native/mgux-hud-ctl/renderproxy.js
       - run: npx --yes acorn@8.11.3 --ecma2017 --silent designer/app/hudclient.js
       - run: npx --yes acorn@8.11.3 --ecma2017 --silent apps/mgux_hud_map/src/hud_control.js
+      # the artifacts built from this tree must be the ones catalog.json names (a code change needs a version bump)
+      - run: node release/catalog.js --out dist --check

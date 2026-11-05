@@ -28,6 +28,10 @@ const DUP = 1000000;                 /* the second layer's ref = the map's ref +
 const MAX_MSG = 5529664 + 64;
 const HIGH_WATER = 2 * MAX_MSG;      /* bytes queued for cluster-render before waze is paused */
 const HUD = 'hud', MAP = 'map';
+/* HUDCTL_LIVE_SET=1: a moved, resized, zoomed or turned layer gets a `set` with its new place instead of
+ * being dropped and made again. Off by default until cluster-render is seen to take x/y/w/h, sx/sy and
+ * rotate in a `set` (it takes opacity, which is always sent as a `set`). */
+const LIVE_SET = process.env.HUDCTL_LIVE_SET === '1';
 
 /* the layer's brightness: a display's opacity setting, 1 when it has none */
 function opacityOf(rect) {
@@ -317,7 +321,7 @@ class Link {
             msg.rotate = d.rot;
         }
         if (d.opacity !== 1) {
-            msg.opacity = Math.round((typeof this.cur.opacity === 'number' ? this.cur.opacity : 1) * d.opacity * 1000) / 1000;
+            msg.opacity = this.layerOpacity(d);
         }
         return msg;
     }
@@ -338,29 +342,43 @@ class Link {
             }
         });
         want.forEach((d) => {
-            const key = `${d.rect ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : ''}@${d.opacity}z${d.zoom}r${d.rot}`;
+            const place = `${d.rect ? `${d.rect.x},${d.rect.y},${d.rect.w},${d.rect.h}` : ''}z${d.zoom}r${d.rot}`;
             const cur = this.actual[d.ref];
             if (cur && cur.target !== d.target) {
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
                 delete this.actual[d.ref];
             }
-            if (!this.actual[d.ref]) {
-                this.toUp(jsonMsg(this.layerMessage(d)));
-                this.actual[d.ref] = { target: d.target, rect: key, opacity: d.opacity };
-                if (this.lastFrame) {
-                    this.sendFrame(d.ref, this.lastFrame);
+            const was = this.actual[d.ref];
+            if (was && was.place === place) {
+                if (was.opacity !== d.opacity) {
+                    /* only the brightness changed: a `set`, so the map does not blink while the bar moves */
+                    this.toUp(jsonMsg({ op: 'set', ref: d.ref, opacity: this.layerOpacity(d) }));
+                    was.opacity = d.opacity;
                 }
-            } else if (this.actual[d.ref].rect !== key) {
+                return;
+            }
+            if (was && LIVE_SET && was.rect && d.rect) {
+                this.toUp(jsonMsg({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h,
+                    sx: d.zoom, sy: d.zoom, rotate: d.rot, opacity: this.layerOpacity(d) }));
+                this.actual[d.ref] = { target: d.target, place, rect: true, opacity: d.opacity };
+                return;
+            }
+            if (was) {
                 /* cluster-render takes a video layer's place from its `layer` message: a changed
                  * rectangle is a drop and a new layer with the last frame replayed, which shows at once */
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
-                this.toUp(jsonMsg(this.layerMessage(d)));
-                this.actual[d.ref] = { target: d.target, rect: key, opacity: d.opacity };
-                if (this.lastFrame) {
-                    this.sendFrame(d.ref, this.lastFrame);
-                }
+            }
+            this.toUp(jsonMsg(this.layerMessage(d)));
+            this.actual[d.ref] = { target: d.target, place, rect: !!d.rect, opacity: d.opacity };
+            if (this.lastFrame) {
+                this.sendFrame(d.ref, this.lastFrame);
             }
         });
+    }
+
+    /* the layer's opacity: waze's own (from its `set`s) times the display's brightness setting */
+    layerOpacity(d) {
+        return Math.round((typeof this.cur.opacity === 'number' ? this.cur.opacity : 1) * d.opacity * 1000) / 1000;
     }
 
     fullW(target) { return target === HUD ? 800 : 1088; }
