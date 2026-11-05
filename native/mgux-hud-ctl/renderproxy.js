@@ -26,6 +26,7 @@ const fs = require('fs');
 
 const DUP = 1000000;                 /* the second layer's ref = the map's ref + DUP */
 const MAX_MSG = 5529664 + 64;
+const HIGH_WATER = 2 * MAX_MSG;      /* bytes queued for cluster-render before waze is paused */
 const HUD = 'hud', MAP = 'map';
 
 /* the layer's brightness: a display's opacity setting, 1 when it has none */
@@ -52,28 +53,55 @@ function jsonMsg(obj) {
     return frame(0x4A, Buffer.from(JSON.stringify(obj), 'utf8'));
 }
 
-/* Splits a byte stream into whole messages {type, body, raw}. */
+/* Splits a byte stream into whole messages {type, body, raw}. A frame of several MB comes in many
+ * socket chunks: they are kept in a list and joined once the whole message is there, not re-copied
+ * on every chunk. */
 class Splitter {
     constructor(onMessage, onBad) {
-        this.buf = Buffer.alloc(0);
+        this.chunks = [];
+        this.len = 0;                      /* bytes held in chunks */
+        this.need = 0;                     /* bytes of the message being collected, 0 = header not read yet */
         this.onMessage = onMessage;
         this.onBad = onBad;
     }
 
+    /* the first n bytes held, as one buffer (the chunk list then starts with it) */
+    head(n) {
+        if (this.chunks[0].length < n) {
+            this.chunks = [Buffer.concat(this.chunks, this.len)];
+        }
+        return this.chunks[0];
+    }
+
     push(chunk) {
-        this.buf = this.buf.length ? Buffer.concat([this.buf, chunk]) : chunk;
-        while (this.buf.length >= 5) {
-            const len = this.buf.readUInt32LE(0);
-            if (len < 1 || len > MAX_MSG) {
-                this.onBad(new Error(`bad message length ${len}`));
-                this.buf = Buffer.alloc(0);
+        if (!chunk.length) {
+            return;
+        }
+        this.chunks.push(chunk);
+        this.len += chunk.length;
+        while (this.len >= 5) {
+            if (!this.need) {
+                const len = this.head(5).readUInt32LE(0);
+                if (len < 1 || len > MAX_MSG) {
+                    this.chunks = [];
+                    this.len = 0;
+                    this.onBad(new Error(`bad message length ${len}`));
+                    return;
+                }
+                this.need = 4 + len;
+            }
+            if (this.len < this.need) {
                 return;
             }
-            if (this.buf.length < 4 + len) {
-                return;
+            const buf = this.head(this.need);
+            const raw = buf.slice(0, this.need);
+            const rest = buf.slice(this.need);
+            this.chunks.shift();
+            if (rest.length) {
+                this.chunks.unshift(rest);
             }
-            const raw = this.buf.slice(0, 4 + len);
-            this.buf = this.buf.slice(4 + len);
+            this.len -= this.need;
+            this.need = 0;
             this.onMessage({ type: raw.readUInt8(4), body: raw.slice(5), raw });
         }
     }
@@ -88,6 +116,8 @@ class Link {
         this.up = net.connect(upstreamPath);
         this.upReady = false;
         this.pending = [];                 /* client bytes before the upstream connected */
+        this.pendingBytes = 0;
+        this.paused = false;               /* waze's socket is paused until the upstream catches up */
         this.base = null;                  /* waze's layer message for its video layer */
         this.cur = null;                   /* that message plus every later `set` of waze's (visible, opacity, ...) */
         this.ref = null;
@@ -98,9 +128,15 @@ class Link {
         this.fromUp = new Splitter((m) => this.onUp(m), (e) => this.fail(e));
         this.up.on('connect', () => {
             this.upReady = true;
-            this.pending.forEach((b) => this.up.write(b));
+            const queued = this.pending;
             this.pending = [];
+            this.pendingBytes = 0;
+            queued.forEach((b) => this.toUp(b));
+            if (this.paused && this.up.bufferSize < HIGH_WATER) {
+                this.resume();
+            }
         });
+        this.up.on('drain', () => this.resume());
         this.up.on('data', (d) => this.fromUp.push(d));
         this.up.on('error', () => this.close());
         this.up.on('close', () => this.close());
@@ -126,14 +162,36 @@ class Link {
         }
     }
 
+    /* Writes to cluster-render. When it falls behind (a slow upstream, or not connected yet), waze's
+     * socket is paused until the upstream drains, so frames do not pile up in memory. */
     toUp(buf) {
         if (this.closed) {
             return;
         }
         if (this.upReady) {
-            this.up.write(buf);
+            if (!this.up.write(buf) && this.up.bufferSize >= HIGH_WATER) {
+                this.pause();
+            }
         } else {
             this.pending.push(buf);
+            this.pendingBytes += buf.length;
+            if (this.pendingBytes >= HIGH_WATER) {
+                this.pause();
+            }
+        }
+    }
+
+    pause() {
+        if (!this.paused && !this.closed) {
+            this.paused = true;
+            this.client.pause();
+        }
+    }
+
+    resume() {
+        if (this.paused && !this.closed) {
+            this.paused = false;
+            this.client.resume();
         }
     }
 
@@ -219,9 +277,12 @@ class Link {
             this.toUp(raw);
             return;
         }
-        const copy = Buffer.from(raw);
-        copy.writeUInt32LE(ref, 5);
-        this.toUp(copy);
+        /* the same frame for another layer: a new header with that layer's ref, then the same pixels
+         * (no copy of the whole frame) */
+        const head = Buffer.from(raw.slice(0, 9));
+        head.writeUInt32LE(ref, 5);
+        this.toUp(head);
+        this.toUp(raw.slice(9));
     }
 
     /* ---- what the layers should be ---- */

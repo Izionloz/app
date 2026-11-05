@@ -1,0 +1,18 @@
+name: test
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      # the head unit runs Node 8: the shipped files must at least parse with its syntax
+      - run: npx --yes acorn@8.11.3 --ecma2017 --silent native/mgux-hud-ctl/hudctl.js
+      - run: npx --yes acorn@8.11.3 --ecma2017 --silent native/mgux-hud-ctl/renderproxy.js
+      - run: npx --yes acorn@8.11.3 --ecma2017 --silent designer/app/hudclient.js
+      - run: npx --yes acorn@8.11.3 --ecma2017 --silent apps/mgux_hud_map/src/hud_control.js

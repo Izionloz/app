@@ -50,6 +50,9 @@ class HudClient {
     close() {
         this.wanted = false;
         clearTimeout(this.timer);
+        clearTimeout(this.sendTimer);
+        this.sendTimer = null;
+        this.pend = { hud: null, map: null };
         const s = this.sock;
         this.sock = null;
         this.ready = false;
@@ -142,10 +145,11 @@ class HudClient {
         local.y = clamp(local.y, 0, c.h - local.h);
         const target = this.connected() ? this.hs : this.demo;
         target[which] = Object.assign({}, target[which], local);
-        this.pend[which] = Object.assign(this.pend[which] || {}, patch);
         if (!this.connected()) {
+            /* demo only: nothing is queued, or a later connection would send these old changes */
             return;
         }
+        this.pend[which] = Object.assign(this.pend[which] || {}, patch);
         if (!this.sendTimer) {
             this.sendTimer = setTimeout(() => {
                 this.sendTimer = null;

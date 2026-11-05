@@ -59,6 +59,13 @@ function mkdirp(dir, mode) {
 const even = (n) => Math.round(n / 2) * 2;
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const num = (v, def) => (Number.isFinite(Number(v)) ? Number(v) : def);
+/* an angle in -180..180: turning past one end comes round from the other (190 -> -170) */
+const wrapDeg = (d) => {
+    const r = ((Math.round(d) % 360) + 360) % 360;
+    return r > 180 ? r - 360 : r;
+};
+/* a burst of changes (a slider drag) is written to flash once, this long after the last one */
+const SAVE_MS = 1000;
 
 function defaultRect(which) {
     const c = CANVAS[which];
@@ -80,7 +87,7 @@ function normaliseRect(which, r) {
         custom: src.custom === true,
         opacity: clamp(Math.round(num(src.opacity, 1) * 100) / 100, 0.1, 1),
         zoom: clamp(Math.round(num(src.zoom, 1) * 100) / 100, 0.3, 3),
-        rot: clamp(Math.round(num(src.rot, 0)), -180, 180),
+        rot: wrapDeg(num(src.rot, 0)),
         w, h,
         x: clamp(even(num(src.x, (c.w - w) / 2)), 0, c.w - w),
         y: clamp(even(num(src.y, (c.h - h) / 2)), 0, c.h - h)
@@ -170,6 +177,8 @@ class Daemon {
         this.state = loadState();
         this.clients = new Set();
         this.note = '';
+        this.saveError = '';
+        this.saveTimer = null;
         this.proxy = new RenderProxy({
             sock: PROXY_SOCK, upstream: REAL_RENDER, log: (m) => console.log(m),
             getLayout: () => this.layout()
@@ -182,12 +191,32 @@ class Daemon {
         return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null };
     }
 
+    /* saves SAVE_MS after the last change, so a drag does not write (and fsync) on every step */
+    saveSoon() {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            this.save();
+        }, SAVE_MS);
+    }
+
     save() {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
         try {
             mkdirp(STATE_DIR, 0o755);
             writeAtomic(STATE_FILE, `${JSON.stringify(this.state, null, 2)}\n`);
+            if (this.saveError) {
+                this.saveError = '';
+                this.broadcast();
+            }
         } catch (e) {
-            this.note = `cannot save: ${e.message}`;
+            /* kept until a save works: the save runs after the command's own answer */
+            const was = this.saveError;
+            this.saveError = `cannot save: ${e.message}`;
+            if (was !== this.saveError) {
+                this.broadcast();
+            }
         }
     }
 
@@ -198,7 +227,7 @@ class Daemon {
     view() {
         const s = this.state;
         return { ev: 'state', mode: s.mode, hud: rectView('hud', s.hud), map: rectView('map', s.map),
-            connections: this.proxy.stats().connections, note: this.note };
+            connections: this.proxy.stats().connections, note: this.note || this.saveError };
     }
 
     broadcast() {
@@ -253,7 +282,7 @@ class Daemon {
     }
 
     changed() {
-        this.save();
+        this.saveSoon();
         try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
     }
 
@@ -301,7 +330,15 @@ class Daemon {
 if (require.main === module) {
     process.on('uncaughtException', (e) => console.error(`hudctl: ${e && e.stack}`));
     process.on('unhandledRejection', (e) => console.error(`hudctl: ${e}`));
-    new Daemon().start();
+    const daemon = new Daemon();
+    /* a pending save is written before systemd stops the helper */
+    ['SIGTERM', 'SIGINT'].forEach((sig) => process.on(sig, () => {
+        if (daemon.saveTimer) {
+            daemon.save();
+        }
+        process.exit(0);
+    }));
+    daemon.start();
 }
 
-module.exports = { normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS };
+module.exports = { wrapDeg, normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS };

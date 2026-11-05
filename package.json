@@ -1,0 +1,9 @@
+{
+  "name": "mgux-hud-map",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "zip": "python3 tools/make_source_zip.py"
+  }
+}

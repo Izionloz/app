@@ -32,5 +32,12 @@ cd apps/mgux_hud_map && node tools/build.js
 ```
 The designer is built with the idrive7-apps kit: see `designer/README.md`.
 
+## Tests
+```
+npm test
+```
+Runs the tests in `test/` (Node 18 or newer; the shipped code itself stays Node 8 compatible). CI runs them on every
+push. `mgux-hud-map-source.zip` is built from this tree with `npm run zip`: change the files here, not in the zip.
+
 GPL-3.0-or-later (the kit patches and the designer app follow the kit's MIT license). The HMI app is derived from
 robertn_waze_cluster by Robert Nisipeanu.
