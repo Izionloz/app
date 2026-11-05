@@ -136,3 +136,24 @@ test('designer: width and height rows keep the middle; the + places the focus, t
     d.touch(1, b.x + 2, b.y + b.h - 2);
     assert.strictEqual(d.drag, null);
 });
+
+test('designer list: + on any setting changes that setting only; every other row keeps its value', () => {
+    const D = require('../designer/app/designer.js');
+    const defs = D.sliders('hud');
+    defs.forEach((def) => {
+        const { c, at, tap } = listRig();
+        /* a map away from the display's edges, so no step is held back by an edge */
+        Object.assign(c.demo.hud, { x: 300, y: 150, w: 200, h: 120, opacity: 0.5, zoom: 1.5, rot: 0, fx: 0.5, fy: 0.5 });
+        const before = defs.map((d) => d.get(c.state().hud));
+        const { b } = at(def.key);
+        tap(b.plus.x + 20, b.cy);
+        const after = defs.map((d) => d.get(c.state().hud));
+        defs.forEach((d, i) => {
+            if (d.key === def.key) {
+                assert.notStrictEqual(after[i], before[i], `${def.key} changes`);
+            } else {
+                assert.ok(Math.abs(after[i] - before[i]) < 1e-9, `${def.key} + left ${d.key} as it was (${before[i]} -> ${after[i]})`);
+            }
+        });
+    });
+});

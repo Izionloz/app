@@ -7,12 +7,12 @@
             "kind": "tool",
             "title": "HUD map settings",
             "description": "Puts the CarPlay map on the cluster, the HUD or both and moves, resizes, dims, zooms and rotates it live, by sitting between waze-on-cluster and cluster-render; the HUD map apps talk to it",
-            "version": "2.6.0",
+            "version": "2.6.1",
             "artifact": {
-                "name": "mgux-hud-ctl@2.6.0.tgz",
-                "size": 10858,
-                "sha256": "5cfc60cb3e63d8252acd7aec0a2769495e93e4fa453d904403413fd486b9c684",
-                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.6.0/mgux-hud-ctl%402.6.0.tgz"
+                "name": "mgux-hud-ctl@2.6.1.tgz",
+                "size": 11403,
+                "sha256": "fe7ea6bed8a5d86c02cf8fb0fa615bbac0adbd4e5dcd721dc68f00c0e76597aa",
+                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.6.1/mgux-hud-ctl%402.6.1.tgz"
             },
             "requires": {
                 "mgu-deploy": "0.4.0"
@@ -48,12 +48,12 @@
             "kind": "app",
             "title": "HUD map designer",
             "description": "Drag, resize, dim, zoom and rotate the CarPlay map on the HUD and the cluster with your finger",
-            "version": "1.2.0",
+            "version": "1.2.1",
             "artifact": {
-                "name": "hud_designer@1.2.0.tgz",
+                "name": "hud_designer@1.2.1.tgz",
                 "size": 871451,
                 "sha256": "2de98702c90c7d57a35d5bdcc7b844393ef5eede3d75cfcd48610c4e34a7ff28",
-                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.2.0/hud_designer%401.2.0.tgz"
+                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.2.1/hud_designer%401.2.1.tgz"
             },
             "requires": {
                 "mgux-hud-ctl": "2.4.0"

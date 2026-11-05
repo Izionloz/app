@@ -18,9 +18,9 @@ The map shows only while CarPlay is navigating (the phone draws nothing otherwis
 Removing `mgux-hud-ctl` in the Store puts waze-on-cluster back on its direct connection.
 
 ## Releases (this repository's Store source)
-- tag `mgux-hud-ctl@2.6.0`: `mgux-hud-ctl@2.6.0.tgz`
+- tag `mgux-hud-ctl@2.6.1`: `mgux-hud-ctl@2.6.1.tgz`
 - tag `mgux_hud_map@2.3.0`: `mgux_hud_map@2.3.0.tgz`
-- tag `hud_designer@1.2.0`: `hud_designer@1.2.0.tgz`
+- tag `hud_designer@1.2.1`: `hud_designer@1.2.1.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -38,10 +38,13 @@ The helper writes every change to `/var/opt/mgux-hud/state.json` 0.3 s after the
 `state.json.bak`, and syncs the folder too, so a power cut soon after a change keeps it. At start it reads the file,
 else the copy; a file it cannot read is left as it is (not replaced by the defaults). The designer says under its
 preview whether the saved settings were restored; `journalctl -u mgux-hud-ctl` says it too.
+A layer made when the head unit starts could keep only part of its place (on the car the height stayed the default
+until a setting was touched), so the proxy sends the whole layout again as a `set` with the first frame, 1.5 s and
+5 s after making a layer, whenever the renderer says the layer changed state, and after each of waze's own `set`s.
 
 ### Designer
-Laid out like the car's own Head-Up Display settings, in Vietnamese: a list (Hiện bản đồ trên, Đang chỉnh, Kích
-thước, Chiều rộng, Chiều cao, Độ sáng, Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng, Căn giữa, Đặt lại) with
+Laid out like the car's own Head-Up Display settings, in Vietnamese: a list (Hiện bản đồ trên, Đang chỉnh, Chiều
+rộng, Chiều cao (each on its own), Độ sáng, Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng, Căn giữa, Đặt lại) with
 − ▬▬ + bars and the row in use lit red. On the preview on the right, drag the map to move it and drag the orange +
 (the zoom focus) onto the car; the size is set in the list. The kit's fonts have no Vietnamese letters, so `designer/app/viet.js`
 draws each from its base letter and stroked marks.

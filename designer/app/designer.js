@@ -4,7 +4,7 @@
  * handed to draw), so it runs the same in a test.
  *
  * Page (1600 x 520), laid out like the car's own Head-Up Display settings:
- *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting with its name and value above a
+ *  - left, a list that scrolls: Show map on, Adjusting, then a row per setting (width and height each on their own) with its name and value above a
  *    − ▬▬▬ + bar (tap − or +, or drag along the bar), then Centre and Reset. The row last touched is lit red.
  *  - right, a preview of the chosen display with the map's rectangle: drag the map to move it, drag the orange +
  *    (the zoom focus: the zoom keeps that point in the middle) onto the car. Size is set in the list.
@@ -19,7 +19,6 @@ const LIST = { x: 24, y: 60, w: 760, h: 452 };     /* the list's window */
 const PREV = { x: 808, y: 60, w: 768, h: 452 };     /* the preview panel */
 const SCROLL_START = 14;
 const FOCUS_HIT = 40;                               /* touch radius of the orange + */                            /* a finger moving this far up or down scrolls the list */
-const MAP_ASPECT = 1088 / 480;
 
 const C = {
     bg: '#0b0c0f', row: '#121318', line: '#2a2c33', text: '#f2f2f2', dim: '#9a9ca3', warn: '#ffb020',
@@ -38,12 +37,6 @@ const round2 = (v) => Math.round(v * 100) / 100;
 function sliders(which) {
     const c = CANVAS[which];
     return [
-        { key: 'size', label: 'Kích thước', lim: () => [0.1, 1], def: which === 'hud' ? 456 / 800 : 1, step: 0.02, show: pct,
-            get: (r) => r.w / c.w,
-            put: (v, r) => {
-                const w = Math.max(40, Math.round(v * c.w)), h = Math.max(20, Math.round(w / MAP_ASPECT));
-                return { w, h, x: Math.round(r.x + r.w / 2 - w / 2), y: Math.round(r.y + r.h / 2 - h / 2) };
-            } },
         { key: 'width', label: 'Chiều rộng', lim: () => [40, c.w], def: which === 'hud' ? 456 : c.w, step: 4,
             show: (v) => `${Math.round(v)} px`, get: (r) => r.w,
             put: (v, r) => {
