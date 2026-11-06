@@ -24,10 +24,9 @@ frames = [
     {'x': 1100, 'y': 346, 'w': 2, 'h': 202, 'kind': 2},                           # speed, right rule
     {'x': 1130, 'y': 402, 'w': 250, 'h': 2, 'kind': 2, 'color': 1},               # rule in the label block
     {'x': 110, 'y': 580, 'w': 830, 'h': 58, 'chamfer': 16},                       # coolant
-    {'x': 950, 'y': 580, 'w': 430, 'h': 58, 'chamfer': 16},                       # range
-    {'x': 1390, 'y': 580, 'w': 420, 'h': 58, 'chamfer': 16},                      # outside
+    {'x': 950, 'y': 580, 'w': 860, 'h': 58, 'chamfer': 16},                       # range
 ]
-W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
+W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 640,
           'frames': frames, 'stripe': [232, 164, 330, 6], 'rpmMax': 8000, 'coolMax': 120,
           'rails': [{'x': 130, 'y': 228, 'w': 1210, 'h': 44, 'segs': 48, 'gap': 4},
                     {'x': 345, 'y': 588, 'w': 360, 'h': 42, 'segs': 24, 'gap': 3, 'ramp': True}]})
@@ -61,11 +60,8 @@ text('coolCap', 142, 594, 200, 28, 'COOLANT', 'e_label', HEAD, z=9)
 text('cool', 715, 590, 120, 39, '{{coolant}}', 'e_val', VAL, 'right', z=9)
 text('coolU', 845, 593, 80, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
 text('rangeCap', 982, 594, 160, 28, 'RANGE', 'e_label', HEAD, z=9)
-text('range', 1110, 590, 130, 39, '{{range}}', 'e_val', VAL, 'right', z=9)
-text('rangeU', 1250, 593, 80, 37, '{{u:distLc}}', 'e_unit', TITLE, z=9)
-text('outCap', 1422, 594, 190, 28, 'OUTSIDE', 'e_label', HEAD, z=9)
-text('out', 1580, 590, 130, 39, '{{ambient}}', 'e_val', VAL, 'right', z=9)
-text('outU', 1720, 593, 70, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
+text('range', 1290, 590, 130, 39, '{{range}}', 'e_val', VAL, 'right', z=9)
+text('rangeU', 1430, 593, 80, 37, '{{u:distLc}}', 'e_unit', TITLE, z=9)
 
 with open(OUT, 'w') as f:
     json.dump({'schemaVersion': 2, 'name': 'EVA', 'theme': 'eva',
