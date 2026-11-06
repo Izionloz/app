@@ -23,6 +23,8 @@ mgu.run({
             return;
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
+        // the last events (drive mode, cluster-render's target and layer states, rebuilds), newest first, for a photo of the screen
+        hud.onEvents((lines) => { for (let i = 0; i < 8; i++) ctx.ui.text('L' + (i + 1), lines[i] || '-'); });
         hud.start();
         process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
     },
