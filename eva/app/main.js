@@ -12,9 +12,7 @@ const net = require('net');
 const mgu = require('./kit/mgu');
 
 // mgux-hud-ctl (the HUD map's root service): one short visit to its socket per message, tried a few times when it is not
-// up yet. It hides the HUD map's layers while EVA shows (the cluster's panel and the HUD share one slot, and whoever holds it
-// keeps it, so a HUD map shown while navigating kept EVA off the cluster), and puts a leftover panel_take_over_stock = 1
-// (0.2.0 / 0.2.1) back to 0: nothing changes or restarts when it was never set.
+// up yet. It gives the cluster's panel a scene of its own and hides the layers that share one while EVA shows (see below).
 const HELPER = '/dev/shm/mgux-hud/ctl.sock';
 function visit(ctx, msg, tries) {
     const c = net.createConnection(HELPER);
@@ -38,14 +36,23 @@ mgu.run({
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
         hud.start();
-        visit(ctx, { cmd: 'panelTakeOver', on: false }, 6);
-        // while EVA shows, tell the helper now and every 10 s (it lets the HUD map back after 30 s of silence, e.g. if this app dies)
-        let keep = null;
-        hud.onShown((on) => {
+        // "separate": the panel gets its own scene id (cluster-render's local conf, set by mgux-hud-ctl) so EVA and the HUD map
+        // show at once; the cluster's map, which has that id, gives way while EVA shows. Off: they share one scene and the HUD
+        // map gives way. While EVA shows, the helper is told now and every 10 s (it lets go after 30 s of silence).
+        const separate = () => ctx.settings.get('separate') !== false;
+        let on = false, keep = null;
+        const tell = () => {
             clearInterval(keep);
             keep = null;
-            visit(ctx, { cmd: 'evaOn', on }, 3);
-            if (on) keep = setInterval(() => visit(ctx, { cmd: 'evaOn', on: true }, 1), 10000);
+            visit(ctx, { cmd: 'evaOn', on, hide: separate() ? 'map' : 'hud' }, 3);
+            if (on) keep = setInterval(() => visit(ctx, { cmd: 'evaOn', on: true, hide: separate() ? 'map' : 'hud' }, 1), 10000);
+        };
+        visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
+        hud.onShown((shown) => { on = shown; tell(); });
+        ctx.settings.onChange((key) => {
+            if (key !== 'separate') return;
+            visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
+            tell();
         });
         process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
     },

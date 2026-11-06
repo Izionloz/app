@@ -259,7 +259,7 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hideHud: Date.now() < (this.evaUntil || 0) };
+        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hide: Date.now() < (this.evaUntil || 0) ? this.evaHide : null };
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -431,12 +431,22 @@ class Daemon {
              * the HUD share one slot and the one that holds it keeps it */
             if (typeof msg.on === 'boolean') {
                 const was = Date.now() < (this.evaUntil || 0);
+                /* which target's layers give way: the HUD's (the panel shares its scene), or the cluster map's (the panel has
+                 * the map's scene, so the HUD can show beside EVA) */
+                const hide = msg.hide === 'map' ? 'map' : 'hud';
+                const moved = was && msg.on && hide !== this.evaHide;
+                this.evaHide = hide;
                 this.evaUntil = msg.on ? Date.now() + EVA_HOLD_MS : 0;
                 clearTimeout(this.evaT);
                 this.evaT = msg.on ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
-                if (was !== msg.on) {
+                if (was !== msg.on || moved) {
                     try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
                 }
+            }
+            return;
+        case 'panelScene':
+            if (typeof msg.on === 'boolean') {
+                this.panelScene(msg.on);
             }
             return;
         case 'panelTakeOver':
@@ -453,26 +463,37 @@ class Daemon {
      * claims it again and again in Sport): panel_take_over_stock in cluster-render's local conf. Only when the file
      * is not already so, and then cluster-render is restarted once (it reads its conf at start). */
     panelTakeOver(on) {
-        const want = on ? '1' : '0';
+        this.crConf('panel_take_over_stock', on ? '1' : '0', !on, 'panel take-over');
+    }
+
+    /* The EVA cluster app asks for the panel's own scene (the map's id, 0x010004f0, in cluster-render's local conf), so the
+     * cluster and the HUD can show at once; by default they share 0x01000400 and one of them keeps the other off (and the
+     * HUD could not come back after the cluster, seen on a car by PenguinDukeYDAuto). Off puts the default back. */
+    panelScene(on) {
+        this.crConf('panel_scene_id', on ? '0x010004f0' : '0x01000400', !on, 'panel scene');
+    }
+
+    /* A key in cluster-render's local conf, changed only when it is not already so (and, with onlyIfSet, only when it is
+     * set at all); then cluster-render is restarted once, as it reads its conf at start. */
+    crConf(key, value, onlyIfSet, what) {
         try {
             let text = '';
             try { text = fs.readFileSync(CR_CONF, 'utf8'); } catch (e) { /* none yet */ }
-            const has = /^[ \t]*panel_take_over_stock[ \t]*=/m.test(text);
-            /* turning it off when it was never set changes nothing (and restarts nothing) */
-            const next = !on && !has ? text : setConfKey(text, 'panel_take_over_stock', want);
+            const has = new RegExp(`^[ \\t]*${key}[ \\t]*=`, 'm').test(text);
+            const next = onlyIfSet && !has ? text : setConfKey(text, key, value);
             if (next === text) {
-                this.note = `panel take-over already ${want}`;
+                this.note = `${what} already ${value}`;
                 return;
             }
             mkdirp(path.dirname(CR_CONF), 0o755);
             writeAtomic(CR_CONF, next);
-            console.log(`hudctl: panel_take_over_stock = ${want} in ${CR_CONF}; restarting cluster-render`);
+            console.log(`hudctl: ${key} = ${value} in ${CR_CONF}; restarting cluster-render`);
             cp.execFile(CR_RESTART, ['restart', 'cluster-render.service'], (err) => {
                 if (err) { console.error(`hudctl: restart cluster-render: ${err.message}`); }
             });
-            this.note = `panel take-over ${want}, cluster-render restarted`;
+            this.note = `${what} ${value}, cluster-render restarted`;
         } catch (e) {
-            this.note = `panel take-over: ${e.message}`;
+            this.note = `${what}: ${e.message}`;
             console.error(`hudctl: ${this.note}`);
         }
     }
