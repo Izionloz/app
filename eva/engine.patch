@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..04e6449 100644
+index db817c2..ce08ad0 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -10,7 +10,7 @@ index db817c2..04e6449 100644
  const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
  const ShiftScore = require('./shift_score');
  const sun = require('./sun');
-@@ -163,13 +164,18 @@ const Car = require('./kit/car');
+@@ -163,13 +164,16 @@ const Car = require('./kit/car');
  
  const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
  // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
@@ -25,104 +25,10 @@ index db817c2..04e6449 100644
 +// EVA rev colours by level (below 3500 rpm, from 3500, from 5000, from the redline), after the EVA HUD design
 +const EVA_LEVELS = [[255, 173, 84, 255], [255, 224, 92, 255], [255, 78, 61, 255], [255, 37, 59, 255]];
 +const EVA_FLASH_MS = 340;
-+const MODE_SETTLE_MS = 2500;
-+const EVENT_LINES = 8;
  const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
  const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
  const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
-@@ -302,6 +308,7 @@ class HudApp {
-         this.flash = false;
-         this.problem = null;             // why nothing shows (a bad layout), for the status line
-         this.statusListeners = [];
-+        this.events = []; this.eventListeners = []; this.evT = null;
-         this.lastStatus = null;
- 
-         this._setupVehicleData();
-@@ -375,10 +382,21 @@ class HudApp {
-                 statusFESVehicleDynamicSwitchHMI: (v) => {
-                     const raw = v && v.actualValueModeDrivingExperience;
-                     const m = driveModeOf(raw), variant = m ? driveVariantOf(raw) : null;
--                    if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
-+                    if (!m) return;
-+                    if (m === this.driveMode && variant === this.driveVariant) { clearTimeout(this.modeT); this.modeT = null; return; }
-+                    this.modeFlips = (this.modeFlips || 0) + 1;
-+                    this.lastModeRaw = String(raw);
-+                    this._ev('drive mode ' + raw);
-                     this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
--                    this.driveMode = m; this.driveVariant = variant;
--                    if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
-+                    const apply = () => {
-+                        this.modeT = null;
-+                        this.driveMode = m; this.driveVariant = variant;
-+                        if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
-+                    };
-+                    // a car whose cluster is coded (M-style) may report the mode flickering; a change that does not hold for
-+                    // MODE_SETTLE_MS is not acted on, so the layout does not drop and come back
-+                    clearTimeout(this.modeT);
-+                    if (this.driveMode === null) apply(); else this.modeT = setTimeout(apply, MODE_SETTLE_MS);
-                 },
-             },
-         };
-@@ -407,12 +425,13 @@ class HudApp {
- 
-     _wireClientEvents(c, ci) {
-         const tag = ci ? ' [connection ' + (ci + 1) + ']' : '';
--        c.on('ready', () => { this.log.info('cluster-render ready' + tag + ' (backend=' + c.backend + ')'); if (ci === 0) this._rebuild(); else this._status(); });
--        c.on('disconnected', () => { this.log.warn('cluster-render disconnected' + tag + ', client will retry'); this._status(); });
-+        c.on('ready', () => { this._ev('cluster-render ready' + tag); this.log.info('cluster-render ready' + tag + ' (backend=' + c.backend + ')'); if (ci === 0) this._rebuild(); else this._status(); });
-+        c.on('disconnected', () => { this._ev('cluster-render DISCONNECTED' + tag); this.log.warn('cluster-render disconnected' + tag + ', client will retry'); this._status(); });
-         c.on('layer', (ref, state, reason) => {
-             const key = ci + ':' + ref;
-             const old = this.layerStates.get(key);
-             this.layerStates.set(key, { state, reason });
-+            if (!old || old.state !== state) { const w = this._widgetOf(ci, ref); this._ev('layer ' + ref + (w ? ' ' + w : '') + ' ' + state + (reason ? ': ' + reason : '')); }
-             if (state === 'error' || ((state === 'waiting' || state === 'stalled') && (!old || old.state !== state))) {
-                 const w = this._widgetOf(ci, ref);
-                 this.log.warn('layer ' + ref + tag + (w ? ' (' + w + ')' : '') + ' ' + state + (reason ? ': ' + reason : ''));
-@@ -422,12 +441,14 @@ class HudApp {
-         c.on('target', (name, state, holder, reason) => {
-             if (name !== this.target) return;
-             this.targetState = { state, holder, reason };
-+            this._ev('target ' + name + ' ' + state + (holder ? ' holder ' + holder : '') + (reason ? ': ' + reason : ''));
-             this.log.info('target ' + name + tag + ' ' + state + (holder ? ' (holder ' + holder + ')' : '') + (reason ? ': ' + reason : ''));
-             this._statusSoon();
-         });
-         c.on('refused', (op, ref, reason) => {
-             const w = this._widgetOf(ci, ref);
-             this.log.warn('refused ' + op + ' on ' + ref + tag + (w ? ' (' + w + ')' : '') + ': ' + reason);
-+            this._ev('refused ' + op + (w ? ' ' + w : '') + ': ' + reason);
-             if (!this.refused) this.refused = (w || op) + ': ' + reason;   // the first one, until the next rebuild
-             this._statusSoon();
-         });
-@@ -548,6 +569,18 @@ class HudApp {
- 
-     /* ---------------- status line (the center screen's first row) ---------------- */
- 
-+    /** One line in the event log (what the center screen shows under the status row), newest first. */
-+    _ev(msg) {
-+        const d = new Date(), p2 = (n) => (n < 10 ? '0' : '') + n;
-+        this.events.unshift(p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds()) + ' ' + String(msg).slice(0, 90));
-+        if (this.events.length > EVENT_LINES) this.events.length = EVENT_LINES;
-+        clearTimeout(this.evT);
-+        this.evT = setTimeout(() => { this.evT = null; this.eventListeners.forEach((fn) => { try { fn(this.events.slice()); } catch (e) { this.log.warn('event listener: ' + e); } }); }, 300);
-+    }
-+
-+    /** fn(lines) after the event log changes. */
-+    onEvents(fn) { this.eventListeners.push(fn); if (this.events.length) fn(this.events.slice()); }
-+
-     /** fn(text) whenever the status line changes. */
-     onStatus(fn) { this.statusListeners.push(fn); if (this.lastStatus) fn(this.lastStatus); }
- 
-@@ -638,7 +671,7 @@ class HudApp {
-         }
-         if (this.problem) return this.label + ': ' + this.problem;
-         const byMode = this.setting('byMode') === true;
--        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
-+        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + (this.modeFlips > 1 ? ', ' + this.modeFlips + ' changes, last ' + this.lastModeRaw : '') + ')' : ' (drive mode not seen yet)') : '';
-         const what = this.target === 'panel' ? 'cluster' : 'HUD';
-         if (this.activeName === 'off') return this.label + ' off' + mode + ": BMW's own " + what + ' shows';
-         const name = this._layoutLabel(this.activeName);
-@@ -829,6 +862,15 @@ class HudApp {
+@@ -829,6 +833,15 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -138,33 +44,7 @@ index db817c2..04e6449 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -885,6 +927,7 @@ class HudApp {
-         this.car.setRedline(this.setting('redline'));
-         const name = this._layoutName();
-         this.activeName = name;
-+        this._ev('layout ' + name + ' (' + (this.driveMode || 'mode ?') + ')');
-         if (name === 'off') {
-             this.problem = null; this.layoutTheme = null; this.needsBoost = false;
-             this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
-@@ -977,7 +1020,7 @@ class HudApp {
-     /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
-     _createSheet(s) {
-         const c = this._clientAt(s.conn);
--        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
-+        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h, contend: this.config.contend === true });
-         if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
-         s.ref = ref; s.c = c; s.ci = s.conn;
-         s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1078,7 @@ class HudApp {
-         if (sheet) { ref = sheet.ref; c = sheet.c; }
-         else {
-             c = this._clientAt(this._connOf(w));
--            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
-+            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h, contend: this.config.contend === true };
-             if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
-             else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
-             if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1101,8 @@ class HudApp {
+@@ -1058,6 +1071,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -173,7 +53,7 @@ index db817c2..04e6449 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1258,6 +1303,7 @@ class HudApp {
+@@ -1258,6 +1273,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -181,7 +61,7 @@ index db817c2..04e6449 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1342,8 @@ class HudApp {
+@@ -1296,6 +1312,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -190,7 +70,7 @@ index db817c2..04e6449 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1444,74 @@ class HudApp {
+@@ -1396,6 +1414,74 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
