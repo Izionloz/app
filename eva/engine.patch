@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..ce08ad0 100644
+index db817c2..aba190c 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -10,7 +10,7 @@ index db817c2..ce08ad0 100644
  const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
  const ShiftScore = require('./shift_score');
  const sun = require('./sun');
-@@ -163,13 +164,16 @@ const Car = require('./kit/car');
+@@ -163,13 +164,17 @@ const Car = require('./kit/car');
  
  const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
  // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
@@ -25,10 +25,44 @@ index db817c2..ce08ad0 100644
 +// EVA rev colours by level (below 3500 rpm, from 3500, from 5000, from the redline), after the EVA HUD design
 +const EVA_LEVELS = [[255, 173, 84, 255], [255, 224, 92, 255], [255, 78, 61, 255], [255, 37, 59, 255]];
 +const EVA_FLASH_MS = 340;
++const MODE_SETTLE_MS = 2500;
  const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
  const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
  const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
-@@ -829,6 +833,15 @@ class HudApp {
+@@ -375,10 +380,20 @@ class HudApp {
+                 statusFESVehicleDynamicSwitchHMI: (v) => {
+                     const raw = v && v.actualValueModeDrivingExperience;
+                     const m = driveModeOf(raw), variant = m ? driveVariantOf(raw) : null;
+-                    if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
++                    if (!m) return;
++                    if (m === this.driveMode && variant === this.driveVariant) { clearTimeout(this.modeT); this.modeT = null; return; }
++                    this.modeFlips = (this.modeFlips || 0) + 1;
++                    this.lastModeRaw = String(raw);
+                     this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
+-                    this.driveMode = m; this.driveVariant = variant;
+-                    if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
++                    const apply = () => {
++                        this.modeT = null;
++                        this.driveMode = m; this.driveVariant = variant;
++                        if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
++                    };
++                    // a car whose cluster is coded (M-style) may report the mode flickering; a change that does not hold for
++                    // MODE_SETTLE_MS is not acted on, so the layout does not drop and come back
++                    clearTimeout(this.modeT);
++                    if (this.driveMode === null) apply(); else this.modeT = setTimeout(apply, MODE_SETTLE_MS);
+                 },
+             },
+         };
+@@ -638,7 +653,7 @@ class HudApp {
+         }
+         if (this.problem) return this.label + ': ' + this.problem;
+         const byMode = this.setting('byMode') === true;
+-        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
++        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + (this.modeFlips > 1 ? ', ' + this.modeFlips + ' changes, last ' + this.lastModeRaw : '') + ')' : ' (drive mode not seen yet)') : '';
+         const what = this.target === 'panel' ? 'cluster' : 'HUD';
+         if (this.activeName === 'off') return this.label + ' off' + mode + ": BMW's own " + what + ' shows';
+         const name = this._layoutLabel(this.activeName);
+@@ -829,6 +844,15 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -44,7 +78,7 @@ index db817c2..ce08ad0 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -1058,6 +1071,8 @@ class HudApp {
+@@ -1058,6 +1082,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -53,7 +87,7 @@ index db817c2..ce08ad0 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1258,6 +1273,7 @@ class HudApp {
+@@ -1258,6 +1284,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -61,7 +95,7 @@ index db817c2..ce08ad0 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1312,8 @@ class HudApp {
+@@ -1296,6 +1323,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -70,7 +104,7 @@ index db817c2..ce08ad0 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1414,74 @@ class HudApp {
+@@ -1396,6 +1425,74 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
