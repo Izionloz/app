@@ -284,6 +284,21 @@ test('proxy: soft edges are an effect layer above the HUD map that follows it, s
         await r.waitUp(n + 2);
         assert.ok(jsonOf(r.upMsgs, n).some((j) => j.ref === 6 + FX && j.op === 'set' && j.visible === 1));
 
+        /* the map zoomed and turned: the edges get the same scale, turn and pivot, so they stay on the map's own edge */
+        n = r.upMsgs.length;
+        const link0 = Array.from(r.proxy.links)[0];
+        layout.hud = Object.assign({}, layout.hud, { zoom: 2, rot: 15, fx: 0.75, fy: 0.7 });
+        link0.reconcile();
+        await r.waitUp(n + 2);
+        const mapSet = jsonOf(r.upMsgs, n).find((j) => j.ref === 6 && j.op === 'set');
+        const fxSet = jsonOf(r.upMsgs, n).find((j) => j.ref === 6 + FX && j.op === 'set');
+        assert.ok(mapSet && fxSet);
+        ['sx', 'sy', 'rotate', 'px', 'py'].forEach((k) => assert.strictEqual(fxSet[k], mapSet[k], `the edges have the map's ${k}`));
+        assert.deepStrictEqual([fxSet.sx, fxSet.rotate], [2, 15]);
+        layout.hud = Object.assign({}, layout.hud, { zoom: 1, rot: 0, fx: 0.5, fy: 0.5 });
+        link0.reconcile();
+        await new Promise((res) => setTimeout(res, 100));
+
         /* a move moves the edges; a softer edge is a uniform, not a new layer */
         const link = Array.from(r.proxy.links)[0];
         n = r.upMsgs.length;

@@ -512,7 +512,9 @@ class Link {
             const side = Math.max(1, Math.min(r.w, r.h)) * d.fe;
             const uf = `${Math.round(side / r.w * 1000) / 1000} ${Math.round(side / r.h * 1000) / 1000}`;
             const look = this.look(d);
-            const fields = { x: r.x, y: r.y, w: r.w, h: r.h, rotate: look.rotate, px: look.px, py: look.py };
+            /* the same scale, turn and pivot as the map's layer, or the fade stays at the unzoomed rectangle while the
+             * zoomed map reaches past it: the fade then lies inside the picture and the picture's own edge is cut hard */
+            const fields = { x: r.x, y: r.y, w: r.w, h: r.h, sx: look.sx, sy: look.sy, rotate: look.rotate, px: look.px, py: look.py };
             const place = JSON.stringify(fields);
             const cur = this.fx[e];
             if (cur && cur.target !== d.target) {
