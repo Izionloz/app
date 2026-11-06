@@ -18,21 +18,21 @@ def text(id, x, y, w, h, t, font, color, align='left', z=5, **k):
 frames = [
     {'x': 190, 'y': 92, 'w': 1540, 'h': 84, 'chamfer': 24},                       # header
     {'x': 110, 'y': 184, 'w': 1700, 'h': 140, 'chamfer': 26},                     # rev panel
-    {'x': 110, 'y': 332, 'w': 1700, 'h': 250, 'kind': 1},                         # core: side lines and a bottom line
-    {'x': 140, 'y': 352, 'w': 200, 'h': 210, 'chamfer': 24},                      # gear
-    {'x': 372, 'y': 356, 'w': 2, 'h': 202, 'kind': 2},                            # speed, left rule
-    {'x': 1100, 'y': 356, 'w': 2, 'h': 202, 'kind': 2},                           # speed, right rule
-    {'x': 1130, 'y': 412, 'w': 250, 'h': 2, 'kind': 2, 'color': 1},               # rule in the label block
-    {'x': 110, 'y': 592, 'w': 830, 'h': 68, 'chamfer': 18},                       # coolant
-    {'x': 950, 'y': 592, 'w': 430, 'h': 68, 'chamfer': 18},                       # range
-    {'x': 1390, 'y': 592, 'w': 420, 'h': 68, 'chamfer': 18},                      # outside
+    {'x': 110, 'y': 332, 'w': 1700, 'h': 240, 'kind': 1},                         # core: side lines and a bottom line
+    {'x': 140, 'y': 342, 'w': 200, 'h': 210, 'chamfer': 24},                      # gear
+    {'x': 372, 'y': 346, 'w': 2, 'h': 202, 'kind': 2},                            # speed, left rule
+    {'x': 1100, 'y': 346, 'w': 2, 'h': 202, 'kind': 2},                           # speed, right rule
+    {'x': 1130, 'y': 402, 'w': 250, 'h': 2, 'kind': 2, 'color': 1},               # rule in the label block
+    {'x': 110, 'y': 580, 'w': 830, 'h': 58, 'chamfer': 16},                       # coolant
+    {'x': 950, 'y': 580, 'w': 430, 'h': 58, 'chamfer': 16},                       # range
+    {'x': 1390, 'y': 580, 'w': 420, 'h': 58, 'chamfer': 16},                      # outside
 ]
 W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
           'frames': frames, 'stripe': [232, 164, 330, 6], 'rpmMax': 8000, 'coolMax': 120,
           'rails': [{'x': 130, 'y': 228, 'w': 1210, 'h': 44, 'segs': 48, 'gap': 4},
-                    {'x': 345, 'y': 604, 'w': 360, 'h': 44, 'segs': 24, 'gap': 3, 'ramp': True}]})
+                    {'x': 345, 'y': 588, 'w': 360, 'h': 42, 'segs': 24, 'gap': 3, 'ramp': True}]})
 # the pilot: x 1610 keeps clear of BMW's gear box (x to 1597)
-W.append({'id': 'pilot', 'type': 'picture', 'class': 'content', 'z': 1, 'own': True, 'x': 1610, 'y': 340, 'w': 200, 'h': 240, 'name': 'pilot'})
+W.append({'id': 'pilot', 'type': 'picture', 'class': 'content', 'z': 1, 'own': True, 'x': 1610, 'y': 332, 'w': 200, 'h': 240, 'name': 'pilot'})
 
 text('title', 232, 98, 520, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
 text('sub', 233, 144, 420, 18, 'TACTICAL DRIVE DISPLAY', 'e_sub', SUB)
@@ -46,26 +46,26 @@ text('rpm', 1380, 204, 290, 70, '{{rpm}}', 'e_rpm', VAL, 'right', byRpm=True, gl
 text('rpmUnit', 1684, 236, 100, 37, 'rpm', 'e_unit', TITLE, z=6)
 text('alert', 1500, 290, 232, 24, '{{evaAlert}}', 'e_mono', VAL, 'right', byRpm=True, z=6)
 
-text('gearCap', 162, 366, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], z=7)
-text('gear', 162, 400, 156, 111, '{{stage}}', 'e_gear', VAL, 'center', glow=True, z=7)
-text('gearWord', 156, 526, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7)
+text('gearCap', 162, 356, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], z=7)
+text('gear', 162, 390, 156, 111, '{{stage}}', 'e_gear', VAL, 'center', glow=True, z=7)
+text('gearWord', 156, 516, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7)
 
-text('speed', 392, 372, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8)
-text('speedUnit', 850, 476, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], z=8)
+text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8)
+text('speedUnit', 850, 466, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], z=8)
 
-text('pilotCap', 1130, 368, 250, 24, 'PILOT UNIT 01', 'e_mono', SUB, z=8)
-text('modeCap', 1130, 424, 250, 24, 'DRIVE MODE', 'e_mono', SUB, z=8)
-text('mode', 1130, 452, 250, 24, '{{mode}}', 'e_mono', VAL, z=8)
+text('pilotCap', 1130, 358, 250, 24, 'PILOT UNIT 01', 'e_mono', SUB, z=8)
+text('modeCap', 1130, 414, 250, 24, 'DRIVE MODE', 'e_mono', SUB, z=8)
+text('mode', 1130, 442, 250, 24, '{{mode}}', 'e_mono', VAL, z=8)
 
-text('coolCap', 142, 608, 200, 28, 'COOLANT', 'e_label', HEAD, z=9)
-text('cool', 715, 606, 120, 39, '{{coolant}}', 'e_val', VAL, 'right', z=9)
-text('coolU', 845, 610, 80, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
-text('rangeCap', 982, 608, 160, 28, 'RANGE', 'e_label', HEAD, z=9)
-text('range', 1110, 606, 130, 39, '{{range}}', 'e_val', VAL, 'right', z=9)
-text('rangeU', 1250, 610, 80, 37, '{{u:distLc}}', 'e_unit', TITLE, z=9)
-text('outCap', 1422, 608, 190, 28, 'OUTSIDE', 'e_label', HEAD, z=9)
-text('out', 1580, 606, 130, 39, '{{ambient}}', 'e_val', VAL, 'right', z=9)
-text('outU', 1720, 610, 70, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
+text('coolCap', 142, 594, 200, 28, 'COOLANT', 'e_label', HEAD, z=9)
+text('cool', 715, 590, 120, 39, '{{coolant}}', 'e_val', VAL, 'right', z=9)
+text('coolU', 845, 593, 80, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
+text('rangeCap', 982, 594, 160, 28, 'RANGE', 'e_label', HEAD, z=9)
+text('range', 1110, 590, 130, 39, '{{range}}', 'e_val', VAL, 'right', z=9)
+text('rangeU', 1250, 593, 80, 37, '{{u:distLc}}', 'e_unit', TITLE, z=9)
+text('outCap', 1422, 594, 190, 28, 'OUTSIDE', 'e_label', HEAD, z=9)
+text('out', 1580, 590, 130, 39, '{{ambient}}', 'e_val', VAL, 'right', z=9)
+text('outU', 1720, 593, 70, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
 
 with open(OUT, 'w') as f:
     json.dump({'schemaVersion': 2, 'name': 'EVA', 'theme': 'eva',
