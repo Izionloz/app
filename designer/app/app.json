@@ -2,7 +2,7 @@
   "id": "hud_designer",
   "title": "HUD map",
   "description": "Beside waze-on-cluster's own app: brightness, zoom with a focus and rotation for its HUD and cluster maps, and the cluster map's place and size; settings kept across restarts",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "vendor": "custom",
   "loggingId": "OA9H",
   "iconGlyph": "HUD",

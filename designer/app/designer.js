@@ -126,7 +126,7 @@ function feedText(st) {
     case 'starting': return 'đang khởi động';
     case 'frozen': return 'bị đứng, hãy kết nối lại CarPlay';
     case 'error': return 'lỗi';
-    case 'disabled': return 'bị cluster-render chặn';
+    case 'disabled': return 'bị cluster-render chặn (root: cluster-render guard-reset)';
     case 'off': return 'tắt';
     default: return 'chờ CarPlay dẫn đường';
     }
@@ -146,10 +146,10 @@ function statusLine(info) {
         text = `Bản đồ: ${feedText(w.state)}. waze-on-cluster cũ, cập nhật lên 0.9.0 để HUD có nền đen`;
         warn = w.state === 'frozen' || w.state === 'error';
     } else {
-        const parts = [];
-        if (w.cluster) { parts.push(`đồng hồ ${feedText(w.state)}`); }
-        if (w.hud) { parts.push(`HUD ${feedText(w.hudState)}`); }
-        text = `Bản đồ: ${parts.join(', ') || 'đang tắt'}`;
+        /* both feeds are always named: a HUD that is off says so (it is turned on in waze-on-cluster's app) */
+        const parts = [w.cluster ? `đồng hồ ${feedText(w.state)}` : 'đồng hồ tắt',
+            w.hud ? `HUD ${feedText(w.hudState)}` : 'HUD tắt (bật ở app waze-on-cluster)'];
+        text = `Bản đồ: ${parts.join(', ')}`;
         warn = w.state === 'frozen' || w.state === 'error' || w.hudState === 'frozen' || w.hudState === 'error' || w.hudState === 'disabled';
     }
     if (info.live && info.connections === 0) {

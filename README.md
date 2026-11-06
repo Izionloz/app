@@ -29,7 +29,7 @@ controller included (turn to move the red row, press to change a setting and tur
 to end) and the map's state from waze-on-cluster under the preview.
 
 - tag `mgux-hud-ctl@2.8.0`: `mgux-hud-ctl@2.8.0.tgz`
-- tag `hud_designer@1.5.0`: `hud_designer@1.5.0.tgz`
+- tag `hud_designer@1.5.1`: `hud_designer@1.5.1.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -77,6 +77,16 @@ What HUD map adds on top, live and kept across restarts:
 The proxy adds these to each feed's layer and passes waze-on-cluster's own `set`s on, so its app's size and move buttons
 keep working on the HUD map. With a waze-on-cluster before 0.9.0 there is no feed of its own for the HUD: HUD map no
 longer copies the cluster's frames to it.
+
+### If the HUD shows nothing
+The line under HUD map's preview names both feeds. Turning the HUD on is waze-on-cluster's, not ours:
+- **"HUD tắt"**: waze-on-cluster starts with the HUD off (`hud = 0`). Choose HUD or both in its app
+  (`robertn_waze_cluster`, same source); it keeps the choice.
+- **"HUD bị cluster-render chặn"** (`hud_state` `disabled`): cluster-render's mapping guard turned the HUD off after two
+  restarts of the cluster renderer in 10 s, which several updates in a row can cause. As root: `cluster-render
+  guard-reset` (choosing the HUD again does not undo it).
+- **"HUD chờ CarPlay dẫn đường"**: nothing is wrong, the HUD shows the map while CarPlay navigates.
+- **"chưa thấy waze-on-cluster"** or **"cũ"**: it is not running, not 0.9.0, or the head unit was not restarted.
 
 ### Zoom focus
 CarPlay's cluster map has the car below and right of the middle, so a zoom about the middle pushes the car to the

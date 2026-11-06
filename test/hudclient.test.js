@@ -212,8 +212,9 @@ test('designer: the map line says what waze-on-cluster and the service report', 
     const { statusLine } = require('../designer/app/designer.js');
     const w = (o) => Object.assign({ connected: true, busy: false, native: true, state: 'showing', hudState: 'showing', cluster: 1, hud: 1 }, o);
     assert.deepStrictEqual(statusLine({ live: true, connections: 2, waze: w() }), { text: 'Bản đồ: đồng hồ đang hiện, HUD đang hiện', warn: false });
-    assert.deepStrictEqual(statusLine({ live: true, connections: 1, waze: w({ cluster: 0 }) }), { text: 'Bản đồ: HUD đang hiện', warn: false });
-    assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hud: 0, cluster: 0 }) }).text, 'Bản đồ: đang tắt');
+    assert.deepStrictEqual(statusLine({ live: true, connections: 1, waze: w({ cluster: 0 }) }), { text: 'Bản đồ: đồng hồ tắt, HUD đang hiện', warn: false });
+    assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hud: 0 }) }).text, 'Bản đồ: đồng hồ đang hiện, HUD tắt (bật ở app waze-on-cluster)');
+    assert.ok(statusLine({ live: true, connections: 1, waze: w({ hud: 0, cluster: 0 }) }).text.includes('HUD tắt'));
     assert.strictEqual(statusLine({ live: true, connections: 0, waze: w() }).warn, true);
     assert.ok(statusLine({ live: true, connections: 0, waze: w() }).text.includes('khởi động lại head unit'));
     assert.strictEqual(statusLine({ live: true, connections: 1, waze: w({ hudState: 'disabled' }) }).warn, true);

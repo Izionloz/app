@@ -29,12 +29,12 @@
             "kind": "app",
             "title": "HUD map",
             "description": "Beside waze-on-cluster's own app: brightness, zoom with a focus and rotation for its HUD and cluster maps, and the cluster map's place and size; settings kept across restarts",
-            "version": "1.5.0",
+            "version": "1.5.1",
             "artifact": {
-                "name": "hud_designer@1.5.0.tgz",
+                "name": "hud_designer@1.5.1.tgz",
                 "size": 871451,
                 "sha256": "2de98702c90c7d57a35d5bdcc7b844393ef5eede3d75cfcd48610c4e34a7ff28",
-                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.5.0/hud_designer%401.5.0.tgz"
+                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.5.1/hud_designer%401.5.1.tgz"
             },
             "requires": {
                 "mgux-hud-ctl": "2.8.0"
