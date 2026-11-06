@@ -77,16 +77,16 @@ test('focus: kept, nudged, held to 0-1 and carried by centre', () => {
 test('settings: saved with a backup, read back after a restart, the backup used when the file is bad', () => {
     const file = path.join(dir, 'state.json');
     const d = new ctl.Daemon();
-    d.handle({ cmd: 'rect', which: 'map', x: 300, y: 100, w: 300, h: 132, zoom: 2, fx: 0.67, fy: 0.72 });
+    d.handle({ cmd: 'rect', which: 'hud', x: 300, y: 100, w: 300, h: 132, zoom: 2, fx: 0.67, fy: 0.72 });
     d.save();
     assert.ok(fs.existsSync(`${file}.bak`));
     let l = ctl.loadState();
     assert.strictEqual(l.from, 'saved');
-    assert.deepStrictEqual([l.state.map.x, l.state.map.zoom, l.state.map.fx], [300, 2, 0.67]);
+    assert.deepStrictEqual([l.state.hud.x, l.state.hud.zoom, l.state.hud.fx], [300, 2, 0.67]);
     fs.writeFileSync(file, '{"hud":');                 /* a file cut short */
     l = ctl.loadState();
     assert.strictEqual(l.from, 'backup');
-    assert.strictEqual(l.state.map.x, 300);
+    assert.strictEqual(l.state.hud.x, 300);
     assert.strictEqual(new ctl.Daemon().view().loaded.from, 'backup');
 });
 
@@ -103,12 +103,20 @@ test('settings: a file that cannot be read is not overwritten with the defaults 
     fs.unlinkSync(`${file}.bak`);
 });
 
+test('soft edges: 0.15 on the HUD by default, none on the cluster, held to 0-0.45', () => {
+    assert.strictEqual(ctl.defaultRect('hud').fe, 0.15);
+    assert.strictEqual(ctl.normaliseRect('hud', {}).fe, 0.15);
+    assert.strictEqual(ctl.normaliseRect('map', { fe: 0.3 }).fe, 0);
+    assert.strictEqual(ctl.normaliseRect('hud', { fe: 0.9 }).fe, 0.45);
+    assert.strictEqual(ctl.adjustRect('hud', ctl.normaliseRect('hud', { fe: 0.2 }), { dfe: -0.05 }).fe, 0.15);
+});
+
 /* waze-on-cluster writes its status every second to a file; the helper only reads it */
 const STATUS = process.env.HUDCTL_WAZE_STATUS;
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 const writeStatus = (st) => fs.writeFileSync(STATUS, `${JSON.stringify(Object.assign({ ev: 'status' }, st))}\n`);
 
-test('waze: the status file tells a 0.9.0 (hud_state) from an older one and from none; nothing is ever sent', () => {
+test('waze: the status file tells a 0.9.0 (hud_state) from an older one and from none', () => {
     const { WazeStatus } = require('../native/mgux-hud-ctl/wazestatus.js');
     let changes = 0;
     const w = new WazeStatus({ file: STATUS, onChange: () => { changes++; } });
@@ -132,30 +140,84 @@ test('waze: the status file tells a 0.9.0 (hud_state) from an older one and from
     fs.unlinkSync(STATUS);
 });
 
-test('waze: the HUD map is shown where waze-on-cluster has it; its place and size are not ours to change, its look is', () => {
+test('waze: with a 0.9.0 the HUD rect is waze-on-cluster\'s own place until a place is set here', () => {
     const d = new ctl.Daemon();
+    d.waze.status = { ev: 'status', hud_state: 'showing', hud: 1, cluster: 0 };
     d.proxy.hudPlace = () => ({ x: 300, y: 120, w: 200, h: 88 });
-    assert.deepStrictEqual([d.view().hud.x, d.view().hud.y, d.view().hud.w, d.view().hud.h], [300, 120, 200, 88]);
-    /* a place or size sent for the HUD is ignored, a look is kept */
-    d.handle({ cmd: 'rect', which: 'hud', x: 10, y: 10, w: 500, h: 300, zoom: 2 });
-    assert.strictEqual(d.state.hud.zoom, 2);
-    assert.deepStrictEqual([d.view().hud.x, d.view().hud.w], [300, 200]);
-    assert.notStrictEqual(d.state.hud.w, 500);
-    d.handle({ cmd: 'adjust', which: 'hud', dx: 40, dw: 40, dop: -0.1, drot: 5 });
-    assert.deepStrictEqual([d.state.hud.opacity, d.state.hud.rot], [0.9, 5]);
-    assert.deepStrictEqual([d.state.hud.x, d.state.hud.w], [ctl.defaultRect('hud').x, ctl.defaultRect('hud').w]);
-    d.handle({ cmd: 'centre', which: 'hud' });          /* nothing for the HUD: its own app has Centre */
-    assert.strictEqual(d.state.hud.x, ctl.defaultRect('hud').x);
-    /* the cluster map's place is ours */
-    d.handle({ cmd: 'rect', which: 'map', x: 100, y: 20, w: 600, h: 300 });
-    assert.deepStrictEqual([d.state.map.x, d.state.map.w, d.state.map.custom], [100, 600, true]);
-    assert.strictEqual(d.layout().map.x, 100);
-    assert.strictEqual(d.layout().hud.zoom, 2);
+    assert.deepStrictEqual([d.view().hud.x, d.view().hud.y, d.view().hud.w, d.view().hud.h, d.view().hud.placed], [300, 120, 200, 88, false]);
+    /* a look change does not take the place */
+    d.handle({ cmd: 'rect', which: 'hud', zoom: 2 });
+    assert.strictEqual(d.state.hud.placed, false);
+    assert.strictEqual(d.view().hud.x, 300);
+    /* a size change starts from waze-on-cluster's place and takes it */
+    d.handle({ cmd: 'rect', which: 'hud', w: 240 });
+    assert.deepStrictEqual([d.state.hud.placed, d.state.hud.x, d.state.hud.y, d.state.hud.w, d.state.hud.h], [true, 300, 120, 240, 88]);
+    assert.strictEqual(d.state.hud.zoom, 2, 'the look is kept');
+    /* reset hands it back */
     d.handle({ cmd: 'reset', which: 'hud' });
-    assert.strictEqual(d.state.hud.zoom, 1);
-    /* there is no mode any more, and no command to set one */
-    assert.strictEqual(d.view().mode, undefined);
-    d.handle({ cmd: 'set', mode: 'hud' });
-    assert.ok(d.note);
+    assert.strictEqual(d.state.hud.placed, false);
+    assert.strictEqual(d.view().hud.x, 300);
+    /* adjust: a move takes it, brightness does not */
+    d.handle({ cmd: 'adjust', which: 'hud', dop: -0.1 });
+    assert.strictEqual(d.state.hud.placed, false);
+    d.handle({ cmd: 'adjust', which: 'hud', dx: 10 });
+    assert.deepStrictEqual([d.state.hud.placed, d.state.hud.x], [true, 310]);
 });
 
+test('waze: an older waze-on-cluster (no hud_state) keeps the HUD rect of its own', () => {
+    const d = new ctl.Daemon();
+    d.waze.status = { ev: 'status', state: 'showing' };
+    d.proxy.hudPlace = () => ({ x: 1, y: 1, w: 1, h: 1 });
+    assert.strictEqual(d.layout().native, false);
+    assert.strictEqual(d.view().hud.x, d.state.hud.x);
+});
+
+test('waze: the mode asks waze-on-cluster 0.9.0 for its feeds in a short visit, again after a restart; "follow" asks nothing', async () => {
+    const net = require('net');
+    const sock = path.join(dir, 'waze.sock');
+    const got = [];
+    const srv = net.createServer((c) => {
+        c.setEncoding('utf8');
+        c.write('{"ev":"status","state":"showing","cluster":1,"hud":0,"hud_state":"off"}\n');
+        c.on('data', (d) => d.split('\n').filter(Boolean).forEach((l) => got.push(JSON.parse(l))));
+        c.on('error', () => {});
+    });
+    await new Promise((res) => srv.listen(sock, res));
+    const d = new ctl.Daemon();
+    d.control.path = sock;
+    d.waze.status = { ev: 'status', state: 'showing', cluster: 1, hud: 0, hud_state: 'off' };
+    try {
+        assert.strictEqual(d.state.mode, 'follow', 'the default leaves it to waze-on-cluster\'s own app');
+        d.syncWaze();
+        await wait(500);
+        assert.deepStrictEqual(got, [], 'follow: nothing is asked');
+        d.handle({ cmd: 'set', mode: 'hud' });
+        await wait(600);
+        assert.deepStrictEqual(got, [{ cmd: 'cluster', on: '0' }, { cmd: 'hud', on: '1' }]);
+        /* asked again at the next look only after a while, and only while it is not as asked */
+        got.length = 0;
+        d.syncWaze();
+        await wait(300);
+        assert.deepStrictEqual(got, [], 'not twice in a row');
+        d.waze.status = { ev: 'status', state: 'showing', cluster: 0, hud: 1, hud_state: 'showing' };
+        d.visited = 0;
+        d.syncWaze();
+        await wait(300);
+        assert.deepStrictEqual(got, [], 'it is as asked');
+        /* waze-on-cluster restarted: HUD off again, so asked again */
+        d.waze.status = { ev: 'status', state: 'idle', cluster: 1, hud: 0, hud_state: 'off' };
+        d.visited = 0;
+        d.syncWaze();
+        await wait(500);
+        assert.deepStrictEqual(got, [{ cmd: 'cluster', on: '0' }, { cmd: 'hud', on: '1' }]);
+        /* an older waze-on-cluster has no feeds to ask for */
+        got.length = 0;
+        d.waze.status = { ev: 'status', state: 'showing' };
+        d.visited = 0;
+        d.syncWaze();
+        await wait(300);
+        assert.deepStrictEqual(got, []);
+    } finally {
+        srv.close();
+    }
+});

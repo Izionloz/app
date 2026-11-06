@@ -1,9 +1,9 @@
 {
   "id": "mgux-hud-ctl",
   "kind": "tool",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "title": "HUD map settings",
-  "description": "Beside waze-on-cluster 0.9.0's own app: sits between waze-on-cluster and cluster-render and adds brightness, zoom with a focus and rotation to its HUD and cluster maps, and the cluster map's place and size; the HUD map app talks to it",
+  "description": "Puts the CarPlay map on the cluster, the HUD or both and keeps its size, place, brightness, soft edges, zoom and rotation, between waze-on-cluster and cluster-render; with waze-on-cluster 0.9.0 it works beside its own app; the HUD map app talks to it",
   "files": [
     {
       "path": "hudctl.js",
@@ -15,6 +15,10 @@
     },
     {
       "path": "wazestatus.js",
+      "mode": "0644"
+    },
+    {
+      "path": "wazecontrol.js",
       "mode": "0644"
     }
   ],
