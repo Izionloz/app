@@ -36,6 +36,12 @@ mgu.run({
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
         hud.start();
+        // cluster-render's own status text under the status row (which target is up, who holds its slot, the layers), as the
+        // page is the only place to read it without a computer
+        hud.onClusterStatus((text) => {
+            const lines = String(text).split('\n').filter((l) => l.trim());
+            for (let i = 0; i < 14; i++) ctx.ui.text('C' + (i + 1), (lines[i] || '-').slice(0, 110));
+        });
         // "separate": the panel gets its own scene id (cluster-render's local conf, set by mgux-hud-ctl) so EVA and the HUD map
         // show at once; the cluster's map, which has that id, gives way while EVA shows. Off: they share one scene and the HUD
         // map gives way. While EVA shows, the helper is told now and every 10 s (it lets go after 30 s of silence).

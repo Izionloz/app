@@ -145,9 +145,11 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the helper hides the cluster map's layers, which EVA covers anyway; the HUD map stays. Off: the default id is put back and
   the HUD map's layers give way instead. Experimental: not verified on this car; the map on the cluster after EVA goes is the
   thing to watch.
-- The black backdrop stops at y 640 (idea from `PenguinDukeYDAuto/idrive7-EVAHUD`, MIT): BMW's own bottom row (drive mode,
-  gear letter P, outside temperature) shows below it, so its P belongs to that row instead of sitting alone on black. The
-  OUTSIDE panel is gone for that reason.
+- The backdrop covers the whole cluster again (0.4.2 stopped it at y 640 to let BMW's bottom row show, as
+  `PenguinDukeYDAuto/idrive7-EVAHUD` does; the owner did not want that row). BMW's gear letter P is drawn above our layers
+  and cannot be hidden, so a small frame at x 1375-1455, y 650-706 makes it part of the design.
+- The app's page lists cluster-render's own status text (targets, who holds each slot, layers) under the status row,
+  refreshed every 5 s, to read why the cluster's map is missing after EVA (a photo of the page is enough).
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
   and the HUD, so **the HUD map is off while EVA shows** and comes back in the other modes (what you chose).
 - Placed clear of BMW's black gear box (x 1406-1597, y 342-419) and the belt light, and of the hood at the top corners.
