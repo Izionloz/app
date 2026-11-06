@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..6d3d5b0 100644
+index db817c2..66450ef 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -29,19 +29,17 @@ index db817c2..6d3d5b0 100644
  const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
  const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
  const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
-@@ -302,6 +306,11 @@ class HudApp {
+@@ -302,6 +306,9 @@ class HudApp {
          this.flash = false;
          this.problem = null;             // why nothing shows (a bad layout), for the status line
          this.statusListeners = [];
 +        this.builtName = null;           // the layout whose layers exist (EVA: built while hidden, shown with Sport)
 +        this.hiddenNow = false;
 +        this.shownListeners = [];
-+        this.crListeners = [];
-+        this.crTimer = null;
          this.lastStatus = null;
  
          this._setupVehicleData();
-@@ -378,7 +387,7 @@ class HudApp {
+@@ -378,7 +385,7 @@ class HudApp {
                      if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
                      this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
                      this.driveMode = m; this.driveVariant = variant;
@@ -50,24 +48,7 @@ index db817c2..6d3d5b0 100644
                  },
              },
          };
-@@ -432,7 +441,7 @@ class HudApp {
-             this._statusSoon();
-         });
-         c.on('budget', (capKb, maxKb, reason) => this.log.info('budget' + tag + ' ' + capKb + '/' + maxKb + ' kb/s (' + reason + ')'));
--        c.on('status', (text) => this.log.info('cluster-render status: ' + text));
-+        c.on('status', (text) => { if (ci === 0) this.crListeners.forEach((fn) => { try { fn(String(text)); } catch (e) { this.log.warn('cluster-render status listener: ' + e); } }); });
-     }
- 
-     start() {
-@@ -484,6 +493,7 @@ class HudApp {
-         clearInterval(this.themeTimer);
-         clearInterval(this.statusTimer);
-         clearInterval(this.dmeTimer);
-+        clearInterval(this.crTimer);
-         clearTimeout(this.statusAskT);
-         this.clients.forEach((c) => c.close());
-         this.atlases.clear();
-@@ -829,6 +839,15 @@ class HudApp {
+@@ -829,6 +836,15 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -83,17 +64,11 @@ index db817c2..6d3d5b0 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -871,6 +890,21 @@ class HudApp {
+@@ -871,6 +887,15 @@ class HudApp {
      _rebuild() {
          this._guard('rebuild', () => this._rebuildInner());
          this._status();
 +        this._shownChanged();
-+    }
-+
-+    /** fn(text) with cluster-render's own status text (targets, who holds each slot, layers), asked for every 5 s. */
-+    onClusterStatus(fn) {
-+        this.crListeners.push(fn);
-+        if (!this.crTimer) this.crTimer = setInterval(() => { try { if (this.client.ready) this.client.status(); } catch (e) { /* not connected */ } }, 5000);
 +    }
 +
 +    /** fn(on) whenever the layers are shown or hidden (config.standby: Sport on, other modes off). */
@@ -105,7 +80,7 @@ index db817c2..6d3d5b0 100644
      }
  
      _rebuildInner() {
-@@ -885,15 +919,20 @@ class HudApp {
+@@ -885,15 +910,20 @@ class HudApp {
          this.car.setRedline(this.setting('redline'));
          const name = this._layoutName();
          this.activeName = name;
@@ -129,7 +104,7 @@ index db817c2..6d3d5b0 100644
              return;
          }
          this.problem = null;
-@@ -977,7 +1016,7 @@ class HudApp {
+@@ -977,7 +1007,7 @@ class HudApp {
      /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
      _createSheet(s) {
          const c = this._clientAt(s.conn);
@@ -138,7 +113,7 @@ index db817c2..6d3d5b0 100644
          if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
          s.ref = ref; s.c = c; s.ci = s.conn;
          s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1074,7 @@ class HudApp {
+@@ -1035,7 +1065,7 @@ class HudApp {
          if (sheet) { ref = sheet.ref; c = sheet.c; }
          else {
              c = this._clientAt(this._connOf(w));
@@ -147,7 +122,7 @@ index db817c2..6d3d5b0 100644
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1097,8 @@ class HudApp {
+@@ -1058,6 +1088,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -156,7 +131,7 @@ index db817c2..6d3d5b0 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1221,7 +1262,7 @@ class HudApp {
+@@ -1221,7 +1253,7 @@ class HudApp {
      _tick() {
          const now = Date.now();
          this._smoothRpm(now);
@@ -165,7 +140,7 @@ index db817c2..6d3d5b0 100644
          // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
          const rpm = this._raw('rpm');
          const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
-@@ -1235,8 +1276,11 @@ class HudApp {
+@@ -1235,8 +1267,11 @@ class HudApp {
          const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
          this.lastTickT = now;
          if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -179,7 +154,7 @@ index db817c2..6d3d5b0 100644
      }
  
      _update(x, now, force) {
-@@ -1258,6 +1302,7 @@ class HudApp {
+@@ -1258,6 +1293,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -187,7 +162,7 @@ index db817c2..6d3d5b0 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1341,8 @@ class HudApp {
+@@ -1296,6 +1332,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -196,7 +171,7 @@ index db817c2..6d3d5b0 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1443,103 @@ class HudApp {
+@@ -1396,6 +1434,103 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
