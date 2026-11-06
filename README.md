@@ -28,7 +28,7 @@ keeps every `requires` on a component of this repository at its current version.
 controller included (turn to move the red row, press to change a setting and turn to step it, press or push left
 to end) and the map's state from waze-on-cluster under the preview.
 
-- tag `mgux-hud-ctl@2.9.0`: `mgux-hud-ctl@2.9.0.tgz`
+- tag `mgux-hud-ctl@2.9.1`: `mgux-hud-ctl@2.9.1.tgz`
 - tag `hud_designer@1.6.0`: `hud_designer@1.6.0.tgz`
 - tag `catalog`: `catalog.json`
 
@@ -92,7 +92,7 @@ The line under HUD map's preview names both feeds:
 ### Soft edges (HUD)
 So the HUD map does not end in a square, its four sides fade out (`fe`: how far in, as a part of its shorter side;
 0.15 by default, 0 to 0.45; "Làm mờ viền"). The proxy puts an effect layer just above the HUD map, at its place and
-turn, showing and hiding with it: black, opaque at the sides and clear inside (`FEATHER_FS`, GLSL ES 1.00, `u_f` the
+turn **and scale** (zoom, about the same pivot), showing and hiding with it: black, opaque at the sides and clear inside (`FEATHER_FS`, GLSL ES 1.00, `u_f` the
 fade's width as a part of the width and height). cluster-render blends quads with their alpha and black is no light on
 the HUD, so the map fades into the glass. A change of `fe` is a `uniform`, not a new layer. Not on the cluster, where
 the fade would be a black frame.
