@@ -42,7 +42,7 @@ text('rpmLabel', 132, 190, 300, 28, 'ENGINE RPM', 'e_label', VAL, byRpm=True, z=
 ticks = [('0', 130, 80, 'left'), ('2000', 353, 160, 'center'), ('4000', 655, 160, 'center'), ('6000', 958, 160, 'center'), ('8000 RPM', 1180, 160, 'right')]
 for i, (t, x, w, a) in enumerate(ticks):
     text('tick%d' % i, x, 282, w, 24, t, 'e_tick', DIM, a, z=6)
-text('rpm', 1380, 204, 290, 70, '{{rpm}}', 'e_rpm', VAL, 'right', byRpm=True, glow=True, z=6)
+text('rpm', 1380, 204, 290, 70, '{{rpm}}', 'e_rpm', VAL, 'right', byRpm=True, glow=True, z=6, rate=1)
 text('rpmUnit', 1684, 236, 100, 37, 'rpm', 'e_unit', TITLE, z=6)
 text('alert', 1500, 290, 232, 24, '{{evaAlert}}', 'e_mono', VAL, 'right', byRpm=True, z=6)
 
@@ -50,7 +50,7 @@ text('gearCap', 162, 356, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], z=7)
 text('gear', 162, 390, 156, 111, '{{stage}}', 'e_gear', VAL, 'center', glow=True, z=7)
 text('gearWord', 156, 516, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7)
 
-text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8)
+text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8, rate=1)
 text('speedUnit', 850, 466, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], z=8)
 
 text('pilotCap', 1130, 358, 250, 24, 'PILOT UNIT 01', 'e_mono', SUB, z=8)

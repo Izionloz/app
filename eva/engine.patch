@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..ce08ad0 100644
+index db817c2..5b00d12 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -21,7 +21,8 @@ index db817c2..ce08ad0 100644
  const MAX_CONN = 4;              // connections a layout may ask for ("conn"): 32 layers service-wide / 8 per connection
  const PIXEL_BYTES = 16 * 1024 * 1024;   // cluster-render's pixel memory for every app's images together (CompositorLimits.pixel_bytes)
  const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
- const TICK_MS = 50;              // 20 Hz: shift bar and gauges
+-const TICK_MS = 50;              // 20 Hz: shift bar and gauges
++const TICK_MS = 25;              // 40 Hz: shift bar and gauges (the readouts follow the car's samples within one tick)
 +// EVA rev colours by level (below 3500 rpm, from 3500, from 5000, from the redline), after the EVA HUD design
 +const EVA_LEVELS = [[255, 173, 84, 255], [255, 224, 92, 255], [255, 78, 61, 255], [255, 37, 59, 255]];
 +const EVA_FLASH_MS = 340;
@@ -53,7 +54,21 @@ index db817c2..ce08ad0 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1258,6 +1273,7 @@ class HudApp {
+@@ -1235,8 +1250,11 @@ class HudApp {
+         const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
+         this.lastTickT = now;
+         if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
+-        this.rpmF = isNum(this.rpmF) ? this.rpmF + (raw - this.rpmF) * (1 - Math.exp(-dt / 120)) : raw;
+-        if (!isNum(this.rpmShown) || Math.abs(this.rpmF - this.rpmShown) >= 40) this.rpmShown = Math.max(0, Math.round(this.rpmF / 50) * 50);
++        // config.rpmFilterMs 0: no filter and a readout in 10 rpm steps, the car's sample as it comes (EVA); else BMW's 120 ms filter and 50 rpm steps
++        const tau = isNum(this.config.rpmFilterMs) ? this.config.rpmFilterMs : 120;
++        this.rpmF = isNum(this.rpmF) && tau > 0 ? this.rpmF + (raw - this.rpmF) * (1 - Math.exp(-dt / tau)) : raw;
++        const step = tau > 0 ? 50 : 10, move = tau > 0 ? 40 : 10;
++        if (!isNum(this.rpmShown) || Math.abs(this.rpmF - this.rpmShown) >= move) this.rpmShown = Math.max(0, Math.round(this.rpmF / step) * step);
+     }
+ 
+     _update(x, now, force) {
+@@ -1258,6 +1276,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -61,7 +76,7 @@ index db817c2..ce08ad0 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1312,8 @@ class HudApp {
+@@ -1296,6 +1315,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -70,7 +85,7 @@ index db817c2..ce08ad0 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1414,74 @@ class HudApp {
+@@ -1396,6 +1417,74 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */

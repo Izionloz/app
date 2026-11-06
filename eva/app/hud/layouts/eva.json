@@ -309,7 +309,8 @@
    ],
    "align": "right",
    "byRpm": true,
-   "glow": true
+   "glow": true,
+   "rate": 1
   },
   {
    "id": "rpmUnit",
@@ -420,7 +421,8 @@
     255
    ],
    "align": "right",
-   "glow": true
+   "glow": true,
+   "rate": 1
   },
   {
    "id": "speedUnit",
