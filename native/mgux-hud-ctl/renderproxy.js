@@ -1,22 +1,45 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * renderproxy - sits between waze-on-cluster (0.9.0 or later) and cluster-render and looks after the map's layers
- * while they run (no restart, so CarPlay's stream is never cut). waze-on-cluster draws the cluster's map and the
- * HUD's each as a feed of its own connection and layer (the HUD's scaled to the size it is shown at, with a black
- * background); its own app chooses which, and the HUD map's size and place. The proxy speaks cluster-render's protocol
- * (PROTOCOL.md: u32 length LE | u8 type | body; J = JSON, F = frame, M = mesh) to both sides and passes every message
- * through unchanged, except for each connection's video layer, to which it adds what waze-on-cluster has not:
- *   - brightness, zoom (about a focus point of the picture), rotation, on both displays;
- *   - on the cluster, the map's place and size, when they were set here (the HUD's stay waze-on-cluster's: its
- *     own `set`s that move or resize the layer go on).
- * The layout is sent again as a `set` with the first frame, a little after the layer is made, when the renderer
- * says the layer changed state, and after each `set` of waze's. Node 8 compatible.
+ * renderproxy - sits between waze-on-cluster and cluster-render so the map's
+ * display and rectangle can change while the map runs (no restart, so CarPlay's
+ * stream is never cut), and so the same map can be on the cluster and the HUD
+ * at once.
+ *
+ * waze-on-cluster is started with render_socket = the proxy's socket. The
+ * proxy speaks cluster-render's protocol (PROTOCOL.md: u32 length LE | u8 type |
+ * body; J = JSON, F = frame, M = mesh) to both sides and passes every message
+ * through unchanged except for the map's video layer:
+ *   - waze's `layer` for its video layer is not forwarded as it is: the proxy
+ *     creates the layer(s) itself, on the target(s) and in the rectangle(s) the
+ *     settings ask for (mode map | hud | both), and drops/re-creates them when
+ *     the settings change; a rectangle change is a `set`;
+ *   - waze's `set` for that layer keeps its fields except x, y, w, h;
+ *   - every frame (F) for that layer is sent to each of its layers, the last
+ *     one is kept and replayed into a layer made later;
+ *   - `drop` drops all of them; events about the extra layer are not passed on.
+ * Node 8 compatible.
  */
 'use strict';
 
 const net = require('net');
 const fs = require('fs');
 
+const DUP = 1000000;                 /* the second layer's ref = the map's ref + DUP */
+const FX = 2 * DUP;                  /* a map layer's soft-edge layer: its ref + FX */
+/* The soft edges: an effect layer just above the HUD map, black, opaque at the map's sides and clear inside it
+ * (u_f: the fade's width as a part of the width and height). The renderer blends quads with their alpha, and
+ * black is no light on the HUD, so the map fades into the glass instead of ending in a square. */
+const FEATHER_FS = [
+    'precision mediump float;',
+    'varying vec2 v_uv;',
+    'uniform vec2 u_f;',
+    'void main() {',
+    '    vec2 f = max(u_f, vec2(0.0001));',
+    '    float ax = min(smoothstep(0.0, f.x, v_uv.x), smoothstep(0.0, f.x, 1.0 - v_uv.x));',
+    '    float ay = min(smoothstep(0.0, f.y, v_uv.y), smoothstep(0.0, f.y, 1.0 - v_uv.y));',
+    '    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - ax * ay);',
+    '}'
+].join('\n');
 const MAX_MSG = 5529664 + 64;
 const HIGH_WATER = 2 * MAX_MSG;      /* bytes queued for cluster-render before waze is paused */
 const HUD = 'hud', MAP = 'map';
@@ -119,7 +142,7 @@ class Splitter {
 }
 
 class Link {
-    /* One waze connection and its upstream. `getLayout()` gives the wanted settings. */
+    /* One waze connection and its upstream. `settings()` gives the wanted layout. */
     constructor(client, upstreamPath, getLayout, log) {
         this.client = client;
         this.getLayout = getLayout;
@@ -132,11 +155,12 @@ class Link {
         this.base = null;                  /* waze's layer message for its video layer */
         this.cur = null;                   /* that message plus every later `set` of waze's (visible, opacity, ...) */
         this.ref = null;
-        this.actual = {};                  /* ref -> { target, place, look, own, opacity } of the real layer */
+        this.actual = {};                  /* ref -> { target, rect: key } */
         this.lastFrame = null;
         this.closed = false;
         this.reapplyOnFrame = false;       /* send the whole layout again with the next frame */
         this.layerStates = {};             /* ref -> the renderer's last layer state, to see it change */
+        this.fx = {};                      /* soft-edge layers: ref -> { target, place, uf } */
         this.timers = [];
         this.fromClient = new Splitter((m) => this.onClient(m), (e) => this.fail(e));
         this.fromUp = new Splitter((m) => this.onUp(m), (e) => this.fail(e));
@@ -228,6 +252,9 @@ class Link {
                 this.layerStates[j.ref] = j.state;
                 this.reapplySoon(150);
             }
+            if (j && typeof j.ref === 'number' && j.ref >= DUP) {
+                return;                               /* the extra layer is ours */
+            }
         }
         this.toClient(m.raw);
     }
@@ -236,9 +263,7 @@ class Link {
     onClient(m) {
         if (m.type === 0x46 && this.ref !== null && m.body.length >= 4 && m.body.readUInt32LE(0) === this.ref) {
             this.lastFrame = m.raw;
-            if (this.actual[this.ref]) {
-                this.toUp(m.raw);
-            }
+            Object.keys(this.actual).forEach((r) => this.sendFrame(Number(r), m.raw));
             if (this.reapplyOnFrame) {
                 this.reapplyOnFrame = false;
                 this.reapply();
@@ -267,6 +292,8 @@ class Link {
         if (this.ref !== null && j.ref === this.ref) {
             if (j.op === 'drop') {
                 Object.keys(this.actual).forEach((r) => this.toUp(jsonMsg({ op: 'drop', ref: Number(r) })));
+                Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'drop', ref: Number(r) })));
+                this.fx = {};
                 this.actual = {};
                 this.base = null;
                 this.cur = null;
@@ -280,6 +307,10 @@ class Link {
                         this.cur[k] = j[k];
                     }
                 });
+                if (j.visible !== undefined) {
+                    /* the soft edges show and hide with the map (a black frame must not hold the HUD alone) */
+                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: j.visible })));
+                }
                 Object.keys(this.actual).forEach((r) => {
                     /* a place waze-on-cluster gives goes on while the place is not ours (its app moves the HUD map) */
                     const m2 = Object.assign({}, j, { ref: Number(r) });
@@ -302,14 +333,40 @@ class Link {
         this.toUp(m.raw);
     }
 
+    sendFrame(ref, raw) {
+        if (ref === this.ref) {
+            this.toUp(raw);
+            return;
+        }
+        /* the same frame for another layer: a new header with that layer's ref, then the same pixels
+         * (no copy of the whole frame) */
+        const head = Buffer.from(raw.slice(0, 9));
+        head.writeUInt32LE(ref, 5);
+        this.toUp(head);
+        this.toUp(raw.slice(9));
+    }
+
     /* ---- what the layers should be ---- */
     desired() {
         const L = this.getLayout();
-        const hud = this.base.target === HUD;       /* waze-on-cluster's HUD feed, else its cluster feed */
-        const rect = hud ? L.hud : L.map;           /* the look settings (the cluster map's place too, when set) */
-        return [{ ref: this.ref, target: hud ? HUD : this.base.target, rect,
-            own: !hud && this.base.target === MAP && !!rect,        /* the place and size are ours */
-            opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect), fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy') }];
+        /* own: the place and size are ours; else they are waze-on-cluster's (its HUD layer, while the HUD rect has not
+         * been placed here) */
+        const one = (ref, target, rect, own) => ({ ref, target, rect, own: own === undefined ? !!rect : !!own && !!rect,
+            opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
+            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0 });
+        if (L.native) {
+            /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
+             * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
+             * no frame is copied to another display */
+            return this.base.target === HUD ? [one(this.ref, HUD, L.hud, !!L.hud && L.hud.placed === true)] : [one(this.ref, MAP, L.map)];
+        }
+        if (L.mode === HUD) {
+            return [one(this.ref, HUD, L.hud)];
+        }
+        if (L.mode === 'both') {
+            return [one(this.ref, MAP, L.map), one(this.ref + DUP, HUD, L.hud)];
+        }
+        return [one(this.ref, MAP, L.map)];
     }
 
     /* the layer's size on its target: the rect, else waze's own place, else the whole target */
@@ -393,10 +450,11 @@ class Link {
             this.actual[d.ref] = { target: d.target, place, look: lookKey, own: d.own, opacity: d.opacity };
             delete this.layerStates[d.ref];
             if (this.lastFrame) {
-                this.toUp(this.lastFrame);
+                this.sendFrame(d.ref, this.lastFrame);
             }
             made = true;
         });
+        this.syncFx(want, false);
         if (made) {
             /* a layer made at start-up could keep only part of its place (seen on the car: the height was the
              * default until any setting was touched): the whole layout is sent again as a `set` with the first
@@ -418,7 +476,7 @@ class Link {
         this.timers.push(t);
     }
 
-    /* The layer gets its whole look (and its place, when it is ours) again in one `set`. */
+    /* Every layer gets its whole place (when it has a rectangle) and look again in one `set`. */
     reapply() {
         if (this.ref === null || !this.base || this.closed) {
             return;
@@ -433,6 +491,60 @@ class Link {
                 Object.assign(msg, { x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h });
             }
             this.toUp(jsonMsg(msg));
+        });
+        this.syncFx(this.desired(), true);
+    }
+
+    /* The soft-edge layer of each HUD map that has soft edges: made, moved, changed or dropped with it. */
+    syncFx(want, again) {
+        const keep = {};
+        want.forEach((d) => {
+            const e = d.ref + FX;
+            const a = this.actual[d.ref];
+            if (!(d.fe > 0.001) || !a || a.target !== d.target) {
+                return;
+            }
+            const r = d.own ? d.rect : this.wazeRect();
+            if (!r) {
+                return;
+            }
+            keep[e] = true;
+            const side = Math.max(1, Math.min(r.w, r.h)) * d.fe;
+            const uf = `${Math.round(side / r.w * 1000) / 1000} ${Math.round(side / r.h * 1000) / 1000}`;
+            const look = this.look(d);
+            const fields = { x: r.x, y: r.y, w: r.w, h: r.h, rotate: look.rotate, px: look.px, py: look.py };
+            const place = JSON.stringify(fields);
+            const cur = this.fx[e];
+            if (cur && cur.target !== d.target) {
+                this.toUp(jsonMsg({ op: 'drop', ref: e }));
+                delete this.fx[e];
+            }
+            if (!this.fx[e]) {
+                const msg = Object.assign({ op: 'layer', ref: e, target: d.target, kind: 'effect', fs: FEATHER_FS,
+                    class: typeof this.cur.class === 'string' ? this.cur.class : 'content',
+                    z: Math.min(1000, (typeof this.cur.z === 'number' ? this.cur.z : 0) + 1) }, fields);
+                if (this.cur.visible !== undefined) {
+                    msg.visible = this.cur.visible;
+                }
+                this.toUp(jsonMsg(msg));
+                this.toUp(jsonMsg({ op: 'uniform', ref: e, name: 'u_f', v: uf }));
+                this.fx[e] = { target: d.target, place, uf };
+                return;
+            }
+            if (again || this.fx[e].place !== place) {
+                this.toUp(jsonMsg(Object.assign({ op: 'set', ref: e }, fields)));
+                this.fx[e].place = place;
+            }
+            if (again || this.fx[e].uf !== uf) {
+                this.toUp(jsonMsg({ op: 'uniform', ref: e, name: 'u_f', v: uf }));
+                this.fx[e].uf = uf;
+            }
+        });
+        Object.keys(this.fx).forEach((e) => {
+            if (!keep[e]) {
+                this.toUp(jsonMsg({ op: 'drop', ref: Number(e) }));
+                delete this.fx[e];
+            }
         });
     }
 
@@ -498,7 +610,7 @@ class RenderProxy {
         return { connections: this.links.size };
     }
 
-    /* where waze-on-cluster has its HUD layer (its feed of its own), null when there is none */
+    /* where waze-on-cluster has its own HUD layer (0.9.0: its feed of its own), null when there is none */
     hudPlace() {
         for (const l of this.links) {
             if (l.base && l.base.target === HUD && !l.closed) {
@@ -512,4 +624,4 @@ class RenderProxy {
     }
 }
 
-module.exports = { RenderProxy, Splitter, frame, jsonMsg, pivot };
+module.exports = { RenderProxy, Splitter, frame, jsonMsg, DUP, FX, FEATHER_FS, pivot };

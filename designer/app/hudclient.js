@@ -35,7 +35,7 @@ class HudClient {
         this.wanted = false;
         this.pend = { hud: null, map: null };
         this.sendTimer = null;
-        this.demo = { hud: demoRect('hud'), map: demoRect('map') };
+        this.demo = { mode: 'hud', hud: demoRect('hud'), map: demoRect('map') };
         if (typeof process !== 'undefined' && process.env && process.env.HUDD_DEMO) {
             try { const o = JSON.parse(process.env.HUDD_DEMO); this.demo = Object.assign(this.demo, o); } catch (e) { /* a preview aid only */ }
         }
@@ -71,14 +71,14 @@ class HudClient {
     info() {
         const live = this.connected();
         return { live, loaded: live ? this.hs.loaded : null, savedAt: live ? this.hs.savedAt : null,
-            connections: live ? this.hs.connections : null, note: live ? this.hs.note : '',
+            connections: live ? this.hs.connections : null, note: live ? this.hs.note : '', mode: live ? this.hs.mode : this.demo.mode,
             waze: live ? this.hs.waze : null };
     }
 
     /* the state to draw: the helper's, else the local demo */
     state() {
         const s = this.connected() ? this.hs : this.demo;
-        return { hud: Object.assign({ canvasW: 800, canvasH: 480 }, s.hud), map: Object.assign({ canvasW: 1088, canvasH: 480 }, s.map) };
+        return { mode: s.mode, hud: Object.assign({ canvasW: 800, canvasH: 480 }, s.hud), map: Object.assign({ canvasW: 1088, canvasH: 480 }, s.map) };
     }
 
     _connect() {
@@ -130,6 +130,14 @@ class HudClient {
     _send(obj) {
         if (this.ready) {
             this.sock.write(`${JSON.stringify(obj)}\n`);
+        }
+    }
+
+    setMode(mode) {
+        if (this.connected()) {
+            this._send({ cmd: 'set', mode });
+        } else {
+            this.demo.mode = mode;
         }
     }
 
