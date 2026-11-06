@@ -134,6 +134,8 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the plain 0.1.1 app (the event log, the debounce, `contend` and the take-over setting are gone). It only puts a leftover
   `panel_take_over_stock = 1` back to `0` through mgux-hud-ctl (nothing happens when it was never set). A normal (not
   M-style) cluster is what it is made for.
+- Switching to Sport is quick: the EVA layers are built once at start, hidden (`config.standby`), and a drive-mode change
+  only shows or hides them (no new layers, no upload); the HUD map always gives way to EVA while it shows.
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
   and the HUD, so **the HUD map is off while EVA shows** and comes back in the other modes (what you chose).
 - Placed clear of BMW's black gear box (x 1406-1597, y 342-419) and the belt light, and of the hood at the top corners.
