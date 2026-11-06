@@ -2,7 +2,7 @@
   "id": "hud_designer",
   "title": "HUD map",
   "description": "The CarPlay map on the HUD and the cluster: where it shows, its size, brightness, soft edges, zoom, rotation and zoom focus, by touch or with the iDrive controller; kept across restarts",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "vendor": "custom",
   "loggingId": "OA9H",
   "iconGlyph": "HUD",

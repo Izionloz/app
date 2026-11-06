@@ -117,6 +117,50 @@ function focusOnPage(p, r) {
     return { x: p.x + fx * p.w, y: p.y + fy * p.h };
 }
 
+/* The pivot (as a part of the rectangle) cluster-render scales and turns the layer about, for a zoom z and a focus f: the
+ * focus shows in the middle when it can (the same as the helper's proxy sends). */
+function pivotOf(z, f) {
+    return z <= 1.001 ? 0.5 : Math.max(0, Math.min(1, (z * f - 0.5) / (z - 1)));
+}
+
+/* Where the map's layer is on the page: its rectangle p scaled by the zoom and turned by the rotation about the pivot,
+ * as cluster-render draws it (it is not clipped to the rectangle: a zoomed map is bigger than it). `to(x, y)` takes a
+ * point of the rectangle to the page; `corners` is the layer's four corners, clockwise from the top left. */
+function layerQuad(p, r) {
+    const z = typeof r.zoom === 'number' ? r.zoom : 1, ang = ((typeof r.rot === 'number' ? r.rot : 0) * Math.PI) / 180;
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    const px = p.x + pivotOf(z, typeof r.fx === 'number' ? r.fx : 0.5) * p.w;
+    const py = p.y + pivotOf(z, typeof r.fy === 'number' ? r.fy : 0.5) * p.h;
+    const to = (x, y) => {
+        const dx = (x - px) * z, dy = (y - py) * z;
+        return [px + dx * ca - dy * sa, py + dx * sa + dy * ca];
+    };
+    return { to, pivot: [px, py], corners: [to(p.x, p.y), to(p.x + p.w, p.y), to(p.x + p.w, p.y + p.h), to(p.x, p.y + p.h)] };
+}
+
+/* Liang-Barsky: the part of segment a-b inside rectangle p, as [x1, y1, x2, y2], or null */
+function clipSegment(a, b, p) {
+    let t0 = 0, t1 = 1;
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const tests = [[-dx, a[0] - p.x], [dx, p.x + p.w - a[0]], [-dy, a[1] - p.y], [dy, p.y + p.h - a[1]]];
+    for (let i = 0; i < 4; i++) {
+        const q = tests[i][0], v = tests[i][1];
+        if (q === 0) {
+            if (v < 0) { return null; }
+        } else {
+            const t = v / q;
+            if (q < 0) {
+                if (t > t1) { return null; }
+                if (t > t0) { t0 = t; }
+            } else {
+                if (t < t0) { return null; }
+                if (t < t1) { t1 = t; }
+            }
+        }
+    }
+    return [a[0] + t0 * dx, a[1] + t0 * dy, a[0] + t1 * dx, a[1] + t1 * dy];
+}
+
 /* waze-on-cluster's state of one feed (state for the cluster's, hud_state for the HUD's) in words */
 function feedText(st) {
     switch (st) {
@@ -464,14 +508,21 @@ class Designer {
         const w = (this.client.info ? this.client.info() : {}).waze;
         /* is the map on this display: waze-on-cluster's report (0.9.0), else what the mode asks */
         const shown = this.native() ? !!(this.which === 'hud' ? w.hud : w.cluster) : (st.mode === 'both' || st.mode === this.which);
-        cv.roundRect(p.x, p.y, p.w, p.h, 6, shown ? C.map : C.off);
-        cv.clip(p.x, p.y, p.w, p.h);
-        this._roads(cv, p, r, shown);
-        cv.noclip();
+        /* the map as the display draws it: its rectangle zoomed and turned about the pivot, reaching past the rectangle,
+         * cut at the display's own edge only */
+        const q = layerQuad(p, r);
+        cv.clip(b.x, b.y, b.w, b.h);
+        cv.quad(q.corners, shown ? C.map : C.off);
+        this._roads(cv, p, q, shown);
         if (this.which === 'hud' && shown) {
-            this._softEdges(cv, p, r);
+            this._softEdges(cv, p, q, r);
         }
-        cv.strokeRoundRect(p.x, p.y, p.w, p.h, 6, 3, shown ? C.accent : C.dim);
+        if (Math.abs(r.zoom - 1) > 0.005 || Math.abs(r.rot) > 0.5) {
+            /* where the rectangle is before the zoom and turn: the focus + sits in it */
+            cv.polyline([[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h], [p.x, p.y]], 1.5, C.dim);
+        }
+        cv.polyline(q.corners.concat([q.corners[0]]), 3, shown ? C.accent : C.dim);
+        cv.noclip();
         if (!shown) {
             V.text(cv, 'không hiện trên màn này', p.x + 12, p.y + 30, 20, C.dim);
         }
@@ -499,39 +550,44 @@ class Designer {
         V.text(cv, saved, PREV.x + 20, ly + 56, 20, col);
     }
 
-    /* the soft edges as the HUD shows them: black bands, darker towards the sides (black is no light there) */
-    _softEdges(cv, p, r) {
+    /* the soft edges as the HUD shows them: black bands along the layer's own sides (zoomed and turned with it), darker
+     * towards the sides (black is no light there) */
+    _softEdges(cv, p, q, r) {
         const fe = typeof r.fe === 'number' ? r.fe : 0.15;
         const side = Math.min(p.w, p.h) * fe;
         const N = 10;
         if (side < 1) {
             return;
         }
+        const ring = (inset) => [q.to(p.x + inset, p.y + inset), q.to(p.x + p.w - inset, p.y + inset),
+            q.to(p.x + p.w - inset, p.y + p.h - inset), q.to(p.x + inset, p.y + p.h - inset)];
         for (let i = 0; i < N; i++) {
             const t = (i + 0.5) / N;                       /* 0 at the side, 1 inside */
             const a = Math.round(255 * (1 - t * t * (3 - 2 * t)));
-            const inset = side * i / N, w = Math.max(1, side / N);
             const col = `#000000${(a < 16 ? '0' : '') + a.toString(16)}`;
-            cv.fillRect(p.x + inset, p.y + inset, p.w - 2 * inset, w, col);
-            cv.fillRect(p.x + inset, p.y + p.h - inset - w, p.w - 2 * inset, w, col);
-            cv.fillRect(p.x + inset, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
-            cv.fillRect(p.x + p.w - inset - w, p.y + inset + w, w, p.h - 2 * inset - 2 * w, col);
+            const o = ring(side * i / N), n = ring(side * (i + 1) / N);
+            for (let k = 0; k < 4; k++) {
+                const k2 = (k + 1) % 4;
+                cv.quad([o[k], o[k2], n[k2], n[k]], col);
+            }
         }
     }
 
-    _roads(cv, p, r, shown) {
-        const z = r.zoom, ang = (r.rot * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
-        const f = focusOnPage(p, r);
-        /* a sample map, zoomed about the focus like the real one */
+    /* a sample map: roads kept to the rectangle, then zoomed and turned with it */
+    _roads(cv, p, q, shown) {
         const k = Math.min(p.w, p.h) / 2;
         const ox = p.x + p.w / 2, oy = p.y + p.h / 2;
-        const pt = (ux, uy) => {
-            const bx = ox + ux * k * 1.4, by = oy + uy * k * 1.4;
-            const dx = (bx - f.x) * z, dy = (by - f.y) * z;
-            return [f.x + dx * ca - dy * sa, f.y + dx * sa + dy * ca];
-        };
+        const pt = (ux, uy) => [ox + ux * k * 1.4, oy + uy * k * 1.4];
         const col = shown ? ['#2f6f82', '#245a6a', '#3a8aa0'] : ['#3a3a3a', '#333333', '#444444'];
-        const road = (pts, w, c) => cv.polyline(pts.map((q) => pt(q[0], q[1])), w, c);
+        const road = (pts, w, c) => {
+            for (let i = 0; i + 1 < pts.length; i++) {
+                const seg = clipSegment(pt(pts[i][0], pts[i][1]), pt(pts[i + 1][0], pts[i + 1][1]), p);
+                if (seg) {
+                    const a = q.to(seg[0], seg[1]), b = q.to(seg[2], seg[3]);
+                    cv.line(a[0], a[1], b[0], b[1], w, c);
+                }
+            }
+        };
         road([[-2, -0.55], [-0.6, -0.3], [0.3, -0.35], [2, 0.1]], 7, col[0]);
         road([[-1.6, 0.7], [-0.4, 0.25], [0.5, 0.2], [1.8, 0.8]], 6, col[0]);
         road([[-0.5, -2], [-0.3, -0.5], [-0.35, 0.4], [-0.1, 2]], 5, col[1]);
@@ -541,4 +597,4 @@ class Designer {
     }
 }
 
-module.exports = { Designer, sliders, rows, bar, statusLine, previewBox, rectOnPage, focusOnPage, MODES, MODES_NATIVE, WHICH, PREV, LIST };
+module.exports = { Designer, sliders, rows, bar, statusLine, previewBox, rectOnPage, focusOnPage, layerQuad, pivotOf, MODES, MODES_NATIVE, WHICH, PREV, LIST };

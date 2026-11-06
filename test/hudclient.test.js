@@ -238,3 +238,25 @@ test('designer: Hiện bản đồ trên has "Theo app waze-on-cluster" with a 0
     assert.ok(d.selected < d.rows().length, 'the lit row is held to the rows there are');
     assert.ok(texts.join('').includes('theo waze'), 'the HUD map place is shown as waze-on-cluster\'s until set here');
 });
+
+test('designer preview: the map is its rectangle zoomed and turned about the same pivot the proxy sends', () => {
+    const D = require('../designer/app/designer.js');
+    const { pivot } = require('../native/mgux-hud-ctl/renderproxy.js');
+    const p = { x: 100, y: 50, w: 200, h: 100 };
+    [[1, 0.5], [2, 0.5], [2.05, 0.67], [1.2, 0.95], [3, 0.05], [0.5, 0.3]].forEach(([z, f]) => {
+        assert.strictEqual(D.pivotOf(z, f), pivot(z, f), `the pivot for zoom ${z}, focus ${f}`);
+    });
+    /* zoom 1: the rectangle itself */
+    let q = D.layerQuad(p, { zoom: 1, rot: 0, fx: 0.5, fy: 0.5 });
+    assert.deepStrictEqual(q.corners.map((c) => c.map((v) => Math.round(v) + 0)), [[100, 50], [300, 50], [300, 150], [100, 150]]);
+    /* zoom 2 about the middle: twice as big, reaching past the rectangle on every side */
+    q = D.layerQuad(p, { zoom: 2, rot: 0, fx: 0.5, fy: 0.5 });
+    assert.deepStrictEqual(q.corners.map((c) => c.map((v) => Math.round(v) + 0)), [[0, 0], [400, 0], [400, 200], [0, 200]]);
+    /* the focus shows in the middle of the rectangle */
+    q = D.layerQuad(p, { zoom: 2, rot: 0, fx: 0.75, fy: 0.5 });
+    const f = q.to(p.x + 0.75 * p.w, p.y + 0.5 * p.h);
+    assert.deepStrictEqual(f.map((v) => Math.round(v) + 0), [200, 100]);
+    /* a quarter turn about the pivot */
+    q = D.layerQuad(p, { zoom: 1, rot: 90, fx: 0.5, fy: 0.5 });
+    assert.deepStrictEqual(q.corners.map((c) => c.map((v) => Math.round(v) + 0)), [[250, 0], [250, 200], [150, 200], [150, 0]]);
+});

@@ -28,12 +28,12 @@
             "kind": "app",
             "title": "HUD map",
             "description": "The CarPlay map on the HUD and the cluster: where it shows, its size, brightness, soft edges, zoom, rotation and zoom focus, by touch or with the iDrive controller; kept across restarts",
-            "version": "1.6.0",
+            "version": "1.6.1",
             "artifact": {
-                "name": "hud_designer@1.6.0.tgz",
+                "name": "hud_designer@1.6.1.tgz",
                 "size": 871451,
                 "sha256": "2de98702c90c7d57a35d5bdcc7b844393ef5eede3d75cfcd48610c4e34a7ff28",
-                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.0/hud_designer%401.6.0.tgz"
+                "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.1/hud_designer%401.6.1.tgz"
             },
             "requires": {
                 "mgux-hud-ctl": "2.9.1"
