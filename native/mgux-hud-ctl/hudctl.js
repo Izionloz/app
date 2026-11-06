@@ -443,7 +443,9 @@ class Daemon {
         try {
             let text = '';
             try { text = fs.readFileSync(CR_CONF, 'utf8'); } catch (e) { /* none yet */ }
-            const next = setConfKey(text, 'panel_take_over_stock', want);
+            const has = /^[ \t]*panel_take_over_stock[ \t]*=/m.test(text);
+            /* turning it off when it was never set changes nothing (and restarts nothing) */
+            const next = !on && !has ? text : setConfKey(text, 'panel_take_over_stock', want);
             if (next === text) {
                 this.note = `panel take-over already ${want}`;
                 return;
