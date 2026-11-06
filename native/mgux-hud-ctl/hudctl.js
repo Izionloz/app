@@ -466,11 +466,13 @@ class Daemon {
         this.crConf('panel_take_over_stock', on ? '1' : '0', !on, 'panel take-over');
     }
 
-    /* The EVA cluster app asks for the panel's own scene (the map's id, 0x010004f0, in cluster-render's local conf), so the
-     * cluster and the HUD can show at once; by default they share 0x01000400 and one of them keeps the other off (and the
-     * HUD could not come back after the cluster, seen on a car by PenguinDukeYDAuto). Off puts the default back. */
+    /* The EVA cluster app asks for a scene of its own for the panel in cluster-render's local conf: 0x010004f1 (the guide
+     * hold's, which is only up while the cluster's map shows, and EVA hides that), so that it shares nothing with the HUD
+     * (0x01000400, the default for both) or with the cluster's map (0x010004f0, which a panel using it kept from coming
+     * back: the fetch of a scene another target has just used failed on a car, as PenguinDukeYDAuto saw with the HUD).
+     * Off puts the default back. */
     panelScene(on) {
-        this.crConf('panel_scene_id', on ? '0x010004f0' : '0x01000400', !on, 'panel scene');
+        this.crConf('panel_scene_id', on ? '0x010004f1' : '0x01000400', !on, 'panel scene');
     }
 
     /* A key in cluster-render's local conf, changed only when it is not already so (and, with onlyIfSet, only when it is
