@@ -27,9 +27,16 @@ jobs:
           ref: 990c105870edb21bd8f23796fcf95182530790e8
           path: .kit
           persist-credentials: false
+      # the EVA cluster app is built with bimmer-lab/apps (MIT), at the commit its patch (eva/engine.patch) was made against
+      - uses: actions/checkout@v4
+        with:
+          repository: bimmer-lab/apps
+          ref: c9f8a8ee2f8885ce1ff1d0ca67bd00af0e68bdb2
+          path: .eva-kit
+          persist-credentials: false
       - run: npm test
       - name: Build and check the artifacts against catalog.json
-        run: mkdir -p dist && node release/catalog.js --out dist --check --kit .kit --commit "$GITHUB_SHA" --write dist/catalog.json > dist/built.json
+        run: mkdir -p dist && node release/catalog.js --out dist --check --kit .kit --eva-kit .eva-kit --commit "$GITHUB_SHA" --write dist/catalog.json > dist/built.json
       - name: Releases for new versions
         run: |
           node -e 'JSON.parse(require("fs").readFileSync("dist/built.json","utf8")).filter(b=>b.built).forEach(b=>console.log(b.tag+" "+b.file))' |

@@ -10,6 +10,7 @@
  *   node release/catalog.js --out dist --commit <sha> --write <file>
  *                                                 also write a copy of the catalog carrying that commit
  *   ... --kit <idrive7-apps checkout>             also build the designer (release/designer.js)
+ *   ... --eva-kit <bimmer-lab/apps checkout>      also build the EVA cluster app (release/eva.js)
  *
  * Tools (native/<id>) are packed with tool_artifact.js; apps built on the unit (apps/<id>, "build": "unit") are
  * their source package. The builds are reproducible: the same tree gives the same bytes.
@@ -23,6 +24,7 @@ const crypto = require('crypto');
 const cp = require('child_process');
 const { buildArtifact } = require('./tool_artifact.js');
 const designer = require('./designer.js');
+const eva = require('./eva.js');
 
 const ROOT = path.join(__dirname, '..');
 const CATALOG = path.join(ROOT, 'catalog.json');
@@ -39,7 +41,10 @@ function urlOf(id, version, file) {
 }
 
 /* builds one component into outDir: {version, file} or null when it is not built here */
-function build(c, outDir, kit) {
+function build(c, outDir, kit, evaKit) {
+    if (c.id === eva.ID) {
+        return evaKit ? { version: eva.version(), file: eva.build(evaKit, outDir), kit: true } : null;
+    }
     if (c.id === designer.ID) {
         return kit ? { version: designer.version(), file: designer.build(kit, outDir), kit: true } : null;
     }
@@ -67,6 +72,7 @@ function main() {
     const outDir = path.resolve(arg(argv, '--out') || 'dist');
     const check = argv.includes('--check');
     const kit = arg(argv, '--kit');
+    const evaKit = arg(argv, '--eva-kit');
     const catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
     const problems = [];
     const built = [];
@@ -74,7 +80,10 @@ function main() {
         if (c.id === designer.ID && c.version !== designer.version()) {
             problems.push(`${c.id}: catalog has ${c.version}, designer/app/app.json ${designer.version()}`);
         }
-        const b = build(c, outDir, kit);
+        if (c.id === eva.ID && c.version !== eva.version()) {
+            problems.push(`${c.id}: catalog has ${c.version}, eva/app/app.json ${eva.version()}`);
+        }
+        const b = build(c, outDir, kit, evaKit);
         if (!b) {
             built.push({ id: c.id, version: c.version, built: false });
             return;

@@ -1,0 +1,288 @@
+diff --git a/shared/hud.js b/shared/hud.js
+index db817c2..ce08ad0 100644
+--- a/shared/hud.js
++++ b/shared/hud.js
+@@ -152,6 +152,7 @@
+ const fs = require('fs');
+ const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client.js');
+ const Layouts = require('./layouts');
++const data = require('./hud_data');
+ const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
+ const ShiftScore = require('./shift_score');
+ const sun = require('./sun');
+@@ -163,13 +164,16 @@ const Car = require('./kit/car');
+ 
+ const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
+ // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
+-const IMAGE_TYPES = { text: true, scale: true, stripe: true, badge: true, gridlabels: true, icon: true, swatchimg: true };
++const IMAGE_TYPES = { text: true, scale: true, stripe: true, badge: true, gridlabels: true, icon: true, swatchimg: true, picture: true };
+ const STATUS_ASK_MS = 2000;      // after a rebuild: ask cluster-render for its own status text
+ const LAYER_BUDGET = 8;          // cluster-render's limit per client connection (CompositorLimits.per_client; confirmed on the car Nov 5 2026)
+ const MAX_CONN = 4;              // connections a layout may ask for ("conn"): 32 layers service-wide / 8 per connection
+ const PIXEL_BYTES = 16 * 1024 * 1024;   // cluster-render's pixel memory for every app's images together (CompositorLimits.pixel_bytes)
+ const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
+ const TICK_MS = 50;              // 20 Hz: shift bar and gauges
++// EVA rev colours by level (below 3500 rpm, from 3500, from 5000, from the redline), after the EVA HUD design
++const EVA_LEVELS = [[255, 173, 84, 255], [255, 224, 92, 255], [255, 78, 61, 255], [255, 37, 59, 255]];
++const EVA_FLASH_MS = 340;
+ const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
+ const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
+ const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
+@@ -829,6 +833,15 @@ class HudApp {
+                 const d = this.car.data();
+                 return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
+             }
++            case 'evaAlert': { const l = this._evaLevel(); return l >= 3 ? 'REDLINE' : l === 2 ? 'HIGH RPM' : ''; }
++            case 'gearWord': {
++                const d = this.car.data();
++                if (d.stage === 'P') return 'PARK';
++                if (d.stage === 'R') return 'REVERSE';
++                if (d.stage === 'N') return 'NEUTRAL';
++                const g = this._program(d);
++                return g === 'S' ? 'SPORT' : g === 'M' ? 'MANUAL' : (d.stage === 'D' || (isNum(d.gear) && d.gear > 0) ? 'DRIVE' : '');
++            }
+             case 'mode': {
+                 if (!this.driveMode) return '';
+                 const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
+@@ -1058,6 +1071,8 @@ class HudApp {
+             }
+         } else if (w.type === 'gridlabels') this._paintGridLabels(x);
+         else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
++        else if (w.type === 'picture') this._paintPicture(x);
++        else if (w.type === 'evadash') this._createEva(x);
+         else if (w.type === 'sdash') {
+             c.uniform(ref, 'u_size', [w.w, w.h]);
+             c.uniform(ref, 'u_geo', w.geo);
+@@ -1258,6 +1273,7 @@ class HudApp {
+                 if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
+                 if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
+             }
++            if (w.byRpm) role = EVA_LEVELS[this._evaLevel()];
+             const key = s + '|' + role;
+             if (!force && key === x.last) return;
+             x.last = key; x.lastPaint = now;
+@@ -1296,6 +1312,8 @@ class HudApp {
+             if (!force && q === x.last) return;
+             x.last = q;
+             x.c.uniform(x.ref, 'u_value', [q]);
++        } else if (w.type === 'evadash') {
++            this._updateEva(x, force);
+         } else if (w.type === 'sdash') {
+             const us = this.setting('units') === 'us';
+             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
+@@ -1396,6 +1414,74 @@ class HudApp {
+     }
+ 
+     /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
++    /** The EVA rev level 0..3: the colour and the warning, from the raw rpm and the redline setting. */
++    _evaLevel() {
++        const rpm = this._raw('rpm');
++        if (!isNum(rpm)) return 0;
++        const red = this.setting('redline');
++        return rpm >= red ? 3 : rpm >= Math.min(5000, red - 500) ? 2 : rpm >= 3500 ? 1 : 0;
++    }
++
++    /** A picture widget: the layout's "name" in hud/pictures/<name>.json ({ w, h, rgba: base64 }), drawn once. */
++    _paintPicture(x) {
++        const w = x.w;
++        const pic = data.json('pictures/' + w.name + '.json');
++        if (!pic || !pic.rgba || pic.w !== w.w || pic.h !== w.h) {
++            this.log.warn('picture "' + w.name + '" is missing or not ' + w.w + 'x' + w.h + '; nothing drawn');
++            return;
++        }
++        this._blit(x, null, Buffer.from(pic.rgba, 'base64'));
++    }
++
++    /** The EVA backdrop's constant uniforms: its frames (w.frames), rails (w.rails) and stripe. */
++    _createEva(x) {
++        const w = x.w, c = x.c, ref = x.ref;
++        const frames = (Array.isArray(w.frames) ? w.frames : []).filter((f) => f && isNum(f.x) && isNum(f.y) && isNum(f.w) && isNum(f.h)).slice(0, 12);
++        const rects = [], styles = [];
++        for (let i = 0; i < 12; i++) {
++            const f = frames[i];
++            rects.push(f ? f.x - w.x : 0, f ? f.y - w.y : 0, f ? f.w : 0, f ? f.h : 0);
++            styles.push(f ? (f.chamfer === undefined ? 22 : f.chamfer) : 0, f ? (f.border === undefined ? 2 : f.border) : 0, f ? f.kind || 0 : 0, f ? f.color || 0 : 0);
++        }
++        const rails = Array.isArray(w.rails) ? w.rails.slice(0, 2) : [];
++        const rr = [], rp = [];
++        for (let i = 0; i < 2; i++) {
++            const r = rails[i];
++            rr.push(r ? r.x - w.x : 0, r ? r.y - w.y : 0, r ? r.w : 0, r ? r.h : 0);
++            rp.push(r ? r.segs : 1, 0, r ? (r.gap === undefined ? 4 : r.gap) : 4, r && r.ramp ? 1 : 0);
++        }
++        x.eva = { segs: [rp[0], rp[4]], rp };
++        c.uniform(ref, 'u_size', [w.w, w.h]);
++        c.uniform(ref, 'u_n', [frames.length]);
++        c.uniform(ref, 'u_frame', rects, { type: 'vec4' });
++        c.uniform(ref, 'u_fstyle', styles, { type: 'vec4' });
++        c.uniform(ref, 'u_pal', [200 / 255, 57 / 255, 50 / 255, 1, 136 / 255, 53 / 255, 43 / 255, 1, 1, 173 / 255, 84 / 255, 1], { type: 'vec4' });
++        c.uniform(ref, 'u_rail', rr, { type: 'vec4' });
++        c.uniform(ref, 'u_railP', rp, { type: 'vec4' });
++        c.uniform(ref, 'u_off', [0.2, 0.04, 0.07, 1]);
++        const s = Array.isArray(w.stripe) && w.stripe.length === 4 ? w.stripe : [0, 0, 0, 0];
++        c.uniform(ref, 'u_stripe', [s[0] - w.x, s[1] - w.y, s[2], s[3]]);
++    }
++
++    /** The EVA rails: the rev rail lights round(rpm / rpmMax * segments), in the level colour (flashing at the redline); the coolant rail round(t / coolMax * segments). */
++    _updateEva(x, force) {
++        const w = x.w, e = x.eva;
++        if (!e) return;
++        const rpm = this._raw('rpm'), cool = this._raw('coolant');
++        const lit0 = isNum(rpm) ? Math.max(0, Math.min(e.segs[0], Math.round(rpm / (w.rpmMax || 8000) * e.segs[0]))) : 0;
++        const lit1 = isNum(cool) ? Math.max(0, Math.min(e.segs[1], Math.round(cool / (w.coolMax || 120) * e.segs[1]))) : 0;
++        const lvl = this._evaLevel();
++        const dim = lvl >= 3 && Math.floor(Date.now() / EVA_FLASH_MS) % 2 === 1 ? 0.55 : 1;
++        const key = lit0 + '|' + lit1 + '|' + lvl + '|' + dim;
++        if (!force && key === x.last) return;
++        x.last = key;
++        const rp = e.rp.slice();
++        rp[1] = lit0; rp[5] = lit1;
++        const lc = EVA_LEVELS[lvl];
++        x.c.uniform(x.ref, 'u_railP', rp, { type: 'vec4' });
++        x.c.uniform(x.ref, 'u_railCol', [lc[0] / 255, lc[1] / 255, lc[2] / 255, dim, 0.4, 0.96, 0.72, 1], { type: 'vec4' });
++    }
++
+     _paintGridLabels(x) {
+         const w = x.w, W = w.w, H = w.h, step = w.step || 100, font = w.font;
+         const cell = textRaster.loadFont(font).metrics.cellHeight;
+diff --git a/shared/hud_themes.js b/shared/hud_themes.js
+index 01149cd..5ae4140 100644
+--- a/shared/hud_themes.js
++++ b/shared/hud_themes.js
+@@ -72,6 +72,16 @@ const THEMES = {
+         ink: [12, 12, 14, 255], accent: [226, 36, 44, 255], well: [0, 0, 0, 255], redTrack: [90, 16, 20, 255],
+         chrome: [182, 188, 198, 255], grey: [160, 166, 176, 255], grey2: [104, 110, 122, 255], faint: [96, 104, 118, 255],
+     },
++    // EVA cluster (layout eva.json): black with red and amber light, mint for "ok". Level colours of the rev rail are in hud.js.
++    eva: {
++        name: 'EVA',
++        fg: [255, 211, 163, 255], dim: [255, 118, 91, 255], track: [81, 16, 26, 255], arc: [255, 173, 84, 255],
++        glow: 0.35, stripe: false,
++        bar: { low: [255, 173, 84], mid: [255, 224, 92], high: [255, 37, 59], midAt: 'shift' },
++        rev: { from: [255, 173, 84], to: [255, 37, 59] },
++        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [200, 57, 50, 255], head: [226, 228, 232, 255],
++        ink: [12, 12, 14, 255], accent: [255, 173, 84, 255], well: [0, 0, 0, 255],
++    },
+ };
+ // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
+ Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
+diff --git a/shared/layouts.js b/shared/layouts.js
+index af2ad98..f3afe59 100644
+--- a/shared/layouts.js
++++ b/shared/layouts.js
+@@ -34,6 +34,8 @@ const TYPES = {
+     swatchimg: [],
+     boxes: ['boxes'],
+     atext: ['text', 'font'],
++    evadash: [],
++    picture: ['name'],
+ };
+ const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
+ 
+diff --git a/shared/shaders.js b/shared/shaders.js
+index c8679c1..37bacef 100644
+--- a/shared/shaders.js
++++ b/shared/shaders.js
+@@ -889,4 +889,101 @@ void main() {
+ }
+ `;
+ 
+-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT };
++const EVADASH = `// The EVA cluster's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00): black, up to 12 framed or ruled
++// rects from the layout (u_frame x, y, w, h in layer px; u_fstyle chamfer px, border px, kind, colour), two segmented
++// rails (u_rail geometry; u_railP segments, lit segments, gap px, kind; u_railCol lit colour and brightness) and one
++// hatched stripe (u_stripe). kind 0: a chamfered outline; 1: side lines and a bottom line only; 2: a solid rule.
++// kind of a rail 0: every lit segment in u_railCol; 1: the coolant ramp (mint, amber from 21/24 = 105 C, red at the last segment).
++// v_uv (0,0) is the top-left.
++#ifdef GL_FRAGMENT_PRECISION_HIGH
++precision highp float;
++#else
++precision mediump float;
++#endif
++varying vec2 v_uv;
++uniform vec2 u_size;
++uniform float u_n;
++uniform vec4 u_frame[12];
++uniform vec4 u_fstyle[12];
++uniform vec4 u_pal[3];
++uniform vec4 u_rail[2];
++uniform vec4 u_railP[2];
++uniform vec4 u_railCol[2];
++uniform vec4 u_off;
++uniform vec4 u_stripe;
++
++float cham(vec2 p, vec4 r, float c) {
++    vec2 h = r.zw * 0.5;
++    vec2 q = abs(p - (r.xy + h)) - h;
++    return max(max(q.x, q.y), (q.x + q.y + c) * 0.70710678);
++}
++
++vec3 over(vec3 under, vec3 c, float a) { return mix(under, c, clamp(a, 0.0, 1.0)); }
++
++vec4 rail(vec2 p, vec4 r, vec4 sp, vec4 cl) {
++    vec2 q = p - r.xy;
++    if (q.x < 0.0 || q.y < 0.0 || q.x > r.z || q.y > r.w) return vec4(0.0);
++    float edge = min(min(q.x, r.z - q.x), min(q.y, r.w - q.y));
++    if (edge < 1.0) return vec4(0.6, 0.2, 0.16, 1.0);
++    float pad = 5.0;
++    vec2 s = vec2(q.x - pad, q.y - pad);
++    float n = sp.x, gap = sp.z;
++    float slot = (r.z - 2.0 * pad + gap) / n;
++    float i = floor(s.x / slot);
++    float fx = s.x - i * slot;
++    float inY = clamp(s.y + 0.5, 0.0, 1.0) * clamp(r.w - 2.0 * pad - s.y + 0.5, 0.0, 1.0);
++    float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0) * inY;
++    if (i < 0.0 || i >= n || a <= 0.0) return vec4(0.04, 0.0, 0.01, 1.0);
++    float fy = s.y / (r.w - 2.0 * pad);
++    vec3 col = u_off.rgb;
++    if (i < sp.y) {
++        vec3 c = cl.rgb;
++        if (sp.w > 0.5) {
++            float k = i / n;
++            c = k >= 0.9500 ? vec3(0.98, 0.32, 0.30) : (k >= 0.8700 ? vec3(0.98, 0.74, 0.41) : vec3(0.40, 0.96, 0.72));
++        }
++        col = mix(c * 1.18, c * 0.92, fy) * cl.a;
++    }
++    return vec4(col, a);
++}
++
++void main() {
++    vec2 p = v_uv * u_size;
++    vec3 c = vec3(0.0);
++    for (int i = 0; i < 12; i++) {
++        if (float(i) >= u_n) break;
++        vec4 r = u_frame[i];
++        vec4 st = u_fstyle[i];
++        vec4 col = u_pal[0];
++        if (st.w > 1.5) col = u_pal[2]; else if (st.w > 0.5) col = u_pal[1];
++        float a = 0.0;
++        if (st.z < 0.5) {
++            float d = cham(p, r, st.x);
++            float e = abs(d + 0.5 * st.y) - 0.5 * st.y;
++            a = clamp(0.5 - e, 0.0, 1.0);
++        } else if (st.z < 1.5) {
++            vec2 q = p - r.xy;
++            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) {
++                if (q.x < st.y || r.z - q.x < st.y || r.w - q.y < 3.0) a = 1.0;
++            }
++        } else {
++            vec2 q = p - r.xy;
++            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) a = 1.0;
++        }
++        c = over(c, col.rgb, a * col.a);
++    }
++    for (int k = 0; k < 2; k++) {
++        vec4 rr = rail(p, u_rail[k], u_railP[k], u_railCol[k]);
++        c = over(c, rr.rgb, rr.a);
++    }
++    if (u_stripe.z > 0.0) {
++        vec2 q = p - u_stripe.xy;
++        if (q.x >= 0.0 && q.y >= 0.0 && q.x <= u_stripe.z && q.y <= u_stripe.w) {
++            if (mod(q.x + q.y * 0.85, 20.0) < 13.0) c = over(c, u_pal[0].rgb * 1.25, 1.0);
++        }
++    }
++    gl_FragColor = vec4(c, 1.0);
++}
++`;
++
++module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, evadash: EVADASH };
