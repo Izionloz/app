@@ -147,7 +147,8 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   Off: the default id is put back and the HUD map's layers give way instead. Experimental: not verified on a car.
 - The backdrop covers the whole cluster again (0.4.2 stopped it at y 640 to let BMW's bottom row show, as
   `PenguinDukeYDAuto/idrive7-EVAHUD` does; the owner did not want that row). BMW's gear letter P is drawn above our layers
-  and cannot be hidden, so a small frame at x 1375-1455, y 650-706 makes it part of the design.
+  and cannot be hidden; 0.5.1 put a small frame around its place (x 1375-1455, y 650-706), which the owner did not like (an empty
+  frame when no letter shows), so 0.5.3 leaves plain black there.
 - The app's page lists cluster-render's own status text (targets, who holds each slot, layers) under the status row,
   refreshed every 5 s, to read why the cluster's map is missing after EVA (a photo of the page is enough).
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
