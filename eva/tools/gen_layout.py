@@ -26,7 +26,6 @@ frames = [
     {'x': 110, 'y': 580, 'w': 830, 'h': 58, 'chamfer': 16},                       # coolant
     {'x': 950, 'y': 580, 'w': 430, 'h': 58, 'chamfer': 16},                       # range
     {'x': 1390, 'y': 580, 'w': 420, 'h': 58, 'chamfer': 16},                      # outside
-    {'x': 1375, 'y': 650, 'w': 80, 'h': 56, 'chamfer': 12},                       # BMW's own gear letter (P R N D) is drawn here, above our layers, and cannot be hidden: a frame makes it part of the design
 ]
 W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
           'frames': frames, 'stripe': [232, 164, 330, 6], 'rpmMax': 8000, 'coolMax': 120,

@@ -372,7 +372,8 @@ class Daemon {
         const s = this.state;
         return { ev: 'state', mode: s.mode, hud: rectView('hud', this.hudRect()), map: rectView('map', s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
-            loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary() };
+            loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary(),
+            eva: { hide: Date.now() < (this.evaUntil || 0) ? this.evaHide : null } };
     }
 
     broadcast() {

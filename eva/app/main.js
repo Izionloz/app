@@ -21,6 +21,23 @@ function visit(ctx, msg, tries) {
     c.on('connect', () => { done = true; c.end(JSON.stringify(msg) + '\n'); });
 }
 
+// What the helper knows, one line under the status row every 5 s: its mode, waze-on-cluster's feeds (state, cluster, HUD) and
+// which layers it hides for EVA, to tell who hides the map: waze-on-cluster (nothing to show) or the helper.
+function askHelper(cb) {
+    const c = net.createConnection(HELPER);
+    let buf = '', done = false;
+    const finish = (v) => { if (!done) { done = true; try { c.destroy(); } catch (e) { /* gone */ } cb(v); } };
+    c.setEncoding('utf8');
+    c.on('error', () => finish(null));
+    c.setTimeout(3000, () => finish(null));
+    c.on('connect', () => c.write(JSON.stringify({ cmd: 'get' }) + '\n'));
+    c.on('data', (d) => {
+        buf += d;
+        const i = buf.indexOf('\n');
+        if (i >= 0) { let v = null; try { v = JSON.parse(buf.slice(0, i)); } catch (e) { /* not json */ } finish(v); }
+    });
+}
+
 const HudApp = require('./hud');
 
 mgu.run({
@@ -36,6 +53,10 @@ mgu.run({
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
         hud.start();
+        setInterval(() => askHelper((v) => {
+            const w = v && v.waze;
+            ctx.ui.text('HELP', !v ? 'helper: not reachable' : 'helper: mode ' + v.mode + ' | waze ' + (w && w.connected ? (w.state + ', cluster ' + w.cluster + ', hud ' + w.hud + ' (' + w.hudState + ')') : 'not seen') + ' | EVA hides ' + ((v.eva && v.eva.hide) || 'nothing'));
+        }), 5000);
         // cluster-render's own status text under the status row (which target is up, who holds its slot, the layers), as the
         // page is the only place to read it without a computer
         hud.onClusterStatus((text) => {
