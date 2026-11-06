@@ -140,6 +140,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   hides the HUD map's layers and their soft edges, so a HUD map shown while navigating no longer keeps EVA off the cluster
   (the panel and the HUD share one slot, and the one that holds it keeps it). The slot changes hands after cluster-render's
   linger of about 3 s; the HUD map is shown again when EVA goes.
+- An OAP app only runs once it has been started, so after a head-unit restart EVA waited until its page was opened. 0.4.1 ships
+  a home-screen widget (`startWidget`, the kit's mechanism: MainApp starts the app when a widget of it is placed): place the
+  "EVA cluster" widget on the home screen once and the app starts at boot. Not verified on this car (the kit verified it on a G05).
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
   and the HUD, so **the HUD map is off while EVA shows** and comes back in the other modes (what you chose).
 - Placed clear of BMW's black gear box (x 1406-1597, y 342-419) and the belt light, and of the hood at the top corners.
