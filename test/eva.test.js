@@ -77,3 +77,10 @@ test('eva engine.patch only touches the engine files it names', () => {
         .split('\n').filter((l) => l.startsWith('diff --git')).map((l) => l.split(' ')[2]).sort();
     assert.deepStrictEqual(files, ['a/shared/hud.js', 'a/shared/hud_themes.js', 'a/shared/layouts.js', 'a/shared/shaders.js']);
 });
+
+test('eva app: only the signals it shows are declared (an interface this car lacks fails the install)', () => {
+    assert.deepStrictEqual(Object.keys(app.signals).sort(), [
+        'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES', 'de.bmw.infotainment.vehicle.CDS',
+        'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation', 'de.bmw.infrastructure.VehicleInformation']);
+    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI']);
+});

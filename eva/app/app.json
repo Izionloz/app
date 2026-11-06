@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -25,47 +25,18 @@
       "statusEngineSpeed2": "rs",
       "statusEngineTemperature": "rs"
     },
-    "de.bmw.infotainment.vehicle.CDS2": {
-      "statusLongitudinalAccelerationMassCenter": "rs",
-      "statusLateralAccelerationMassCenter": "rs"
-    },
     "de.bmw.infotainment.vehicle.Vehicle2": {
       "statusCarSpeed2": "rs"
     },
     "de.bmw.infotainment.drivingexcitement.FES": {
-      "statusSwitchDriveDynamicSport2": "rs",
-      "statusActualValueTorque2": "rs",
-      "statusFESVehicleDynamicSwitchHMI": "rs",
-      "statusVehicleDynamicEngine": "rs"
+      "statusFESVehicleDynamicSwitchHMI": "rs"
     },
     "de.bmw.infrastructure.VehicleInformation": {
       "statusGearboxDrive": "s",
       "DataPowerTrain2": "s"
     },
-    "com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu": {
-      "_instances": "SystemFunctionsInternalTasuInst1",
-      "_methods": [
-        "sendTasuRequest"
-      ],
-      "_broadcasts": [
-        "sendTasuResponse"
-      ]
-    },
     "de.bmw.infotainment.KombiIF": {
       "statusRangeTankStatus": "rs"
-    },
-    "de.bmw.infotainment.vehicle.Vehicle": {
-      "statusNewCurrentUnitsStatusExt": "rs",
-      "_optional": "the car's pressure and temperature units, for the tyre block"
-    },
-    "de.bmw.infotainment.misc.MDrive": {
-      "dataDisplayGearbox": "rs",
-      "_optional": "S or M next to the gear"
-    },
-    "de.bmw.infotainment.vehicle.TPMS": {
-      "statusTyrePressure": "rs",
-      "statusTyreTemperature": "rs",
-      "_optional": "tyre pressures and temperatures in the M theme"
     },
     "de.bmw.infrastructure.EnvironmentalInformation": {
       "ExteriorTemperature": "s"
