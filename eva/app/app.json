@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -235,9 +235,9 @@
     },
     {
       "key": "takeOver",
-      "label": "Take the cluster back from BMW (needs the HUD map service)",
+      "label": "Try to take the cluster back from BMW (experimental)",
       "type": "bool",
-      "default": true
+      "default": false
     }
   ],
   "config": {

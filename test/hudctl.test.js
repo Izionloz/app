@@ -239,4 +239,9 @@ test('panelTakeOver: sets panel_take_over_stock in cluster-render\'s local conf,
     assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_take_over_stock = 1\n');
     d.handle({ cmd: 'panelTakeOver', on: false });
     assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_take_over_stock = 0\n');
+    /* off when it was never set: no file change, no restart */
+    fs.unlinkSync(conf);
+    d.handle({ cmd: 'panelTakeOver', on: false });
+    assert.ok(!fs.existsSync(conf));
+    assert.match(d.note, /already 0/);
 });
