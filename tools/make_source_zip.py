@@ -4,7 +4,7 @@ import os
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PARTS = ['README.md', 'LICENSE', 'apps', 'designer', 'native', 'release', 'tools']
+PARTS = ['README.md', 'LICENSE', 'apps', 'designer', 'eva', 'native', 'release', 'tools']
 
 
 def files():

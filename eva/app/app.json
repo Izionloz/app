@@ -1,0 +1,242 @@
+{
+  "id": "eva_cluster",
+  "title": "EVA cluster",
+  "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
+  "version": "0.1.0",
+  "vendor": "custom",
+  "loggingId": "OAE1",
+  "iconGlyph": "EVA",
+  "shared": [
+    "hud.js",
+    "hud_text.js",
+    "hud_data.js",
+    "hud_themes.js",
+    "layouts.js",
+    "shaders.js",
+    "icons.js",
+    "shift_score.js",
+    "sun.js",
+    "cluster_render_client.js",
+    "calibration.js",
+    "visible.js"
+  ],
+  "signals": {
+    "de.bmw.infotainment.vehicle.CDS": {
+      "statusEngineSpeed2": "rs",
+      "statusEngineTemperature": "rs"
+    },
+    "de.bmw.infotainment.vehicle.CDS2": {
+      "statusLongitudinalAccelerationMassCenter": "rs",
+      "statusLateralAccelerationMassCenter": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    },
+    "de.bmw.infotainment.drivingexcitement.FES": {
+      "statusSwitchDriveDynamicSport2": "rs",
+      "statusActualValueTorque2": "rs",
+      "statusFESVehicleDynamicSwitchHMI": "rs",
+      "statusVehicleDynamicEngine": "rs"
+    },
+    "de.bmw.infrastructure.VehicleInformation": {
+      "statusGearboxDrive": "s",
+      "DataPowerTrain2": "s"
+    },
+    "com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu": {
+      "_instances": "SystemFunctionsInternalTasuInst1",
+      "_methods": [
+        "sendTasuRequest"
+      ],
+      "_broadcasts": [
+        "sendTasuResponse"
+      ]
+    },
+    "de.bmw.infotainment.KombiIF": {
+      "statusRangeTankStatus": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle": {
+      "statusNewCurrentUnitsStatusExt": "rs",
+      "_optional": "the car's pressure and temperature units, for the tyre block"
+    },
+    "de.bmw.infotainment.misc.MDrive": {
+      "dataDisplayGearbox": "rs",
+      "_optional": "S or M next to the gear"
+    },
+    "de.bmw.infotainment.vehicle.TPMS": {
+      "statusTyrePressure": "rs",
+      "statusTyreTemperature": "rs",
+      "_optional": "tyre pressures and temperatures in the M theme"
+    },
+    "de.bmw.infrastructure.EnvironmentalInformation": {
+      "ExteriorTemperature": "s"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "menu",
+      "title": "EVA cluster",
+      "settings": true,
+      "items": [
+        [
+          "text",
+          "STATUS",
+          "Starting the cluster"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "hudLayout",
+      "label": "Layout (when not by drive mode)",
+      "type": "choice",
+      "default": "eva",
+      "options": [
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ],
+        [
+          "eva",
+          "EVA"
+        ]
+      ]
+    },
+    {
+      "key": "byMode",
+      "label": "Change with SPORT / COMFORT / ECO PRO",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "inComfort",
+      "label": "In Comfort",
+      "type": "choice",
+      "default": "off",
+      "options": [
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ],
+        [
+          "eva",
+          "EVA"
+        ]
+      ]
+    },
+    {
+      "key": "inSport",
+      "label": "In Sport",
+      "type": "choice",
+      "default": "eva",
+      "options": [
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ],
+        [
+          "eva",
+          "EVA"
+        ]
+      ]
+    },
+    {
+      "key": "inEco",
+      "label": "In Eco Pro",
+      "type": "choice",
+      "default": "off",
+      "options": [
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ],
+        [
+          "eva",
+          "EVA"
+        ]
+      ]
+    },
+    {
+      "key": "units",
+      "label": "Units",
+      "type": "choice",
+      "default": "metric",
+      "options": [
+        [
+          "us",
+          "mph, \u00b0F, psi"
+        ],
+        [
+          "metric",
+          "km/h, \u00b0C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "clock",
+      "label": "Clock",
+      "type": "choice",
+      "default": "24h",
+      "options": [
+        [
+          "12h",
+          "12-hour"
+        ],
+        [
+          "24h",
+          "24-hour"
+        ]
+      ]
+    },
+    {
+      "key": "redline",
+      "label": "Redline (flashing warning)",
+      "type": "number",
+      "unit": "rpm",
+      "default": 6500,
+      "steps": [
+        5500,
+        6000,
+        6500,
+        7000
+      ]
+    },
+    {
+      "key": "demo",
+      "label": "Demo data",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (until the car sends data)"
+        ],
+        [
+          "on",
+          "On"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    }
+  ],
+  "config": {
+    "target": "panel",
+    "statusName": "EVA",
+    "socketPath": "/dev/shm/cluster-render/render.sock",
+    "location": {
+      "lat": 35.2271,
+      "lon": -80.8431
+    },
+    "utcOffsetMinutes": null,
+    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges (the engine is bimmer-lab/apps' hud.js with an evadash widget). The car is a 330i G20 (B48: 8000 rpm scale, redline 6500).",
+    "tankLitres": 59,
+    "engine": {
+      "torqueNm": 350,
+      "powerKw": 190
+    }
+  }
+}
