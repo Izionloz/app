@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..04e6449 100644
+index db817c2..d877561 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -10,7 +10,7 @@ index db817c2..04e6449 100644
  const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
  const ShiftScore = require('./shift_score');
  const sun = require('./sun');
-@@ -163,13 +164,18 @@ const Car = require('./kit/car');
+@@ -163,13 +164,16 @@ const Car = require('./kit/car');
  
  const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
  // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
@@ -21,108 +21,33 @@ index db817c2..04e6449 100644
  const MAX_CONN = 4;              // connections a layout may ask for ("conn"): 32 layers service-wide / 8 per connection
  const PIXEL_BYTES = 16 * 1024 * 1024;   // cluster-render's pixel memory for every app's images together (CompositorLimits.pixel_bytes)
  const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
- const TICK_MS = 50;              // 20 Hz: shift bar and gauges
+-const TICK_MS = 50;              // 20 Hz: shift bar and gauges
++const TICK_MS = 25;              // 40 Hz: shift bar and gauges (the readouts follow the car's samples within one tick)
 +// EVA rev colours by level (below 3500 rpm, from 3500, from 5000, from the redline), after the EVA HUD design
 +const EVA_LEVELS = [[255, 173, 84, 255], [255, 224, 92, 255], [255, 78, 61, 255], [255, 37, 59, 255]];
 +const EVA_FLASH_MS = 340;
-+const MODE_SETTLE_MS = 2500;
-+const EVENT_LINES = 8;
  const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
  const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
  const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
-@@ -302,6 +308,7 @@ class HudApp {
+@@ -302,6 +306,8 @@ class HudApp {
          this.flash = false;
          this.problem = null;             // why nothing shows (a bad layout), for the status line
          this.statusListeners = [];
-+        this.events = []; this.eventListeners = []; this.evT = null;
++        this.builtName = null;           // the layout whose layers exist (EVA: built while hidden, shown with Sport)
++        this.hiddenNow = false;
          this.lastStatus = null;
  
          this._setupVehicleData();
-@@ -375,10 +382,21 @@ class HudApp {
-                 statusFESVehicleDynamicSwitchHMI: (v) => {
-                     const raw = v && v.actualValueModeDrivingExperience;
-                     const m = driveModeOf(raw), variant = m ? driveVariantOf(raw) : null;
--                    if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
-+                    if (!m) return;
-+                    if (m === this.driveMode && variant === this.driveVariant) { clearTimeout(this.modeT); this.modeT = null; return; }
-+                    this.modeFlips = (this.modeFlips || 0) + 1;
-+                    this.lastModeRaw = String(raw);
-+                    this._ev('drive mode ' + raw);
+@@ -378,7 +384,7 @@ class HudApp {
+                     if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
                      this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
--                    this.driveMode = m; this.driveVariant = variant;
+                     this.driveMode = m; this.driveVariant = variant;
 -                    if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
-+                    const apply = () => {
-+                        this.modeT = null;
-+                        this.driveMode = m; this.driveVariant = variant;
-+                        if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
-+                    };
-+                    // a car whose cluster is coded (M-style) may report the mode flickering; a change that does not hold for
-+                    // MODE_SETTLE_MS is not acted on, so the layout does not drop and come back
-+                    clearTimeout(this.modeT);
-+                    if (this.driveMode === null) apply(); else this.modeT = setTimeout(apply, MODE_SETTLE_MS);
++                    if (this._layoutName() !== this.activeName) this._modeChanged(); else this._status();
                  },
              },
          };
-@@ -407,12 +425,13 @@ class HudApp {
- 
-     _wireClientEvents(c, ci) {
-         const tag = ci ? ' [connection ' + (ci + 1) + ']' : '';
--        c.on('ready', () => { this.log.info('cluster-render ready' + tag + ' (backend=' + c.backend + ')'); if (ci === 0) this._rebuild(); else this._status(); });
--        c.on('disconnected', () => { this.log.warn('cluster-render disconnected' + tag + ', client will retry'); this._status(); });
-+        c.on('ready', () => { this._ev('cluster-render ready' + tag); this.log.info('cluster-render ready' + tag + ' (backend=' + c.backend + ')'); if (ci === 0) this._rebuild(); else this._status(); });
-+        c.on('disconnected', () => { this._ev('cluster-render DISCONNECTED' + tag); this.log.warn('cluster-render disconnected' + tag + ', client will retry'); this._status(); });
-         c.on('layer', (ref, state, reason) => {
-             const key = ci + ':' + ref;
-             const old = this.layerStates.get(key);
-             this.layerStates.set(key, { state, reason });
-+            if (!old || old.state !== state) { const w = this._widgetOf(ci, ref); this._ev('layer ' + ref + (w ? ' ' + w : '') + ' ' + state + (reason ? ': ' + reason : '')); }
-             if (state === 'error' || ((state === 'waiting' || state === 'stalled') && (!old || old.state !== state))) {
-                 const w = this._widgetOf(ci, ref);
-                 this.log.warn('layer ' + ref + tag + (w ? ' (' + w + ')' : '') + ' ' + state + (reason ? ': ' + reason : ''));
-@@ -422,12 +441,14 @@ class HudApp {
-         c.on('target', (name, state, holder, reason) => {
-             if (name !== this.target) return;
-             this.targetState = { state, holder, reason };
-+            this._ev('target ' + name + ' ' + state + (holder ? ' holder ' + holder : '') + (reason ? ': ' + reason : ''));
-             this.log.info('target ' + name + tag + ' ' + state + (holder ? ' (holder ' + holder + ')' : '') + (reason ? ': ' + reason : ''));
-             this._statusSoon();
-         });
-         c.on('refused', (op, ref, reason) => {
-             const w = this._widgetOf(ci, ref);
-             this.log.warn('refused ' + op + ' on ' + ref + tag + (w ? ' (' + w + ')' : '') + ': ' + reason);
-+            this._ev('refused ' + op + (w ? ' ' + w : '') + ': ' + reason);
-             if (!this.refused) this.refused = (w || op) + ': ' + reason;   // the first one, until the next rebuild
-             this._statusSoon();
-         });
-@@ -548,6 +569,18 @@ class HudApp {
- 
-     /* ---------------- status line (the center screen's first row) ---------------- */
- 
-+    /** One line in the event log (what the center screen shows under the status row), newest first. */
-+    _ev(msg) {
-+        const d = new Date(), p2 = (n) => (n < 10 ? '0' : '') + n;
-+        this.events.unshift(p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds()) + ' ' + String(msg).slice(0, 90));
-+        if (this.events.length > EVENT_LINES) this.events.length = EVENT_LINES;
-+        clearTimeout(this.evT);
-+        this.evT = setTimeout(() => { this.evT = null; this.eventListeners.forEach((fn) => { try { fn(this.events.slice()); } catch (e) { this.log.warn('event listener: ' + e); } }); }, 300);
-+    }
-+
-+    /** fn(lines) after the event log changes. */
-+    onEvents(fn) { this.eventListeners.push(fn); if (this.events.length) fn(this.events.slice()); }
-+
-     /** fn(text) whenever the status line changes. */
-     onStatus(fn) { this.statusListeners.push(fn); if (this.lastStatus) fn(this.lastStatus); }
- 
-@@ -638,7 +671,7 @@ class HudApp {
-         }
-         if (this.problem) return this.label + ': ' + this.problem;
-         const byMode = this.setting('byMode') === true;
--        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
-+        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + (this.modeFlips > 1 ? ', ' + this.modeFlips + ' changes, last ' + this.lastModeRaw : '') + ')' : ' (drive mode not seen yet)') : '';
-         const what = this.target === 'panel' ? 'cluster' : 'HUD';
-         if (this.activeName === 'off') return this.label + ' off' + mode + ": BMW's own " + what + ' shows';
-         const name = this._layoutLabel(this.activeName);
-@@ -829,6 +862,15 @@ class HudApp {
+@@ -829,6 +835,15 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -138,33 +63,49 @@ index db817c2..04e6449 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -885,6 +927,7 @@ class HudApp {
+@@ -885,15 +900,20 @@ class HudApp {
          this.car.setRedline(this.setting('redline'));
          const name = this._layoutName();
          this.activeName = name;
-+        this._ev('layout ' + name + ' (' + (this.driveMode || 'mode ?') + ')');
-         if (name === 'off') {
+-        if (name === 'off') {
++        // config.standby: the layout of the Sport mode is built at once, hidden, and a drive-mode change only shows or hides
++        // it (set visible), so it appears without building and uploading it first
++        const build = name !== 'off' ? name : this._standbyName();
++        this.builtName = build;
++        this.hiddenNow = name === 'off' && !!build;
++        if (!build) {
              this.problem = null; this.layoutTheme = null; this.needsBoost = false;
              this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
-@@ -977,7 +1020,7 @@ class HudApp {
+             return;
+         }
+         let layout;
+-        try { layout = this.layouts.load(name); } catch (e) {
++        try { layout = this.layouts.load(build); } catch (e) {
+             this.problem = e.message;
+-            this.log.warn('layout "' + name + '" unusable (' + e.message + '); showing nothing');
++            this.log.warn('layout "' + build + '" unusable (' + e.message + '); showing nothing');
+             return;
+         }
+         this.problem = null;
+@@ -977,7 +997,7 @@ class HudApp {
      /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
      _createSheet(s) {
          const c = this._clientAt(s.conn);
 -        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
-+        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h, contend: this.config.contend === true });
++        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h, visible: !this.hiddenNow });
          if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
          s.ref = ref; s.c = c; s.ci = s.conn;
          s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1078,7 @@ class HudApp {
+@@ -1035,7 +1055,7 @@ class HudApp {
          if (sheet) { ref = sheet.ref; c = sheet.c; }
          else {
              c = this._clientAt(this._connOf(w));
 -            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
-+            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h, contend: this.config.contend === true };
++            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h, visible: !this.hiddenNow };
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1101,8 @@ class HudApp {
+@@ -1058,6 +1078,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -173,7 +114,30 @@ index db817c2..04e6449 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1258,6 +1303,7 @@ class HudApp {
+@@ -1221,7 +1243,7 @@ class HudApp {
+     _tick() {
+         const now = Date.now();
+         this._smoothRpm(now);
+-        if (!this.client.ready) return;
++        if (!this.client.ready || this.hiddenNow) return;
+         // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
+         const rpm = this._raw('rpm');
+         const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
+@@ -1235,8 +1257,11 @@ class HudApp {
+         const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
+         this.lastTickT = now;
+         if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
+-        this.rpmF = isNum(this.rpmF) ? this.rpmF + (raw - this.rpmF) * (1 - Math.exp(-dt / 120)) : raw;
+-        if (!isNum(this.rpmShown) || Math.abs(this.rpmF - this.rpmShown) >= 40) this.rpmShown = Math.max(0, Math.round(this.rpmF / 50) * 50);
++        // config.rpmFilterMs 0: no filter and a readout in 10 rpm steps, the car's sample as it comes (EVA); else BMW's 120 ms filter and 50 rpm steps
++        const tau = isNum(this.config.rpmFilterMs) ? this.config.rpmFilterMs : 120;
++        this.rpmF = isNum(this.rpmF) && tau > 0 ? this.rpmF + (raw - this.rpmF) * (1 - Math.exp(-dt / tau)) : raw;
++        const step = tau > 0 ? 50 : 10, move = tau > 0 ? 40 : 10;
++        if (!isNum(this.rpmShown) || Math.abs(this.rpmF - this.rpmShown) >= move) this.rpmShown = Math.max(0, Math.round(this.rpmF / step) * step);
+     }
+ 
+     _update(x, now, force) {
+@@ -1258,6 +1283,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -181,7 +145,7 @@ index db817c2..04e6449 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1342,8 @@ class HudApp {
+@@ -1296,6 +1322,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -190,7 +154,7 @@ index db817c2..04e6449 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1444,74 @@ class HudApp {
+@@ -1396,6 +1424,102 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -260,6 +224,34 @@ index db817c2..04e6449 100644
 +        const lc = EVA_LEVELS[lvl];
 +        x.c.uniform(x.ref, 'u_railP', rp, { type: 'vec4' });
 +        x.c.uniform(x.ref, 'u_railCol', [lc[0] / 255, lc[1] / 255, lc[2] / 255, dim, 0.4, 0.96, 0.72, 1], { type: 'vec4' });
++    }
++
++    /** The layout to keep built, hidden, while the active one is "off" (config.standby): the Sport layout, else the plain one. */
++    _standbyName() {
++        if (this.config.standby !== true) return null;
++        const names = [this.setting('inSport'), this.setting('hudLayout')];
++        for (let i = 0; i < names.length; i++) if (names[i] && names[i] !== 'off') return names[i];
++        return null;
++    }
++
++    /** A drive-mode change: when the layout that should show is the one already built (or off), only show or hide its layers. */
++    _modeChanged() {
++        const name = this._layoutName();
++        if (this.builtName && (name === 'off' || name === this.builtName) && this.client.ready) {
++            this.activeName = name;
++            this._setVisible(name !== 'off');
++            this.log.info('layout ' + name + ' (' + (this.driveMode || 'mode ?') + '), layers ' + (name === 'off' ? 'hidden' : 'shown'));
++            this._status();
++        } else this._rebuild();
++    }
++
++    _setVisible(on) {
++        this.hiddenNow = !on;
++        this._layerRefs().forEach((r) => r.c.set(r.ref, { visible: on }));
++        if (on) {
++            const now = Date.now();
++            this.widgets.forEach((x) => this._guard('widget ' + x.w.id, () => this._update(x, now, true)));
++        }
 +    }
 +
      _paintGridLabels(x) {

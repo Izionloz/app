@@ -11,20 +11,15 @@
 const net = require('net');
 const mgu = require('./kit/mgu');
 
-// mgux-hud-ctl (the HUD map's root service) can let cluster-render take the cluster's screen slot back from BMW's own
-// cluster, which an M-style coded cluster claims again and again in Sport. One short visit to its socket, repeated
-// a few times in case the service is not up yet; it only changes anything when the setting is not already as asked.
+// 0.2.0 / 0.2.1 could ask mgux-hud-ctl to set panel_take_over_stock = 1 in cluster-render's conf (it did not help on a car
+// whose cluster was coded M-style). This version only puts a leftover 1 back to 0: the helper changes and restarts
+// nothing when it was never set. Tried a few times in case the helper is not up yet.
 const HELPER = '/dev/shm/mgux-hud/ctl.sock';
-function askTakeOver(ctx, on, tries) {
+function undoTakeOver(ctx, tries) {
     const c = net.createConnection(HELPER);
     let done = false;
-    const again = () => { if (!done) { done = true; if (tries > 1) setTimeout(() => askTakeOver(ctx, on, tries - 1), 20000); else ctx.log.warn('mgux-hud-ctl is not there: the cluster cannot be taken back from BMW'); } };
-    c.on('error', again);
-    c.on('connect', () => {
-        done = true;
-        c.end(JSON.stringify({ cmd: 'panelTakeOver', on }) + '\n');
-        ctx.log.info('asked mgux-hud-ctl: panelTakeOver ' + on);
-    });
+    c.on('error', () => { if (!done) { done = true; if (tries > 1) setTimeout(() => undoTakeOver(ctx, tries - 1), 20000); } });
+    c.on('connect', () => { done = true; c.end(JSON.stringify({ cmd: 'panelTakeOver', on: false }) + '\n'); });
 }
 
 const HudApp = require('./hud');
@@ -41,13 +36,8 @@ mgu.run({
             return;
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
-        // the last events (drive mode, cluster-render's target and layer states, rebuilds), newest first, for a photo of the screen
-        hud.onEvents((lines) => { for (let i = 0; i < 8; i++) ctx.ui.text('L' + (i + 1), lines[i] || '-'); });
         hud.start();
-        let lastAsk = null;
-        const ask = () => { const on = ctx.settings.get('takeOver') !== false; if (on !== lastAsk) { lastAsk = on; askTakeOver(ctx, on, 6); } };
-        ask();
-        ctx.settings.onChange((key) => { if (key === 'takeOver') ask(); });
+        undoTakeOver(ctx, 6);
         process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
     },
 });
