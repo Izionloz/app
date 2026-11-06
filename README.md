@@ -29,7 +29,7 @@ controller included (turn to move the red row, press to change a setting and tur
 to end) and the map's state from waze-on-cluster under the preview.
 
 - tag `mgux-hud-ctl@2.9.1`: `mgux-hud-ctl@2.9.1.tgz`
-- tag `hud_designer@1.6.0`: `hud_designer@1.6.0.tgz`
+- tag `hud_designer@1.6.1`: `hud_designer@1.6.1.tgz`
 - tag `catalog`: `catalog.json`
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
@@ -56,7 +56,9 @@ Laid out like the car's own Head-Up Display settings, in Vietnamese: a list with
 Hiện bản đồ trên (Đồng hồ, HUD, Cả hai, and with waze-on-cluster 0.9.0 "Theo app waze-on-cluster", the default, which
 leaves the choice to its own app), Đang chỉnh (the HUD map or the cluster map), Chiều rộng, Chiều cao, Độ sáng, Làm
 mờ viền (HUD), Độ cao, Vị trí ngang, Thu phóng, Xoay, Tâm thu phóng (ngang, dọc), Căn giữa and Đặt lại. On the preview,
-drag the map to move it and the orange + (the zoom focus) onto the car. The iDrive controller works the list. The
+drag the map to move it and the orange + (the zoom focus) onto the car. The preview draws the map as the display does:
+its rectangle zoomed and turned about the pivot, reaching past the rectangle (a thin outline), with the soft edges along
+its own sides. The iDrive controller works the list. The
 kit's fonts have no Vietnamese letters, so `designer/app/viet.js` draws each from its base letter and stroked marks.
 
 ### With waze-on-cluster 0.9.0 and its own app
