@@ -12,6 +12,8 @@ process.env.HUDCTL_STATE_DIR = dir;
 process.env.HUDCTL_SOCK = path.join(dir, 'ctl.sock');
 process.env.HUDCTL_PROXY_SOCK = path.join(dir, 'render.sock');
 process.env.HUDCTL_WAZE_STATUS = path.join(dir, 'waze-status.json');
+process.env.HUDCTL_CR_CONF = path.join(dir, 'cr', 'cluster-render.local.conf');
+process.env.HUDCTL_RESTART_CMD = 'true';
 const ctl = require('../native/mgux-hud-ctl/hudctl.js');
 
 test.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -220,4 +222,21 @@ test('waze: the mode asks waze-on-cluster 0.9.0 for its feeds in a short visit, 
     } finally {
         srv.close();
     }
+});
+
+test('panelTakeOver: sets panel_take_over_stock in cluster-render\'s local conf, only when it is not already so', () => {
+    const conf = process.env.HUDCTL_CR_CONF;
+    assert.strictEqual(ctl.setConfKey('', 'panel_take_over_stock', '1'), 'panel_take_over_stock = 1\n');
+    assert.strictEqual(ctl.setConfKey('a = 1', 'panel_take_over_stock', '1'), 'a = 1\npanel_take_over_stock = 1\n');
+    assert.strictEqual(ctl.setConfKey('x = 2\npanel_take_over_stock=0\ny = 3\n', 'panel_take_over_stock', '1'), 'x = 2\npanel_take_over_stock = 1\ny = 3\n');
+    const d = new ctl.Daemon();
+    d.handle({ cmd: 'panelTakeOver', on: true });
+    assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_take_over_stock = 1\n');
+    assert.match(d.note, /restarted/);
+    d.handle({ cmd: 'panelTakeOver', on: true });
+    assert.match(d.note, /already 1/);
+    d.handle({ cmd: 'panelTakeOver', on: 'yes' });         /* not a boolean: nothing */
+    assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_take_over_stock = 1\n');
+    d.handle({ cmd: 'panelTakeOver', on: false });
+    assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_take_over_stock = 0\n');
 });

@@ -28,6 +28,7 @@
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
+const cp = require('child_process');
 const { RenderProxy } = require('./renderproxy.js');
 const { WazeStatus } = require('./wazestatus.js');
 const { WazeControl } = require('./wazecontrol.js');
@@ -46,6 +47,9 @@ const WAZE_STATUS = env.HUDCTL_WAZE_STATUS || '/run/waze-on-cluster/status.json'
 const WAZE_SOCK = env.HUDCTL_WAZE_SOCK || '/dev/shm/waze-on-cluster/ctl.sock';
 /* which of its feeds waze-on-cluster 0.9.0 draws for each mode */
 const WAZE_MODE = { map: { cluster: 1, hud: 0 }, hud: { cluster: 0, hud: 1 }, both: { cluster: 1, hud: 1 } };
+/* cluster-render's own settings that the units keeps across updates (cluster-render.conf "local_conf") */
+const CR_CONF = env.HUDCTL_CR_CONF || '/var/opt/cluster-render/cluster-render.local.conf';
+const CR_RESTART = env.HUDCTL_RESTART_CMD || 'systemctl';
 const SYNC_MS = 4000;                /* waze-on-cluster is looked at this often while its feeds are not as asked */
 const RESEND_MS = 3000;              /* the same visit at most this often */
 const WIDTH_MS = 600;                /* the HUD size is sent this long after the last change */
@@ -216,6 +220,17 @@ function rectView(which, r) {
         pct: Math.round(100 * r.w / c.w),
         dx: Math.round(r.x + r.w / 2 - c.w / 2), dy: Math.round(r.y + r.h / 2 - c.h / 2),
         defaultW: full };
+}
+
+
+/* `key = value` set in a cluster-render conf's text: the line replaced, else added; same text when it is already so */
+function setConfKey(text, key, value) {
+    const re = new RegExp(`^[ \\t]*${key}[ \\t]*=.*$`, 'm');
+    const line = `${key} = ${value}`;
+    if (re.test(text)) {
+        return text.replace(re, line);
+    }
+    return `${text}${text && !text.endsWith('\n') ? '\n' : ''}${line}\n`;
 }
 
 class Daemon {
@@ -410,8 +425,39 @@ class Daemon {
             }
             this.changed();
             return;
+        case 'panelTakeOver':
+            if (typeof msg.on === 'boolean') {
+                this.panelTakeOver(msg.on);
+            }
+            return;
         default:
             this.note = 'unknown command';
+        }
+    }
+
+    /* The EVA cluster app asks cluster-render to take the cluster's slot from BMW's own cluster (an M-style coded one
+     * claims it again and again in Sport): panel_take_over_stock in cluster-render's local conf. Only when the file
+     * is not already so, and then cluster-render is restarted once (it reads its conf at start). */
+    panelTakeOver(on) {
+        const want = on ? '1' : '0';
+        try {
+            let text = '';
+            try { text = fs.readFileSync(CR_CONF, 'utf8'); } catch (e) { /* none yet */ }
+            const next = setConfKey(text, 'panel_take_over_stock', want);
+            if (next === text) {
+                this.note = `panel take-over already ${want}`;
+                return;
+            }
+            mkdirp(path.dirname(CR_CONF), 0o755);
+            writeAtomic(CR_CONF, next);
+            console.log(`hudctl: panel_take_over_stock = ${want} in ${CR_CONF}; restarting cluster-render`);
+            cp.execFile(CR_RESTART, ['restart', 'cluster-render.service'], (err) => {
+                if (err) { console.error(`hudctl: restart cluster-render: ${err.message}`); }
+            });
+            this.note = `panel take-over ${want}, cluster-render restarted`;
+        } catch (e) {
+            this.note = `panel take-over: ${e.message}`;
+            console.error(`hudctl: ${this.note}`);
         }
     }
 
@@ -490,4 +536,4 @@ if (require.main === module) {
     daemon.start();
 }
 
-module.exports = { wrapDeg, loadState, parseState, normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS };
+module.exports = { wrapDeg, loadState, parseState, normalise, normaliseRect, adjustRect, centredRect, defaultRect, defaultState, Daemon, CANVAS, setConfKey };
