@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..7cc7407 100644
+index db817c2..04e6449 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -146,6 +146,24 @@ index db817c2..7cc7407 100644
          if (name === 'off') {
              this.problem = null; this.layoutTheme = null; this.needsBoost = false;
              this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
+@@ -977,7 +1020,7 @@ class HudApp {
+     /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
+     _createSheet(s) {
+         const c = this._clientAt(s.conn);
+-        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
++        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h, contend: this.config.contend === true });
+         if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
+         s.ref = ref; s.c = c; s.ci = s.conn;
+         s.buf = Buffer.alloc(s.w * s.h * 4, 0);
+@@ -1035,7 +1078,7 @@ class HudApp {
+         if (sheet) { ref = sheet.ref; c = sheet.c; }
+         else {
+             c = this._clientAt(this._connOf(w));
+-            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
++            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h, contend: this.config.contend === true };
+             if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
+             else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
+             if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
 @@ -1058,6 +1101,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
