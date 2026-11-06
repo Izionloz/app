@@ -136,13 +136,15 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   M-style) cluster is what it is made for.
 - Switching to Sport is quick: the EVA layers are built once at start, hidden (`config.standby`), and a drive-mode change
   only shows or hides them (no new layers, no upload); the HUD map always gives way to EVA while it shows.
-- While EVA shows it tells `mgux-hud-ctl` (`evaOn`, now and every 10 s; the helper lets go after 30 s of silence), which
-  hides the HUD map's layers and their soft edges, so a HUD map shown while navigating no longer keeps EVA off the cluster
-  (the panel and the HUD share one slot, and the one that holds it keeps it). The slot changes hands after cluster-render's
-  linger of about 3 s; the HUD map is shown again when EVA goes.
-- An OAP app only runs once it has been started, so after a head-unit restart EVA waited until its page was opened. 0.4.1 ships
-  a home-screen widget (`startWidget`, the kit's mechanism: MainApp starts the app when a widget of it is placed): place the
-  "EVA cluster" widget on the home screen once and the app starts at boot. Not verified on this car (the kit verified it on a G05).
+- EVA and the HUD map are kept apart (setting "EVA and the HUD map together", on by default). cluster-render gives the cluster's
+  panel and the HUD one scene id (`0x01000400`) and never has both up, so a HUD map shown while navigating kept EVA off the
+  cluster, and (PenguinDukeYDAuto/idrive7-EVAHUD saw it on a car) the HUD could not come back after the cluster. With the setting
+  on, EVA asks `mgux-hud-ctl` (`panelScene`) for `panel_scene_id = 0x010004f0` in `/var/opt/cluster-render/cluster-render.local.conf`
+  (the id was verified for the panel there, with the HUD lit at once) and cluster-render is restarted once. That id is the
+  cluster map's, so while EVA shows (it tells the helper with `evaOn` now and every 10 s; the helper lets go after 30 s of silence)
+  the helper hides the cluster map's layers, which EVA covers anyway; the HUD map stays. Off: the default id is put back and
+  the HUD map's layers give way instead. Experimental: not verified on this car; the map on the cluster after EVA goes is the
+  thing to watch.
 - The black backdrop stops at y 640 (idea from `PenguinDukeYDAuto/idrive7-EVAHUD`, MIT): BMW's own bottom row (drive mode,
   gear letter P, outside temperature) shows below it, so its P belongs to that row instead of sitting alone on black. The
   OUTSIDE panel is gone for that reason.

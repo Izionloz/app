@@ -309,8 +309,7 @@ class Link {
                 });
                 if (j.visible !== undefined) {
                     /* the soft edges show and hide with the map (a black frame must not hold the HUD alone) */
-                    const hid = this.hideHud();
-                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: hid && this.fx[r].target === HUD ? 0 : j.visible })));
+                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: this.hidden(this.fx[r].target) ? 0 : j.visible })));
                 }
                 Object.keys(this.actual).forEach((r) => {
                     /* a place waze-on-cluster gives goes on while the place is not ours (its app moves the HUD map) */
@@ -318,7 +317,7 @@ class Link {
                     if (this.actual[r].own) {
                         ['x', 'y', 'w', 'h'].forEach((k) => { delete m2[k]; });
                     }
-                    if (m2.visible !== undefined && this.actual[r].target === HUD && this.hideHud()) {
+                    if (m2.visible !== undefined && this.hidden(this.actual[r].target)) {
                         m2.visible = 0;
                     }
                     if (typeof m2.opacity === 'number') {
@@ -358,8 +357,9 @@ class Link {
         const one = (ref, target, rect, own) => ({ ref, target, rect, own: own === undefined ? !!rect : !!own && !!rect,
             opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
             fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0,
-            /* hide: the EVA cluster app shows, and a HUD layer shown would hold the slot the cluster's panel needs */
-            hide: !!L.hideHud && target === HUD });
+            /* hide: the EVA cluster app shows, and a layer of this target shown would hold the slot (the HUD, while the panel
+             * shares its scene; the cluster's map, when the panel has the map's scene so that the HUD can show with it) */
+            hide: L.hide === target });
         if (L.native) {
             /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
              * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
@@ -581,9 +581,9 @@ class Link {
         });
     }
 
-    /* the EVA cluster app shows: the HUD's layers are hidden so the slot is free for the panel */
-    hideHud() {
-        try { return !!this.getLayout().hideHud; } catch (e) { return false; }
+    /* the EVA cluster app shows: this target's layers are hidden so its scene is free for the panel */
+    hidden(target) {
+        try { return this.getLayout().hide === target; } catch (e) { return false; }
     }
 
     /* waze-on-cluster's own place of its layer, as it made it or moved it last */
