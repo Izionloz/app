@@ -245,3 +245,24 @@ test('panelTakeOver: sets panel_take_over_stock in cluster-render\'s local conf,
     assert.ok(!fs.existsSync(conf));
     assert.match(d.note, /already 0/);
 });
+
+test('evaOn: the HUD map is hidden while the EVA cluster app says it shows, and comes back when it stops or goes silent', async () => {
+    const d = new ctl.Daemon();
+    let updates = 0;
+    d.proxy.update = () => { updates++; };
+    assert.strictEqual(d.layout().hideHud, false);
+    d.handle({ cmd: 'evaOn', on: true });
+    assert.strictEqual(d.layout().hideHud, true);
+    assert.strictEqual(updates, 1);
+    d.handle({ cmd: 'evaOn', on: true });                 /* the keep-alive: nothing to redo */
+    assert.strictEqual(updates, 1);
+    d.handle({ cmd: 'evaOn', on: 'yes' });                /* not a boolean: nothing */
+    assert.strictEqual(d.layout().hideHud, true);
+    d.handle({ cmd: 'evaOn', on: false });
+    assert.strictEqual(d.layout().hideHud, false);
+    assert.strictEqual(updates, 2);
+    d.handle({ cmd: 'evaOn', on: true });
+    d.evaUntil = Date.now() - 1;                           /* no keep-alive for 30 s */
+    assert.strictEqual(d.layout().hideHud, false);
+    clearTimeout(d.evaT);
+});

@@ -136,6 +136,10 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   M-style) cluster is what it is made for.
 - Switching to Sport is quick: the EVA layers are built once at start, hidden (`config.standby`), and a drive-mode change
   only shows or hides them (no new layers, no upload); the HUD map always gives way to EVA while it shows.
+- While EVA shows it tells `mgux-hud-ctl` (`evaOn`, now and every 10 s; the helper lets go after 30 s of silence), which
+  hides the HUD map's layers and their soft edges, so a HUD map shown while navigating no longer keeps EVA off the cluster
+  (the panel and the HUD share one slot, and the one that holds it keeps it). The slot changes hands after cluster-render's
+  linger of about 3 s; the HUD map is shown again when EVA goes.
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
   and the HUD, so **the HUD map is off while EVA shows** and comes back in the other modes (what you chose).
 - Placed clear of BMW's black gear box (x 1406-1597, y 342-419) and the belt light, and of the hood at the top corners.
