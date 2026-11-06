@@ -276,7 +276,7 @@ test('panelScene and evaOn hide: the panel gets the map\'s scene so the HUD can 
     assert.ok(!fs.existsSync(conf));
     assert.match(d.note, /already/);
     d.handle({ cmd: 'panelScene', on: true });
-    assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_scene_id = 0x010004f0\n');
+    assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_scene_id = 0x010004f1\n');
     assert.match(d.note, /restarted/);
     d.handle({ cmd: 'panelScene', on: true });
     assert.match(d.note, /already/);

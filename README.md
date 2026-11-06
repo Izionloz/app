@@ -136,15 +136,15 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   M-style) cluster is what it is made for.
 - Switching to Sport is quick: the EVA layers are built once at start, hidden (`config.standby`), and a drive-mode change
   only shows or hides them (no new layers, no upload); the HUD map always gives way to EVA while it shows.
-- EVA and the HUD map are kept apart (setting "EVA and the HUD map together", on by default). cluster-render gives the cluster's
-  panel and the HUD one scene id (`0x01000400`) and never has both up, so a HUD map shown while navigating kept EVA off the
-  cluster, and (PenguinDukeYDAuto/idrive7-EVAHUD saw it on a car) the HUD could not come back after the cluster. With the setting
-  on, EVA asks `mgux-hud-ctl` (`panelScene`) for `panel_scene_id = 0x010004f0` in `/var/opt/cluster-render/cluster-render.local.conf`
-  (the id was verified for the panel there, with the HUD lit at once) and cluster-render is restarted once. That id is the
-  cluster map's, so while EVA shows (it tells the helper with `evaOn` now and every 10 s; the helper lets go after 30 s of silence)
-  the helper hides the cluster map's layers, which EVA covers anyway; the HUD map stays. Off: the default id is put back and
-  the HUD map's layers give way instead. Experimental: not verified on this car; the map on the cluster after EVA goes is the
-  thing to watch.
+- EVA, the HUD map and the cluster's map are kept on three scenes (setting "EVA and the HUD map together", on by default).
+  cluster-render gives the cluster's panel and the HUD one scene id (`0x01000400`) and never has both up, so a HUD map shown while
+  navigating kept EVA off the cluster. With the setting on, EVA asks `mgux-hud-ctl` (`panelScene`) for
+  `panel_scene_id = 0x010004f1` in `/var/opt/cluster-render/cluster-render.local.conf` and cluster-render is restarted once.
+  0.5.0 used `0x010004f0` (verified for the panel on another car by PenguinDukeYDAuto), but that is the cluster map's id, and
+  the map did not come back on the cluster after EVA (the owner's guess: EVA shares its layer with the map); `0x010004f1` is the
+  guide hold's, up only while the cluster's map shows. While EVA shows (it tells the helper with `evaOn` now and every 10 s; the
+  helper lets go after 30 s of silence) the helper hides the cluster map's layers, which EVA covers anyway; the HUD map stays.
+  Off: the default id is put back and the HUD map's layers give way instead. Experimental: not verified on a car.
 - The backdrop covers the whole cluster again (0.4.2 stopped it at y 640 to let BMW's bottom row show, as
   `PenguinDukeYDAuto/idrive7-EVAHUD` does; the owner did not want that row). BMW's gear letter P is drawn above our layers
   and cannot be hidden, so a small frame at x 1375-1455, y 650-706 makes it part of the design.
