@@ -388,3 +388,42 @@ test('proxy: with waze-on-cluster 0.9.0 its HUD layer keeps its place until one 
         mapRig.close();
     }
 });
+
+test('proxy: while the EVA cluster shows, the HUD map and its soft edges are hidden, and shown again after; the cluster map is left alone', async () => {
+    const { FX } = require('../native/mgux-hud-ctl/renderproxy.js');
+    const layout = { mode: 'hud', native: true, hideHud: true,
+        hud: { x: 150, y: 90, w: 300, h: 150, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0.2, placed: false },
+        map: null };
+    const r = await rig(layout);
+    const m = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'hud', x: 200, y: 140, w: 400, h: 176, vw: 400, vh: 176, visible: 1 }));
+        r.waze.write(frameMsg(2, 64, 5));
+        await r.waitUp(4);
+        let msgs = jsonOf(r.upMsgs, 0);
+        assert.strictEqual(msgs.find((j) => j.op === 'layer' && j.ref === 2).visible, 0, 'the HUD layer is made hidden');
+        assert.strictEqual(msgs.find((j) => j.op === 'layer' && j.ref === 2 + FX).visible, 0, 'and so are its soft edges');
+        /* waze shows its map (a set with visible 1): it stays hidden */
+        let n = r.upMsgs.length;
+        r.waze.write(jsonMsg({ op: 'set', ref: 2, visible: 1 }));
+        await r.waitUp(n + 2);
+        const sets = jsonOf(r.upMsgs, n).filter((j) => j.op === 'set' && j.visible !== undefined);
+        assert.ok(sets.length >= 1 && sets.every((j) => j.visible === 0), 'waze\'s visible 1 is not passed on');
+        /* EVA goes: both are shown again */
+        n = r.upMsgs.length;
+        layout.hideHud = false;
+        r.proxy.apply();
+        await r.waitUp(n + 2);
+        msgs = jsonOf(r.upMsgs, n);
+        assert.ok(msgs.some((j) => j.op === 'set' && j.ref === 2 && j.visible === 1));
+        assert.ok(msgs.some((j) => j.op === 'set' && j.ref === 2 + FX && j.visible === 1));
+        /* the cluster's map is not a HUD layer */
+        layout.hideHud = true;
+        m.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 1, target: 'map', visible: 1 }));
+        await m.waitUp(1);
+        assert.strictEqual(jsonOf(m.upMsgs, 0).find((j) => j.op === 'layer' && j.ref === 1).visible, 1);
+    } finally {
+        r.close();
+        m.close();
+    }
+});

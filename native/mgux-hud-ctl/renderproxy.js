@@ -309,13 +309,17 @@ class Link {
                 });
                 if (j.visible !== undefined) {
                     /* the soft edges show and hide with the map (a black frame must not hold the HUD alone) */
-                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: j.visible })));
+                    const hid = this.hideHud();
+                    Object.keys(this.fx).forEach((r) => this.toUp(jsonMsg({ op: 'set', ref: Number(r), visible: hid && this.fx[r].target === HUD ? 0 : j.visible })));
                 }
                 Object.keys(this.actual).forEach((r) => {
                     /* a place waze-on-cluster gives goes on while the place is not ours (its app moves the HUD map) */
                     const m2 = Object.assign({}, j, { ref: Number(r) });
                     if (this.actual[r].own) {
                         ['x', 'y', 'w', 'h'].forEach((k) => { delete m2[k]; });
+                    }
+                    if (m2.visible !== undefined && this.actual[r].target === HUD && this.hideHud()) {
+                        m2.visible = 0;
                     }
                     if (typeof m2.opacity === 'number') {
                         m2.opacity = Math.round(m2.opacity * this.actual[r].opacity * 1000) / 1000;
@@ -353,7 +357,9 @@ class Link {
          * been placed here) */
         const one = (ref, target, rect, own) => ({ ref, target, rect, own: own === undefined ? !!rect : !!own && !!rect,
             opacity: opacityOf(rect), zoom: zoomOf(rect), rot: rotOf(rect),
-            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0 });
+            fx: focusOf(rect, 'fx'), fy: focusOf(rect, 'fy'), fe: target === HUD && rect && typeof rect.fe === 'number' ? rect.fe : 0,
+            /* hide: the EVA cluster app shows, and a HUD layer shown would hold the slot the cluster's panel needs */
+            hide: !!L.hideHud && target === HUD });
         if (L.native) {
             /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
              * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
@@ -378,6 +384,19 @@ class Link {
         return { w: typeof b.w === 'number' ? b.w : this.fullW(d.target), h: typeof b.h === 'number' ? b.h : this.fullH() };
     }
 
+    /* `visible` only when the HUD layer is hidden for the EVA cluster, or shown again after that */
+    visPatch(d, a) {
+        const hid = !!(a && a.hid);
+        if (d.hide === hid) {
+            return {};
+        }
+        if (d.hide) {
+            return { visible: 0 };
+        }
+        const v = this.cur && (this.cur.visible === 0 || this.cur.visible === false) ? 0 : 1;
+        return { visible: v };
+    }
+
     /* zoom, turn and pivot, as layer fields; the pivot is always sent (cluster-render keeps the last one) */
     look(d) {
         const sz = this.sizeOf(d);
@@ -395,6 +414,9 @@ class Link {
             msg.x = d.rect.x; msg.y = d.rect.y; msg.w = d.rect.w; msg.h = d.rect.h;
         }
         Object.assign(msg, this.look(d));
+        if (d.hide) {
+            msg.visible = 0;
+        }
         if (d.opacity !== 1) {
             msg.opacity = this.layerOpacity(d);
         }
@@ -428,17 +450,19 @@ class Link {
                 delete this.actual[d.ref];
             }
             const was = this.actual[d.ref];
+            const vis = this.visPatch(d, was);
             if (was && was.place === place) {
-                if (was.look !== lookKey) {
-                    this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref }, look)));
+                if (was.look !== lookKey || vis.visible !== undefined) {
+                    this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref }, look, vis)));
                     was.look = lookKey;
                     was.opacity = d.opacity;
+                    was.hid = d.hide;
                 }
                 return;
             }
             if (was && liveSet() && was.own && d.own) {
-                this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h }, look)));
-                this.actual[d.ref] = { target: d.target, place, look: lookKey, own: true, opacity: d.opacity };
+                this.toUp(jsonMsg(Object.assign({ op: 'set', ref: d.ref, x: d.rect.x, y: d.rect.y, w: d.rect.w, h: d.rect.h }, look, vis)));
+                this.actual[d.ref] = { target: d.target, place, look: lookKey, own: true, opacity: d.opacity, hid: d.hide };
                 return;
             }
             if (was) {
@@ -447,7 +471,7 @@ class Link {
                 this.toUp(jsonMsg({ op: 'drop', ref: d.ref }));
             }
             this.toUp(jsonMsg(this.layerMessage(d)));
-            this.actual[d.ref] = { target: d.target, place, look: lookKey, own: d.own, opacity: d.opacity };
+            this.actual[d.ref] = { target: d.target, place, look: lookKey, own: d.own, opacity: d.opacity, hid: d.hide };
             delete this.layerStates[d.ref];
             if (this.lastFrame) {
                 this.sendFrame(d.ref, this.lastFrame);
@@ -528,10 +552,17 @@ class Link {
                 if (this.cur.visible !== undefined) {
                     msg.visible = this.cur.visible;
                 }
+                if (d.hide) {
+                    msg.visible = 0;
+                }
                 this.toUp(jsonMsg(msg));
                 this.toUp(jsonMsg({ op: 'uniform', ref: e, name: 'u_f', v: uf }));
-                this.fx[e] = { target: d.target, place, uf };
+                this.fx[e] = { target: d.target, place, uf, hid: d.hide };
                 return;
+            }
+            if (this.fx[e].hid !== d.hide) {
+                this.toUp(jsonMsg({ op: 'set', ref: e, visible: d.hide ? 0 : (this.cur.visible === 0 || this.cur.visible === false ? 0 : 1) }));
+                this.fx[e].hid = d.hide;
             }
             if (again || this.fx[e].place !== place) {
                 this.toUp(jsonMsg(Object.assign({ op: 'set', ref: e }, fields)));
@@ -548,6 +579,11 @@ class Link {
                 delete this.fx[e];
             }
         });
+    }
+
+    /* the EVA cluster app shows: the HUD's layers are hidden so the slot is free for the panel */
+    hideHud() {
+        try { return !!this.getLayout().hideHud; } catch (e) { return false; }
     }
 
     /* waze-on-cluster's own place of its layer, as it made it or moved it last */

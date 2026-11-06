@@ -11,15 +11,16 @@
 const net = require('net');
 const mgu = require('./kit/mgu');
 
-// 0.2.0 / 0.2.1 could ask mgux-hud-ctl to set panel_take_over_stock = 1 in cluster-render's conf (it did not help on a car
-// whose cluster was coded M-style). This version only puts a leftover 1 back to 0: the helper changes and restarts
-// nothing when it was never set. Tried a few times in case the helper is not up yet.
+// mgux-hud-ctl (the HUD map's root service): one short visit to its socket per message, tried a few times when it is not
+// up yet. It hides the HUD map's layers while EVA shows (the cluster's panel and the HUD share one slot, and whoever holds it
+// keeps it, so a HUD map shown while navigating kept EVA off the cluster), and puts a leftover panel_take_over_stock = 1
+// (0.2.0 / 0.2.1) back to 0: nothing changes or restarts when it was never set.
 const HELPER = '/dev/shm/mgux-hud/ctl.sock';
-function undoTakeOver(ctx, tries) {
+function visit(ctx, msg, tries) {
     const c = net.createConnection(HELPER);
     let done = false;
-    c.on('error', () => { if (!done) { done = true; if (tries > 1) setTimeout(() => undoTakeOver(ctx, tries - 1), 20000); } });
-    c.on('connect', () => { done = true; c.end(JSON.stringify({ cmd: 'panelTakeOver', on: false }) + '\n'); });
+    c.on('error', () => { if (!done) { done = true; if (tries > 1) setTimeout(() => visit(ctx, msg, tries - 1), 20000); } });
+    c.on('connect', () => { done = true; c.end(JSON.stringify(msg) + '\n'); });
 }
 
 const HudApp = require('./hud');
@@ -37,7 +38,15 @@ mgu.run({
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
         hud.start();
-        undoTakeOver(ctx, 6);
+        visit(ctx, { cmd: 'panelTakeOver', on: false }, 6);
+        // while EVA shows, tell the helper now and every 10 s (it lets the HUD map back after 30 s of silence, e.g. if this app dies)
+        let keep = null;
+        hud.onShown((on) => {
+            clearInterval(keep);
+            keep = null;
+            visit(ctx, { cmd: 'evaOn', on }, 3);
+            if (on) keep = setInterval(() => visit(ctx, { cmd: 'evaOn', on: true }, 1), 10000);
+        });
         process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
     },
 });

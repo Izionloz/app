@@ -50,6 +50,7 @@ const WAZE_MODE = { map: { cluster: 1, hud: 0 }, hud: { cluster: 0, hud: 1 }, bo
 /* cluster-render's own settings that the units keeps across updates (cluster-render.conf "local_conf") */
 const CR_CONF = env.HUDCTL_CR_CONF || '/var/opt/cluster-render/cluster-render.local.conf';
 const CR_RESTART = env.HUDCTL_RESTART_CMD || 'systemctl';
+const EVA_HOLD_MS = 30000;           /* the EVA cluster app says every 10 s that it shows; without that the HUD comes back */
 const SYNC_MS = 4000;                /* waze-on-cluster is looked at this often while its feeds are not as asked */
 const RESEND_MS = 3000;              /* the same visit at most this often */
 const WIDTH_MS = 600;                /* the HUD size is sent this long after the last change */
@@ -258,7 +259,7 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native() };
+        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hideHud: Date.now() < (this.evaUntil || 0) };
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -424,6 +425,19 @@ class Daemon {
                 this.state = Object.assign(defaultState(), { mode: this.state.mode });
             }
             this.changed();
+            return;
+        case 'evaOn':
+            /* the EVA cluster app shows (or stops): the HUD map's layers are hidden meanwhile, since the cluster's panel and
+             * the HUD share one slot and the one that holds it keeps it */
+            if (typeof msg.on === 'boolean') {
+                const was = Date.now() < (this.evaUntil || 0);
+                this.evaUntil = msg.on ? Date.now() + EVA_HOLD_MS : 0;
+                clearTimeout(this.evaT);
+                this.evaT = msg.on ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
+                if (was !== msg.on) {
+                    try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
+                }
+            }
             return;
         case 'panelTakeOver':
             if (typeof msg.on === 'boolean') {
