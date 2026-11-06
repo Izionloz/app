@@ -149,8 +149,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   `PenguinDukeYDAuto/idrive7-EVAHUD` does; the owner did not want that row). BMW's gear letter P is drawn above our layers
   and cannot be hidden; 0.5.1 put a small frame around its place (x 1375-1455, y 650-706), which the owner did not like (an empty
   frame when no letter shows), so 0.5.3 leaves plain black there.
-- The app's page lists cluster-render's own status text (targets, who holds each slot, layers) under the status row,
-  refreshed every 5 s, to read why the cluster's map is missing after EVA (a photo of the page is enough).
+- 0.5.1 to 0.5.4 listed cluster-render's status text and the helper's state on the app's page, to find why the map on the cluster was
+  missing in Comfort: the KOMBI reported the map slot `0x100` "locked" (`target map: waiting slot locked`), i.e. the cluster's own
+  layout has no map area; not EVA's doing. The lines are removed in 0.5.5.
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
   and the HUD, so **the HUD map is off while EVA shows** and comes back in the other modes (what you chose).
 - Placed clear of BMW's black gear box (x 1406-1597, y 342-419) and the belt light, and of the hood at the top corners.
