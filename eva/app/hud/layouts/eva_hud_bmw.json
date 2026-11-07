@@ -66,7 +66,16 @@
     }
    ],
    "rpmMax": 8000,
-   "coolMax": 120,
+   "coolMax": 140,
+   "rail1Signal": "oil",
+   "lights": {
+    "x": 262,
+    "y": 108,
+    "w": 160,
+    "h": 14,
+    "count": 10,
+    "tail": 0
+   },
    "rails": [
     {
      "x": 168,
@@ -407,9 +416,9 @@
    "z": 9,
    "x": 400,
    "y": 341,
-   "w": 150,
+   "w": 80,
    "h": 18,
-   "text": "COOLANT {{u:temp}}",
+   "text": "OIL {{u:temp}}",
    "font": "w_small",
    "color": [
     249,
@@ -420,6 +429,24 @@
    "align": "left"
   },
   {
+   "id": "water",
+   "type": "text",
+   "z": 9,
+   "x": 470,
+   "y": 341,
+   "w": 70,
+   "h": 18,
+   "text": "WATER {{coolant}}",
+   "font": "w_small",
+   "color": [
+    249,
+    113,
+    88,
+    255
+   ],
+   "align": "right"
+  },
+  {
    "id": "cool",
    "type": "text",
    "z": 9,
@@ -427,7 +454,7 @@
    "y": 354,
    "w": 52,
    "h": 21,
-   "text": "{{coolant}}",
+   "text": "{{oil}}",
    "font": "w_rpm",
    "color": [
     255,

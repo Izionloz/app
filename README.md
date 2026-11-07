@@ -163,6 +163,14 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   3500 rpm, 1.4 s), the frame and a glow round the bar grow with the level and breathe from 5000 rpm, and at the redline the whole bar and
   its last six segments strobe (shift lights). The effects are uniform values (`u_fx`) sent a few times a second, no new layers. The HUD
   layouts also show the coolant (a 14-segment ramp rail and the number, bottom right, clear of BMW's speed; the cluster already had it).
+- **Oil temperature and the Redline shift features (0.10.0):** after cauliflowermossgrape's Redline app (MIT; the engine's `shift_score.js`
+  already held its rules). The cluster has an OIL panel beside COOLANT (`{{oil}}`), the HUD an oil rail and number with the water
+  number beside its caption (the oil is what was missing, not the water). **Shift lights**: 12 on the cluster (above the rev bar) and 10
+  on the HUD (in the header), drawn by the `evadash` shader (`lights`): they fill over the last 2000 rpm before the shift point (green,
+  yellow, red) and all strobe at it (`u_led`, `u_ledP`). The shift point is the redline minus the new setting "Shift point before the
+  redline" (300 rpm), lowered by the **cold-engine guard** (setting, on) until the oil is warm (80 C: 4500 rpm at 30 C, rising in 50 rpm
+  steps); the cluster says so (`COLD . LIMIT 5400`). **SHIFT** shows as the warning at the shift point (before HIGH RPM and REDLINE),
+  and the cluster has a LAST SHIFT line: the gears, the rpm and the verdict (SPOT ON / EARLY / LATE / LIMITER / COLD REV), coloured by it.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

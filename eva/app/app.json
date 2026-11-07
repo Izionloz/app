@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -303,6 +303,28 @@
         4,
         5
       ]
+    },
+    {
+      "key": "shiftBefore",
+      "label": "Shift point before the redline",
+      "type": "number",
+      "unit": "rpm",
+      "default": 300,
+      "steps": [
+        0,
+        100,
+        200,
+        300,
+        500,
+        800,
+        1000
+      ]
+    },
+    {
+      "key": "coldGuard",
+      "label": "Cold-engine guard (lower shift point until the oil is warm)",
+      "type": "bool",
+      "default": true
     }
   ],
   "config": {

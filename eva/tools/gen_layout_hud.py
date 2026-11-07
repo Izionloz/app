@@ -44,10 +44,13 @@ def build(variant):
         # BMW's speed is the speed: a rule over it with two ticks, and "SPEED" to its left
         frames += [{'x': 262, 'y': 326, 'w': 124, 'h': 2, 'kind': 2}, {'x': 262, 'y': 326, 'w': 2, 'h': 8, 'kind': 2},
                    {'x': 384, 'y': 326, 'w': 2, 'h': 8, 'kind': 2}]
-    # coolant, bottom right (clear of BMW's speed at the lower left): a small ramp rail (mint, amber from 105 C, red at the end)
+    # oil temperature, bottom right (clear of BMW's speed at the lower left): a small ramp rail (mint, amber from 0.87 of its scale, red at the end);
+    # the water temperature is a number beside the caption
     cool = {'x': 400, 'y': 357, 'w': 140, 'h': 18, 'segs': 14, 'gap': 2, 'ramp': True}
     W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3],
-              'frames': frames, 'rpmMax': 8000, 'coolMax': 120, 'rails': [rail, cool]})
+              'frames': frames, 'rpmMax': 8000, 'coolMax': 140, 'rail1Signal': 'oil',
+              # the shift lights (Redline) in the header: they fill over the last 2000 rpm before the shift point, then strobe
+              'lights': {'x': 262, 'y': 108, 'w': 160, 'h': 14, 'count': 10, 'tail': 0}, 'rails': [rail, cool]})
 
     text('nerv', 130, 104, 150, 'NERV', 'w_title', RED, glow=True)
     text('hud', 131, 131, 160, 'HEAD-UP DISPLAY', 'w_small', SUB)
@@ -77,8 +80,9 @@ def build(variant):
         text('speedCap', 236, 346, 42, 'SPEED', 'w_small', SUB, 'right', z=9)
         text('alert', 400, 314, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
 
-    text('coolCap', 400, 341, 150, 'COOLANT {{u:temp}}', 'w_small', SUB, z=9)
-    text('cool', 546, 354, 52, '{{coolant}}', 'w_rpm', VAL, 'right', z=9)
+    text('coolCap', 400, 341, 80, 'OIL {{u:temp}}', 'w_small', SUB, z=9)
+    text('water', 470, 341, 70, 'WATER {{coolant}}', 'w_small', SUB, 'right', z=9)
+    text('cool', 546, 354, 52, '{{oil}}', 'w_rpm', VAL, 'right', z=9)
 
     name = 'EVA HUD' if own else 'EVA HUD (BMW speed)'
     with open(os.path.join(APP, 'layouts', variant + '.json'), 'w') as f:
