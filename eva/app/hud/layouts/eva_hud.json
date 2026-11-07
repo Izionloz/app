@@ -45,7 +45,14 @@
     }
    ],
    "rpmMax": 8000,
-   "coolMax": 120,
+   "lights": {
+    "x": 262,
+    "y": 108,
+    "w": 160,
+    "h": 14,
+    "count": 10,
+    "tail": 0
+   },
    "rails": [
     {
      "x": 168,
@@ -54,15 +61,6 @@
      "h": 24,
      "segs": 38,
      "gap": 2
-    },
-    {
-     "x": 400,
-     "y": 357,
-     "w": 140,
-     "h": 18,
-     "segs": 14,
-     "gap": 2,
-     "ramp": true
     }
    ]
   },
@@ -380,42 +378,6 @@
    ],
    "align": "center",
    "byRpm": true
-  },
-  {
-   "id": "coolCap",
-   "type": "text",
-   "z": 9,
-   "x": 400,
-   "y": 341,
-   "w": 150,
-   "h": 18,
-   "text": "COOLANT {{u:temp}}",
-   "font": "w_small",
-   "color": [
-    249,
-    113,
-    88,
-    255
-   ],
-   "align": "left"
-  },
-  {
-   "id": "cool",
-   "type": "text",
-   "z": 9,
-   "x": 546,
-   "y": 354,
-   "w": 52,
-   "h": 21,
-   "text": "{{coolant}}",
-   "font": "w_rpm",
-   "color": [
-    255,
-    170,
-    80,
-    255
-   ],
-   "align": "right"
   }
  ]
 }

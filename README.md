@@ -163,10 +163,23 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   3500 rpm, 1.4 s), the frame and a glow round the bar grow with the level and breathe from 5000 rpm, and at the redline the whole bar and
   its last six segments strobe (shift lights). The effects are uniform values (`u_fx`) sent a few times a second, no new layers. The HUD
   layouts also show the coolant (a 14-segment ramp rail and the number, bottom right, clear of BMW's speed; the cluster already had it).
-- **S and M (0.9.1):** the shifter programme (S, or M for manual / paddles) comes from `de.bmw.infotainment.misc.MDrive`
-  (`dataDisplayGearbox`), declared again in `app.json`: the gear then reads S3 / M3 instead of D3, with SPORT / MANUAL under it. That
-  interface was one of those dropped in 0.1.1 (the 0.1.0 install failed on one the unit lacks, which one is not known), so if this
-  install fails, the MDrive declaration is the first thing to remove (the gear then reads D1 .. D8 only).
+- **Oil temperature and the Redline shift features (0.10.0):** after cauliflowermossgrape's Redline app (MIT; the engine's `shift_score.js`
+  already held its rules). The cluster has an OIL panel beside COOLANT (`{{oil}}`), the HUD an oil rail and number with the water
+  number beside its caption (the oil is what was missing, not the water). **Shift lights**: 12 on the cluster (above the rev bar) and 10
+  on the HUD (in the header), drawn by the `evadash` shader (`lights`): they fill over the last 2000 rpm before the shift point (green,
+  yellow, red) and all strobe at it (`u_led`, `u_ledP`). The shift point is the redline minus the new setting "Shift point before the
+  redline" (300 rpm), lowered by the **cold-engine guard** (setting, on) until the oil is warm (80 C: 4500 rpm at 30 C, rising in 50 rpm
+  steps); the cluster says so (`COLD . LIMIT 5400`). **SHIFT** shows as the warning at the shift point (before HIGH RPM and REDLINE),
+  and the cluster has a LAST SHIFT line: the gears, the rpm and the verdict (SPOT ON / EARLY / LATE / LIMITER / COLD REV), coloured by it.
+- **Battery and a clean HUD (0.10.1):** the cluster header shows the 12 V battery's charge (`{{battery}}` %, from CDS `statusBattery2`, an
+  interface the app already declares; the voltage itself is not on the signals the app can reach). The HUD no longer shows oil or water
+  (the oil stays on the cluster). **Boost:** a BOOST readout in the cluster header (`{{boost}}`, from the FES sport display's `displayBoostPressure`, the interface
+  the app already declares; M Vitals reads the same field). **S / M again:** `MDrive.dataDisplayGearbox` is declared again, this time with mode `s` (notify only), as
+  the M Vitals app declares it (0.9.1 used `rs`, which is the likely reason that install failed); the gear then reads S3 / M3.
+  If this install fails, remove that declaration first.
+- **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
+  and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
+  it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
 - **The gear (0.8.1):** the gear box shows what BMW's selector shows, P R N or D with the engaged gear (D1 .. D8; S / M by the shifter
   programme when known), on the cluster and the HUD (`{{gear}}` instead of `{{stage}}`; fonts `e_gearn`, `w_gear`).
 - **EVA HUD on the windshield (0.6.0):** a second display of the same app on cluster-render's `hud` target, from the owner's

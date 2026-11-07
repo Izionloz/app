@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.9.1",
+  "version": "0.10.1",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -23,13 +23,19 @@
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
       "statusEngineSpeed2": "rs",
-      "statusEngineTemperature": "rs"
+      "statusEngineTemperature": "rs",
+      "statusBattery2": "rs"
+    },
+    "de.bmw.infotainment.misc.MDrive": {
+      "dataDisplayGearbox": "s",
+      "_optional": "S or M next to the gear"
     },
     "de.bmw.infotainment.vehicle.Vehicle2": {
       "statusCarSpeed2": "rs"
     },
     "de.bmw.infotainment.drivingexcitement.FES": {
-      "statusFESVehicleDynamicSwitchHMI": "rs"
+      "statusFESVehicleDynamicSwitchHMI": "rs",
+      "statusSwitchDriveDynamicSport2": "rs"
     },
     "de.bmw.infrastructure.VehicleInformation": {
       "statusGearboxDrive": "s",
@@ -45,10 +51,6 @@
       "statusTyrePressure": "rs",
       "statusTyreTemperature": "rs",
       "_optional": "tyre pressures on the cluster"
-    },
-    "de.bmw.infotainment.misc.MDrive": {
-      "dataDisplayGearbox": "rs",
-      "_optional": "S or M next to the gear"
     }
   },
   "screens": [
@@ -307,6 +309,28 @@
         4,
         5
       ]
+    },
+    {
+      "key": "shiftBefore",
+      "label": "Shift point before the redline",
+      "type": "number",
+      "unit": "rpm",
+      "default": 300,
+      "steps": [
+        0,
+        100,
+        200,
+        300,
+        500,
+        800,
+        1000
+      ]
+    },
+    {
+      "key": "coldGuard",
+      "label": "Cold-engine guard (lower shift point until the oil is warm)",
+      "type": "bool",
+      "default": true
     }
   ],
   "config": {

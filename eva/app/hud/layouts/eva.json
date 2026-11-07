@@ -58,7 +58,7 @@
     },
     {
      "x": 1130,
-     "y": 402,
+     "y": 404,
      "w": 250,
      "h": 2,
      "kind": 2,
@@ -67,14 +67,21 @@
     {
      "x": 110,
      "y": 580,
-     "w": 830,
+     "w": 650,
      "h": 58,
      "chamfer": 16
     },
     {
-     "x": 950,
+     "x": 770,
      "y": 580,
-     "w": 430,
+     "w": 330,
+     "h": 58,
+     "chamfer": 16
+    },
+    {
+     "x": 1110,
+     "y": 580,
+     "w": 270,
      "h": 58,
      "chamfer": 16
     },
@@ -94,6 +101,14 @@
    ],
    "rpmMax": 8000,
    "coolMax": 120,
+   "lights": {
+    "x": 330,
+    "y": 194,
+    "w": 1010,
+    "h": 20,
+    "count": 12,
+    "tail": 0
+   },
    "rails": [
     {
      "x": 130,
@@ -106,7 +121,7 @@
     {
      "x": 345,
      "y": 588,
-     "w": 360,
+     "w": 270,
      "h": 42,
      "segs": 24,
      "gap": 3,
@@ -159,6 +174,114 @@
     255,
     118,
     91,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "boostCap",
+   "type": "text",
+   "z": 5,
+   "x": 790,
+   "y": 112,
+   "w": 100,
+   "h": 28,
+   "text": "BOOST",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "boost",
+   "type": "text",
+   "z": 5,
+   "x": 878,
+   "y": 108,
+   "w": 100,
+   "h": 39,
+   "text": "{{boost}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "boostU",
+   "type": "text",
+   "z": 5,
+   "x": 986,
+   "y": 111,
+   "w": 50,
+   "h": 37,
+   "text": "{{u:boost}}",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "batCap",
+   "type": "text",
+   "z": 5,
+   "x": 1070,
+   "y": 112,
+   "w": 150,
+   "h": 28,
+   "text": "BATTERY",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "bat",
+   "type": "text",
+   "z": 5,
+   "x": 1210,
+   "y": 108,
+   "w": 90,
+   "h": 39,
+   "text": "{{battery}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "batU",
+   "type": "text",
+   "z": 5,
+   "x": 1308,
+   "y": 111,
+   "w": 40,
+   "h": 37,
+   "text": "%",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
     255
    ],
    "align": "left"
@@ -443,29 +566,11 @@
    "align": "left"
   },
   {
-   "id": "pilotCap",
-   "type": "text",
-   "z": 8,
-   "x": 1130,
-   "y": 358,
-   "w": 250,
-   "h": 24,
-   "text": "PILOT UNIT 01",
-   "font": "e_mono",
-   "color": [
-    255,
-    118,
-    91,
-    255
-   ],
-   "align": "left"
-  },
-  {
    "id": "modeCap",
    "type": "text",
    "z": 8,
    "x": 1130,
-   "y": 414,
+   "y": 350,
    "w": 250,
    "h": 24,
    "text": "DRIVE MODE",
@@ -483,7 +588,7 @@
    "type": "text",
    "z": 8,
    "x": 1130,
-   "y": 442,
+   "y": 374,
    "w": 250,
    "h": 24,
    "text": "{{mode}}",
@@ -495,6 +600,43 @@
     255
    ],
    "align": "left"
+  },
+  {
+   "id": "shiftCap",
+   "type": "text",
+   "z": 8,
+   "x": 1130,
+   "y": 410,
+   "w": 250,
+   "h": 24,
+   "text": "LAST SHIFT",
+   "font": "e_mono",
+   "color": [
+    255,
+    118,
+    91,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "shift",
+   "type": "text",
+   "z": 8,
+   "x": 1130,
+   "y": 436,
+   "w": 262,
+   "h": 32,
+   "text": "{{lastGears}}  {{lastShift}}  {{verdict}}",
+   "font": "e_tyre",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "left",
+   "colorBy": "verdict"
   },
   {
    "id": "tyreCap",
@@ -572,9 +714,9 @@
    "id": "cool",
    "type": "text",
    "z": 9,
-   "x": 715,
+   "x": 625,
    "y": 590,
-   "w": 120,
+   "w": 90,
    "h": 39,
    "text": "{{coolant}}",
    "font": "e_val",
@@ -590,9 +732,63 @@
    "id": "coolU",
    "type": "text",
    "z": 9,
-   "x": 845,
+   "x": 722,
    "y": 593,
-   "w": 80,
+   "w": 36,
+   "h": 37,
+   "text": "{{u:temp}}",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "oilCap",
+   "type": "text",
+   "z": 9,
+   "x": 802,
+   "y": 594,
+   "w": 100,
+   "h": 28,
+   "text": "OIL",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "oil",
+   "type": "text",
+   "z": 9,
+   "x": 905,
+   "y": 590,
+   "w": 130,
+   "h": 39,
+   "text": "{{oil}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "oilU",
+   "type": "text",
+   "z": 9,
+   "x": 1042,
+   "y": 593,
+   "w": 50,
    "h": 37,
    "text": "{{u:temp}}",
    "font": "e_unit",
@@ -608,9 +804,9 @@
    "id": "rangeCap",
    "type": "text",
    "z": 9,
-   "x": 982,
+   "x": 1130,
    "y": 594,
-   "w": 160,
+   "w": 100,
    "h": 28,
    "text": "RANGE",
    "font": "e_label",
@@ -626,9 +822,9 @@
    "id": "range",
    "type": "text",
    "z": 9,
-   "x": 1110,
+   "x": 1226,
    "y": 590,
-   "w": 130,
+   "w": 92,
    "h": 39,
    "text": "{{range}}",
    "font": "e_val",
@@ -644,9 +840,9 @@
    "id": "rangeU",
    "type": "text",
    "z": 9,
-   "x": 1250,
+   "x": 1324,
    "y": 593,
-   "w": 80,
+   "w": 52,
    "h": 37,
    "text": "{{u:distLc}}",
    "font": "e_unit",
@@ -711,6 +907,24 @@
     255
    ],
    "align": "left"
+  },
+  {
+   "id": "coldNote",
+   "type": "text",
+   "z": 6,
+   "x": 1380,
+   "y": 290,
+   "w": 240,
+   "h": 24,
+   "text": "{{coldNote}}",
+   "font": "e_mono",
+   "color": [
+    255,
+    173,
+    84,
+    255
+   ],
+   "align": "right"
   }
  ]
 }
