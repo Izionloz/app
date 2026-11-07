@@ -259,7 +259,7 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hide: Date.now() < (this.evaUntil || 0) ? this.evaHide : null };
+        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hide: this.hideNow() };
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -373,7 +373,7 @@ class Daemon {
         return { ev: 'state', mode: s.mode, hud: rectView('hud', this.hudRect()), map: rectView('map', s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
             loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary(),
-            eva: { hide: Date.now() < (this.evaUntil || 0) ? this.evaHide : null } };
+            eva: { hide: this.hideNow() } };
     }
 
     broadcast() {
@@ -428,19 +428,22 @@ class Daemon {
             this.changed();
             return;
         case 'evaOn':
-            /* the EVA cluster app shows (or stops): the HUD map's layers are hidden meanwhile, since the cluster's panel and
-             * the HUD share one slot and the one that holds it keeps it */
+            /* an EVA display of the app shows (or stops): who "panel" (the cluster) or "hud" (the windshield). While it shows,
+             * the layers of the target named in hide are hidden: the HUD's when the panel shares its scene (and for EVA on the
+             * HUD itself), or the cluster map's when the panel has a scene of its own (it uses the map's slot). */
             if (typeof msg.on === 'boolean') {
-                const was = Date.now() < (this.evaUntil || 0);
-                /* which target's layers give way: the HUD's (the panel shares its scene), or the cluster map's (the panel has
-                 * the map's scene, so the HUD can show beside EVA) */
-                const hide = msg.hide === 'map' ? 'map' : 'hud';
-                const moved = was && msg.on && hide !== this.evaHide;
-                this.evaHide = hide;
-                this.evaUntil = msg.on ? Date.now() + EVA_HOLD_MS : 0;
+                const who = msg.who === 'hud' ? 'hud' : 'panel';
+                const before = JSON.stringify(this.hideNow());
+                this.evaHolds = this.evaHolds || {};
+                if (msg.on) {
+                    this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : 'hud' };
+                } else {
+                    delete this.evaHolds[who];
+                }
                 clearTimeout(this.evaT);
-                this.evaT = msg.on ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
-                if (was !== msg.on || moved) {
+                this.evaT = Object.keys(this.evaHolds).length
+                    ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
+                if (JSON.stringify(this.hideNow()) !== before) {
                     try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
                 }
             }
@@ -465,6 +468,18 @@ class Daemon {
      * is not already so, and then cluster-render is restarted once (it reads its conf at start). */
     panelTakeOver(on) {
         this.crConf('panel_take_over_stock', on ? '1' : '0', !on, 'panel take-over');
+    }
+
+    /* The targets whose layers are hidden now for an EVA display (a list), or null: each hold lasts EVA_HOLD_MS from the last word. */
+    hideNow() {
+        const now = Date.now(), out = [];
+        Object.keys(this.evaHolds || {}).forEach((who) => {
+            const h = this.evaHolds[who];
+            if (h.until > now && out.indexOf(h.hide) < 0) {
+                out.push(h.hide);
+            }
+        });
+        return out.length ? out.sort() : null;
     }
 
     /* The EVA cluster app asks for a scene of its own for the panel in cluster-render's local conf: 0x010004f1 (the guide

@@ -252,17 +252,17 @@ test('evaOn: the HUD map is hidden while the EVA cluster app says it shows, and 
     d.proxy.update = () => { updates++; };
     assert.strictEqual(d.layout().hide, null);
     d.handle({ cmd: 'evaOn', on: true });
-    assert.strictEqual(d.layout().hide, 'hud');
+    assert.deepStrictEqual(d.layout().hide, ['hud']);
     assert.strictEqual(updates, 1);
     d.handle({ cmd: 'evaOn', on: true });                 /* the keep-alive: nothing to redo */
     assert.strictEqual(updates, 1);
     d.handle({ cmd: 'evaOn', on: 'yes' });                /* not a boolean: nothing */
-    assert.strictEqual(d.layout().hide, 'hud');
+    assert.deepStrictEqual(d.layout().hide, ['hud']);
     d.handle({ cmd: 'evaOn', on: false });
     assert.strictEqual(d.layout().hide, null);
     assert.strictEqual(updates, 2);
     d.handle({ cmd: 'evaOn', on: true });
-    d.evaUntil = Date.now() - 1;                           /* no keep-alive for 30 s */
+    d.evaHolds.panel.until = Date.now() - 1;               /* no keep-alive for 30 s */
     assert.strictEqual(d.layout().hide, null);
     clearTimeout(d.evaT);
 });
@@ -283,10 +283,24 @@ test('panelScene and evaOn hide: the panel gets the map\'s scene so the HUD can 
     d.handle({ cmd: 'panelScene', on: false });
     assert.strictEqual(fs.readFileSync(conf, 'utf8'), 'panel_scene_id = 0x01000400\n');
     d.handle({ cmd: 'evaOn', on: true, hide: 'map' });
-    assert.strictEqual(d.layout().hide, 'map');
+    assert.deepStrictEqual(d.layout().hide, ['map']);
     d.handle({ cmd: 'evaOn', on: true, hide: 'hud' });          /* the setting changed while it shows */
-    assert.strictEqual(d.layout().hide, 'hud');
+    assert.deepStrictEqual(d.layout().hide, ['hud']);
     d.handle({ cmd: 'evaOn', on: false });
+    assert.strictEqual(d.layout().hide, null);
+    clearTimeout(d.evaT);
+});
+
+test('evaOn: the cluster and the EVA HUD each hold their own hide; both can be on', () => {
+    const d = new ctl.Daemon();
+    d.proxy.update = () => {};
+    d.handle({ cmd: 'evaOn', on: true, who: 'panel', hide: 'map' });
+    assert.deepStrictEqual(d.layout().hide, ['map']);
+    d.handle({ cmd: 'evaOn', on: true, who: 'hud', hide: 'hud' });
+    assert.deepStrictEqual(d.layout().hide, ['hud', 'map']);
+    d.handle({ cmd: 'evaOn', on: false, who: 'panel' });
+    assert.deepStrictEqual(d.layout().hide, ['hud']);
+    d.handle({ cmd: 'evaOn', on: false, who: 'hud' });
     assert.strictEqual(d.layout().hide, null);
     clearTimeout(d.evaT);
 });

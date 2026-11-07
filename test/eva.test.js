@@ -84,3 +84,48 @@ test('eva app: only the signals it shows are declared (an interface this car lac
         'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation', 'de.bmw.infrastructure.VehicleInformation']);
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI']);
 });
+
+const hudLayout = json('hud', 'layouts', 'eva_hud.json');
+const WINDOW = [120, 100, 485, 278];      /* what the driver sees of the 800x480 HUD (shared/visible.js) */
+
+test('eva HUD layout: ids are unique, widgets are inside the part of the HUD the driver sees, and clear BMW\'s own content at the lower left', () => {
+    const ids = new Set();
+    hudLayout.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(['text', 'evadash'].includes(w.type), `${w.id}: type ${w.type}`);
+        assert.ok(w.x >= WINDOW[0] && w.y >= WINDOW[1] && w.x + w.w <= WINDOW[0] + WINDOW[2] && w.y + w.h <= WINDOW[1] + WINDOW[3],
+            `${w.id} is outside the visible HUD window`);
+        if (w.type === 'text') {
+            assert.ok(!(w.x < 290 && w.y + w.h > 312), `${w.id} is where BMW's own HUD content sits (lower left)`);
+        }
+    });
+    assert.strictEqual(hudLayout.schemaVersion, 2);
+});
+
+test('eva HUD layout: each text widget\'s font is baked and has the letters of its fixed text', () => {
+    hudLayout.widgets.filter((w) => w.type === 'text').forEach((w) => {
+        const f = json('hud', 'fonts', `${w.font}.json`);
+        assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+        if (!/\{\{/.test(w.text)) {
+            for (const ch of w.text) {
+                assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+            }
+        }
+    });
+    const d = hudLayout.widgets.find((w) => w.type === 'evadash');
+    assert.ok(d.frames.length <= 12 && d.rails.length <= 2);
+});
+
+test('eva app: the HUD settings name layouts that exist, and Sport has the EVA HUD by default', () => {
+    const s = (k) => app.settings.find((x) => x.key === k);
+    ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
+        s(k).options.forEach((o) => {
+            assert.ok(o[0] === 'off' || fs.existsSync(path.join(APP, 'hud', 'layouts', `${o[0]}.json`)), `${k}: no layout ${o[0]}`);
+        });
+    });
+    assert.strictEqual(s('windInSport').default, 'eva_hud');
+    assert.strictEqual(s('windInComfort').default, 'off');
+    assert.strictEqual(s('windInEco').default, 'off');
+    assert.strictEqual(s('windHudLayout').default, 'off');
+});
