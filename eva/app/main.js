@@ -80,7 +80,7 @@ mgu.run({
             clearInterval(h.keep);
             h.keep = null;
             // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
-            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide' ? 'none' : 'map') : 'hud') }, who === 'panel' && (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide') && separate() ? { mapRect: h.layout === 'eva_comfort' ? COMFORT_MAP : COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
+            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, layout: h.layout, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide' ? 'none' : 'map') : 'hud') }, who === 'panel' && (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide') && separate() ? { mapRect: h.layout === 'eva_comfort' ? COMFORT_MAP : COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };

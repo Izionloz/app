@@ -239,6 +239,13 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   0x01000300), `0x101 s2 0x1000312 c1024 m1, 0x1000311 c0 m3`, `0x102 s0 0x1000313`, `0x103 s1`, `0x104 s1`, `0x105 s0`, `0x111 s1`, `0x200 s0`,
   `0x201 s1 0x1000600`, `0x202 s1` (status 0 disabled, 1 free, 2 taken). 0x101's box is only a candidate. The page rows that showed the table (and what
   changed in it) were taken out at the owner's request; the app log still has cluster-render's status, slot rows included.
+- **Adjusting EVA's map windows in the HUD map app (0.13.5, with mgux-hud-ctl 2.18.0):** while an EVA layout holds a display's map (EVA Comfort's cluster
+  window, EVA HUD Comfort's middle), the designer's sliders and buttons for that display work on *that rectangle*: the page shows the layout's
+  rectangle (a note says the change is for EVA's window), and a move, a size, the zoom, the focus, the turn or the brightness set there is
+  kept for that layout (`evaRects` in the helper's state, per display and layout: `map:eva_comfort_wide`) and used in place of the layout's own,
+  also after EVA stops and comes back; Centre or Reset on that display puts the layout's rectangle back. The display's own rectangle (when EVA
+  does not hold it) is not changed by these edits and works as before. For the big-map layout (the map is cropped by the window) a move or a
+  zoom pans the map behind the window.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

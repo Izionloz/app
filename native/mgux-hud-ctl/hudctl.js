@@ -126,7 +126,7 @@ function normaliseRect(which, r) {
 }
 
 function defaultState() {
-    return { mode: 'follow', hud: defaultRect('hud'), map: defaultRect('map') };
+    return { mode: 'follow', hud: defaultRect('hud'), map: defaultRect('map'), evaRects: {} };
 }
 
 function normalise(s) {
@@ -134,8 +134,21 @@ function normalise(s) {
     return {
         mode: src.mode === 'map' || src.mode === 'hud' || src.mode === 'both' ? src.mode : 'follow',
         hud: normaliseRect('hud', src.hud),
-        map: normaliseRect('map', src.map)
+        map: normaliseRect('map', src.map),
+        /* what the owner set in the designer while an EVA layout showed its map: per display and layout ("map:eva_comfort_wide") */
+        evaRects: normaliseEvaRects(src.evaRects)
     };
+}
+
+function normaliseEvaRects(src) {
+    const out = {};
+    Object.keys(src && typeof src === 'object' ? src : {}).slice(0, 16).forEach((k) => {
+        const m = /^(map|hud):[a-z0-9_]{0,40}$/.exec(k);
+        if (m) {
+            out[k] = normaliseRect(m[1], src[k]);
+        }
+    });
+    return out;
 }
 
 /* Resize about the centre by (dw, dh), then move the centre by (dx, dy). */
@@ -260,12 +273,62 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        const place = (which, over) => normaliseRect(which, Object.assign({}, s[which], { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, over));
+        /* the rectangle an EVA layout asked for, forced to zoom 1 and no turn; or what the owner set for it in the designer (kept whole) */
+        const place = (which, over, own) => normaliseRect(which, own ? Object.assign({}, over, { custom: true, placed: true })
+            : Object.assign({}, s[which], { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, over));
         const overMap = this.evaRect('panel'), overHud = this.evaRect('hud');
-        const map = overMap ? place('map', overMap) : (s.map.custom ? s.map : null);
-        const hud = overHud ? place('hud', overHud) : s.hud;
+        const map = overMap ? place('map', overMap, this.evaOwn('map')) : (s.map.custom ? s.map : null);
+        const hud = overHud ? place('hud', overHud, this.evaOwn('hud')) : s.hud;
         const pm = this.evaPanelMap();
         return { mode: s.mode, hud, map, native: this.waze.native(), hide: this.hideNow(), panelMap: pm };
+    }
+
+    /* While an EVA display that asked for it shows (EVA Comfort's map window, the EVA HUD Comfort's middle), the map of that display
+     * goes into the rectangle it sent (x, y, w, h in the map target's own 1088x480 pixels for the cluster, the HUD's 800x480 for the HUD),
+     * and back to its own place when it stops or goes silent. What the owner sets for it in the designer meanwhile (a move, a size, the zoom,
+     * the focus, the brightness) is kept for that layout (state.evaRects) and used in place of the layout's own rectangle. */
+    evaHold(which) {
+        const h = (this.evaHolds || {})[which === 'map' ? 'panel' : 'hud'];
+        return h && h.until > Date.now() && h.mapRect ? h : null;
+    }
+
+    evaKey(which) {
+        const h = this.evaHold(which);
+        return h ? `${which}:${h.layout || ''}` : null;
+    }
+
+    evaOwn(which) {
+        const k = this.evaKey(which);
+        return k && this.state.evaRects[k] ? this.state.evaRects[k] : null;
+    }
+
+    evaRect(who) {
+        const which = who === 'panel' ? 'map' : 'hud';
+        const h = this.evaHold(which);
+        return h ? (this.evaOwn(which) || h.mapRect) : null;
+    }
+
+    /* the rectangle the designer works on while EVA's holds the display: the owner's, else the layout's */
+    evaBase(which) {
+        const h = this.evaHold(which);
+        if (!h) {
+            return null;
+        }
+        return this.evaOwn(which) || normaliseRect(which, Object.assign({}, this.state[which], { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, h.mapRect));
+    }
+
+    /* the designer changed the map of a display an EVA layout holds: kept for that layout, not for the display */
+    setEvaRect(which, rect) {
+        const k = this.evaKey(which);
+        this.state.evaRects[k] = rect;
+        this.note = `EVA ${which === 'map' ? 'Comfort' : 'HUD Comfort'}: the change is for its map window (kept for this layout); Centre / Reset puts it back`;
+        this.changed();
+    }
+
+    resetEvaRect(which) {
+        delete this.state.evaRects[this.evaKey(which)];
+        this.note = 'EVA: the map window is back as the layout has it';
+        this.changed();
     }
 
     /* EVA Comfort draws the cluster map in the panel's own scene instead of the map slot's (which the BMW cluster shows only in its map
@@ -275,16 +338,9 @@ class Daemon {
         if (!h || h.until <= Date.now() || !h.mapRect || h.panelMap !== true) {
             return null;
         }
-        const r = h.mapRect;
-        return { x: even(PANEL_MAP_X + r.x), y: even(PANEL_MAP_Y + r.y), w: even(r.w), h: even(r.h) };
-    }
-
-    /* While an EVA display that asked for it shows (EVA Comfort's map window, the EVA HUD Comfort's free middle), the map of that display
-     * goes into the rectangle it sent (x, y, w, h in the map target's own 1088x480 pixels for the cluster, the HUD's 800x480 for the HUD),
-     * and back to its own place when it stops or goes silent; nothing is saved. */
-    evaRect(who) {
-        const h = (this.evaHolds || {})[who];
-        return h && h.until > Date.now() && h.mapRect ? h.mapRect : null;
+        const r = this.evaRect('panel'), own = this.evaOwn('map');
+        const out = { x: even(PANEL_MAP_X + r.x), y: even(PANEL_MAP_Y + r.y), w: even(r.w), h: even(r.h) };
+        return own ? Object.assign(out, { opacity: own.opacity, zoom: own.zoom, rot: own.rot, fx: own.fx, fy: own.fy }) : out;
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -395,10 +451,10 @@ class Daemon {
 
     view() {
         const s = this.state;
-        return { ev: 'state', mode: s.mode, hud: rectView('hud', this.hudRect()), map: rectView('map', s.map),
+        return { ev: 'state', mode: s.mode, hud: rectView('hud', this.evaBase('hud') || this.hudRect()), map: rectView('map', this.evaBase('map') || s.map),
             connections: this.proxy.stats().connections, note: this.note || this.saveError,
             loaded: this.loaded, savedAt: this.savedAt || null, waze: this.waze.summary(),
-            eva: { hide: this.hideNow() } };
+            eva: { hide: this.hideNow(), map: !!this.evaHold('map'), hud: !!this.evaHold('hud') } };
     }
 
     broadcast() {
@@ -419,11 +475,25 @@ class Daemon {
             }
             return;
         case 'adjust':
+            if (this.evaHold(which)) {
+                this.setEvaRect(which, adjustRect(which, this.evaBase(which), msg));
+                return;
+            }
             this.adoptWazePlace(which);
             this.state[which] = adjustRect(which, this.state[which], msg);
             this.changed();
             return;
         case 'rect': {
+            if (this.evaHold(which)) {
+                const cur = this.evaBase(which), next = Object.assign({}, cur, { custom: true, placed: true });
+                ['x', 'y', 'w', 'h', 'opacity', 'zoom', 'rot', 'fx', 'fy', 'fe'].forEach((k) => {
+                    if (msg[k] !== undefined) {
+                        next[k] = num(msg[k], cur[k]);
+                    }
+                });
+                this.setEvaRect(which, normaliseRect(which, next));
+                return;
+            }
             /* absolute values from the graphical designer: any of x, y, w, h, opacity, zoom, rot */
             if (['x', 'y', 'w', 'h'].some((k) => msg[k] !== undefined)) {
                 this.adoptWazePlace(which);
@@ -440,11 +510,19 @@ class Daemon {
             return;
         }
         case 'centre':
+            if (this.evaHold(which)) {
+                this.resetEvaRect(which);
+                return;
+            }
             this.adoptWazePlace(which);
             this.state[which] = centredRect(which, this.state[which]);
             this.changed();
             return;
         case 'reset':
+            if ((msg.which === 'hud' || msg.which === 'map') && this.evaHold(msg.which)) {
+                this.resetEvaRect(msg.which);
+                return;
+            }
             if (msg.which === 'hud' || msg.which === 'map') {
                 this.state[msg.which] = defaultRect(msg.which);
             } else {
@@ -464,7 +542,8 @@ class Daemon {
                     const r = msg.mapRect;
                     const ok = r && [r.x, r.y, r.w, r.h].every((v) => Number.isFinite(Number(v))) && r.w >= MIN_W && r.h >= MIN_H;
                     this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : msg.hide === 'none' ? 'none' : 'hud',
-                        mapRect: ok ? { x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) } : null, panelMap: msg.panelMap === true };
+                        mapRect: ok ? { x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) } : null, panelMap: msg.panelMap === true,
+                        layout: /^[a-z0-9_]{1,40}$/.test(String(msg.layout)) ? String(msg.layout) : '' };
                 } else {
                     delete this.evaHolds[who];
                 }
