@@ -254,8 +254,8 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   only lines and numbers are drawn, inside the part the driver sees (x 120, y 100, 485x278), clear of BMW's own content at the lower
   left (BMW's white speed there cannot be removed: turning the speed off in the iDrive HUD settings turns the whole HUD off; the
   REDLINE warning is centred to the right of it). A trial layout (0.7.0, `eva_hud_bmw`, the default for Sport) builds the HUD around that
-  number instead: no big speed of ours; the big number is the rev count, with a bracket over BMW's speed and "SPEED" at its
-  left; the other layout (`eva_hud`) stays selectable in the settings. The position of BMW's number is an estimate from one photo.
+  number instead: no big speed of ours; the big number is the rev count (0.13.4: the bracket over BMW's speed and "SPEED" at its left are
+  gone); the other layout (`eva_hud`) stays selectable in the settings. The position of BMW's number is an estimate from one photo.
   While it shows, `mgux-hud-ctl` (2.14.0: `evaOn` has `who`, the holds of the cluster and the HUD are kept apart) hides the HUD
   map's layers, so in Sport with the EVA HUD the HUD map gives way; in the other modes the HUD map shows as before. It needs
   "EVA and the HUD map together" on (the HUD and the cluster then have their own scenes). Checked on the bench only.
