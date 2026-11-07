@@ -1,6 +1,7 @@
 'use strict';
 /**
- * EVA cluster: redraws the iDrive 7 instrument cluster (the 1920x720 "panel" target) through cluster-render.
+ * EVA cluster: redraws the iDrive 7 instrument cluster (the 1920x720 "panel" target) and the windshield HUD (the 800x480 "hud"
+ * target) through cluster-render.
  *
  * The center screen is the app's settings page (app.json "screens" MAIN, a menu with
  * "settings": true): a status line, then the theme, room for the map, units, redline and which readouts
@@ -36,24 +37,48 @@ mgu.run({
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
         hud.start();
+
+        // The EVA HUD on the windshield: a second display of this app on cluster-render's "hud" target, with a connection of
+        // its own and layouts of its own (hud/layouts/eva_hud.json, settings windHudLayout / windInSport / ...). It follows
+        // this display's car data and drive mode, so both change with the drive mode together.
+        let whud = null;
+        try {
+            const wspec = Object.assign({}, ctx.spec, {
+                id: ctx.spec.id + '_hud',
+                config: Object.assign({}, ctx.spec.config, { target: 'hud', statusName: 'HUD', settingsPrefix: 'wind', needs: 'separate' }),
+            });
+            const wctx = Object.create(ctx, { spec: { value: wspec } });
+            whud = new HudApp(wctx, { follow: hud });
+            whud.onStatus((s) => { ctx.ui.text('HUDSTATUS', s); });
+            whud.start();
+        } catch (e) {
+            ctx.log.error('EVA HUD failed to start: ' + (e && e.stack || e));
+            ctx.ui.text('HUDSTATUS', 'EVA HUD failed to start: ' + (e && e.message || e));
+            whud = null;
+        }
+
         // "separate": the panel gets its own scene id (cluster-render's local conf, set by mgux-hud-ctl) so EVA and the HUD map
         // show at once; the cluster's map, which has that id, gives way while EVA shows. Off: they share one scene and the HUD
-        // map gives way. While EVA shows, the helper is told now and every 10 s (it lets go after 30 s of silence).
+        // map gives way (and the EVA HUD, which needs the separate scenes, stays off). The EVA HUD hides the HUD map while it
+        // shows. Each display tells the helper now and every 10 s while it shows (it lets go after 30 s of silence).
         const separate = () => ctx.settings.get('separate') !== false;
-        let on = false, keep = null;
-        const tell = () => {
-            clearInterval(keep);
-            keep = null;
-            visit(ctx, { cmd: 'evaOn', on, hide: separate() ? 'map' : 'hud' }, 3);
-            if (on) keep = setInterval(() => visit(ctx, { cmd: 'evaOn', on: true, hide: separate() ? 'map' : 'hud' }, 1), 10000);
+        const holds = {};
+        const tell = (who) => {
+            const h = holds[who] || (holds[who] = { on: false, keep: null });
+            clearInterval(h.keep);
+            h.keep = null;
+            const msg = () => ({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? 'map' : 'hud') });
+            visit(ctx, msg(), 3);
+            if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };
         visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
-        hud.onShown((shown) => { on = shown; tell(); });
+        hud.onShown((shown) => { (holds.panel || (holds.panel = { on: false, keep: null })).on = shown; tell('panel'); });
+        if (whud) whud.onShown((shown) => { (holds.hud || (holds.hud = { on: false, keep: null })).on = shown; tell('hud'); });
         ctx.settings.onChange((key) => {
             if (key !== 'separate') return;
             visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
-            tell();
+            tell('panel');
         });
-        process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
+        process.on('exit', () => { try { hud.stop(); if (whud) whud.stop(); } catch (e) { /* exiting anyway */ } });
     },
 });

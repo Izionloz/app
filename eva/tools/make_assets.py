@@ -32,6 +32,16 @@ FONTS = [
     ('e_gear', 'BarlowCondensed-Bold.ttf', 150, 'PRNDSM' + D + '-'),
     ('e_mono', 'BarlowCondensed-SemiBold.ttf', 24, U + D + ' .:-'),
     ('e_val', 'BarlowCondensed-Bold.ttf', 50, D + '.+-'),
+    # the EVA HUD on the windshield (800x480, the window the driver sees is about 485x278)
+    ('w_title', 'BarlowCondensed-Bold.ttf', 26, U + ' '),
+    ('w_small', 'BarlowCondensed-SemiBold.ttf', 12, U + D + ' :.-/'),
+    ('w_mode', 'BarlowCondensed-Bold.ttf', 20, U + ' :'),
+    ('w_label', 'BarlowCondensed-Bold.ttf', 20, U + ' '),
+    ('w_rpm', 'BarlowCondensed-Bold.ttf', 24, D + '-'),
+    ('w_gear', 'BarlowCondensed-Bold.ttf', 84, 'PRNDSM' + D + '-'),
+    ('w_speed', 'BarlowCondensed-Bold.ttf', 112, D + '-'),
+    ('w_unit', 'BarlowCondensed-Bold.ttf', 26, L + '/'),
+    ('w_alert', 'BarlowCondensed-Bold.ttf', 22, U + ' '),
 ]
 fo = os.path.join(OUT, 'fonts')
 os.makedirs(fo, exist_ok=True)

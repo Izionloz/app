@@ -7,12 +7,12 @@
             "kind": "tool",
             "title": "HUD map (background service)",
             "description": "Installed with HUD map: keeps the HUD map's and the cluster map's size, place, brightness, soft edges, zoom and rotation, and puts the map where HUD map says",
-            "version": "2.13.1",
+            "version": "2.14.0",
             "artifact": {
-                "name": "mgux-hud-ctl@2.13.1.tgz",
-                "size": 18205,
-                "sha256": "fd9726ed3c46acf2c259940bdde398f50ab102a515ddfb058833d43416a1a1e8",
-                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.13.1/mgux-hud-ctl%402.13.1.tgz"
+                "name": "mgux-hud-ctl@2.14.0.tgz",
+                "size": 18389,
+                "sha256": "921cccea5e8ba017bbfe8eacf751fca06f286b656582f5199e9a2624a21fcce0",
+                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.14.0/mgux-hud-ctl%402.14.0.tgz"
             },
             "requires": {
                 "mgu-deploy": "0.4.0"
@@ -36,7 +36,7 @@
                 "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.1/hud_designer%401.6.1.tgz"
             },
             "requires": {
-                "mgux-hud-ctl": "2.13.1"
+                "mgux-hud-ctl": "2.14.0"
             },
             "mguHmi": [
                 "ID7"
@@ -46,21 +46,21 @@
         {
             "id": "eva_cluster",
             "kind": "app",
-            "title": "EVA cluster",
-            "description": "In Sport mode the instrument cluster becomes an EVA-style display: segmented rev rail (flashes at the redline), big speed, gear, coolant, range and outside temperature, with the pilot picture. HUD map is off while it shows",
-            "version": "0.5.5",
+            "title": "EVA cluster and HUD",
+            "description": "In Sport the instrument cluster and the windshield HUD become an EVA-style display: segmented rev bar (flashes at the redline), big speed, gear and drive mode; the cluster also shows coolant, range and outside temperature, and the pilot picture. The HUD map gives way while the EVA HUD shows",
+            "version": "0.6.0",
             "artifact": {
-                "name": "eva_cluster@0.5.5.tgz",
-                "size": 1099465,
-                "sha256": "fe2eb9006671d1ce2a905f13fbe11d24aba3aa39864925958a197245489eee72",
-                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.5.5/eva_cluster%400.5.5.tgz"
+                "name": "eva_cluster@0.6.0.tgz",
+                "size": 1137650,
+                "sha256": "ce7dbef80e28422b5d4102a398d65290b73689c338db3ed45077714733cab5d0",
+                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.6.0/eva_cluster%400.6.0.tgz"
             },
             "mguHmi": [
                 "ID7"
             ],
             "uninstallable": true,
             "requires": {
-                "mgux-hud-ctl": "2.13.1"
+                "mgux-hud-ctl": "2.14.0"
             }
         }
     ]

@@ -7,7 +7,7 @@ The release build patches that engine (eva/engine.patch in Izionloz/app: the eva
 Their NOTICE, with the licences of cluster_render_client.js (MPL 2.0, Copyright (C) 2026 Robert Nisipeanu), the pixel-diff
 text update (MIT, DukeAPenguin) and the kit, applies to the engine files in this package.
 
-The layout follows the "EVA HUD" design the owner supplied (EVA_HUD_JS_Source_v3). The pilot picture (hud/pictures/pilot.json)
+The cluster layout follows the "EVA HUD" design the owner supplied (EVA_HUD_JS_Source_v3), and the windshield HUD layout (hud/layouts/eva_hud.json) the owner's "EVA Windshield HUD" design (EVA_Windshield_HUD_JS). The pilot picture (hud/pictures/pilot.json)
 is that design's pilot.webp cut and re-sized; it is third-party artwork of a character from an anime franchise, used here
 with the owner's own copy for personal use. It is not covered by this project's licence: delete hud/pictures/pilot.json
 (the app then shows the layout without the picture) if you do not have the right to use it.

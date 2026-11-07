@@ -583,7 +583,12 @@ class Link {
 
     /* the EVA cluster app shows: this target's layers are hidden so its scene is free for the panel */
     hidden(target) {
-        try { return this.getLayout().hide === target; } catch (e) { return false; }
+        try {
+            const h = this.getLayout().hide;
+            return Array.isArray(h) ? h.indexOf(target) >= 0 : h === target;
+        } catch (e) {
+            return false;
+        }
     }
 
     /* waze-on-cluster's own place of its layer, as it made it or moved it last */

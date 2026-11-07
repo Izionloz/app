@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..66450ef 100644
+index db817c2..202f574 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -29,7 +29,16 @@ index db817c2..66450ef 100644
  const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
  const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
  const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
-@@ -302,6 +306,9 @@ class HudApp {
+@@ -266,7 +270,7 @@ function rgba(c) { return [c[0] / 255, c[1] / 255, c[2] / 255, (c[3] === undefin
+ function isNum(v) { return typeof v === 'number' && isFinite(v); }
+ 
+ class HudApp {
+-    constructor(ctx) {
++    constructor(ctx, opts) {
+         this.ctx = ctx;
+         this.log = ctx.log;
+         this.config = (ctx.spec && ctx.spec.config) || {};
+@@ -302,9 +306,24 @@ class HudApp {
          this.flash = false;
          this.problem = null;             // why nothing shows (a bad layout), for the status line
          this.statusListeners = [];
@@ -38,17 +47,61 @@ index db817c2..66450ef 100644
 +        this.shownListeners = [];
          this.lastStatus = null;
  
-         this._setupVehicleData();
-@@ -378,7 +385,7 @@ class HudApp {
+-        this._setupVehicleData();
++        this.modeListeners = [];
++        this.parent = (opts && opts.follow) || null;
++        if (this.parent) {
++            // a second display of the same app (the EVA HUD beside the EVA cluster): the car's data, the drive mode and the
++            // readings are the first's, and a change of the drive mode reaches this one too
++            this.car = this.parent.car;
++            this.score = this.parent.score;
++            ['driveMode', 'driveVariant', 'program', 'fuelL', 'rangeKm', 'ambient', 'boostFes', 'boostFesAt', 'boostDme', 'boostDmeAt',
++                'tyres', 'carUnits', 'sportPower', 'sportTorque', 'sportAt'].forEach((k) => {
++                Object.defineProperty(this, k, { get: () => this.parent[k], set: () => {}, configurable: true });
++            });
++            this.parent.modeListeners.push(() => { if (this._layoutName() !== this.activeName) this._modeChanged(); else this._status(); });
++        } else this._setupVehicleData();
+         this.layouts.onChange(() => this._rebuild());
+         ctx.settings.onChange((key) => { if (key !== 'demo') this._rebuild(); else this._status(); });
+     }
+@@ -378,7 +397,8 @@ class HudApp {
                      if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
                      this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
                      this.driveMode = m; this.driveVariant = variant;
 -                    if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
++                    this.modeListeners.forEach((fn) => { try { fn(); } catch (e) { this.log.warn('mode listener: ' + e); } });
 +                    if (this._layoutName() !== this.activeName) this._modeChanged(); else this._status();
                  },
              },
          };
-@@ -829,6 +836,15 @@ class HudApp {
+@@ -552,12 +572,24 @@ class HudApp {
+     onStatus(fn) { this.statusListeners.push(fn); if (this.lastStatus) fn(this.lastStatus); }
+ 
+     /** The layout name to show now: per drive mode when that's on and known, else the plain setting. */
++    /** A setting's key for this display: config.settingsPrefix ("wind") gives windHudLayout, windInSport... for the HUD beside the cluster. */
++    _k(name) {
++        const p = this.config.settingsPrefix;
++        return p ? p + name.charAt(0).toUpperCase() + name.slice(1) : name;
++    }
++
++    /** config.needs: a bool setting this display needs on (the HUD beside the cluster needs the panel's own scene). */
++    _lacks() {
++        return !!this.config.needs && this.setting(this.config.needs) === false;
++    }
++
+     _layoutName() {
++        if (this._lacks()) return 'off';
+         if (this.setting('byMode') === true && this.driveMode && MODE_KEY[this.driveMode]) {
+-            const v = this.setting(MODE_KEY[this.driveMode]);
++            const v = this.setting(this._k(MODE_KEY[this.driveMode]));
+             if (v) return v;
+         }
+-        return this.setting('hudLayout');
++        return this.setting(this._k('hudLayout'));
+     }
+ 
+     _layoutLabel(name) {
+@@ -829,6 +861,15 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -64,7 +117,7 @@ index db817c2..66450ef 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -871,6 +887,15 @@ class HudApp {
+@@ -871,6 +912,15 @@ class HudApp {
      _rebuild() {
          this._guard('rebuild', () => this._rebuildInner());
          this._status();
@@ -80,7 +133,7 @@ index db817c2..66450ef 100644
      }
  
      _rebuildInner() {
-@@ -885,15 +910,20 @@ class HudApp {
+@@ -885,15 +935,20 @@ class HudApp {
          this.car.setRedline(this.setting('redline'));
          const name = this._layoutName();
          this.activeName = name;
@@ -104,7 +157,7 @@ index db817c2..66450ef 100644
              return;
          }
          this.problem = null;
-@@ -977,7 +1007,7 @@ class HudApp {
+@@ -977,7 +1032,7 @@ class HudApp {
      /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
      _createSheet(s) {
          const c = this._clientAt(s.conn);
@@ -113,7 +166,7 @@ index db817c2..66450ef 100644
          if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
          s.ref = ref; s.c = c; s.ci = s.conn;
          s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1065,7 @@ class HudApp {
+@@ -1035,7 +1090,7 @@ class HudApp {
          if (sheet) { ref = sheet.ref; c = sheet.c; }
          else {
              c = this._clientAt(this._connOf(w));
@@ -122,7 +175,7 @@ index db817c2..66450ef 100644
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1088,8 @@ class HudApp {
+@@ -1058,6 +1113,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -131,7 +184,7 @@ index db817c2..66450ef 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1221,7 +1253,7 @@ class HudApp {
+@@ -1221,7 +1278,7 @@ class HudApp {
      _tick() {
          const now = Date.now();
          this._smoothRpm(now);
@@ -140,7 +193,7 @@ index db817c2..66450ef 100644
          // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
          const rpm = this._raw('rpm');
          const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
-@@ -1235,8 +1267,11 @@ class HudApp {
+@@ -1235,8 +1292,11 @@ class HudApp {
          const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
          this.lastTickT = now;
          if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -154,7 +207,7 @@ index db817c2..66450ef 100644
      }
  
      _update(x, now, force) {
-@@ -1258,6 +1293,7 @@ class HudApp {
+@@ -1258,6 +1318,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -162,7 +215,7 @@ index db817c2..66450ef 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1332,8 @@ class HudApp {
+@@ -1296,6 +1357,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -171,7 +224,7 @@ index db817c2..66450ef 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1434,103 @@ class HudApp {
+@@ -1396,6 +1459,103 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -245,8 +298,8 @@ index db817c2..66450ef 100644
 +
 +    /** The layout to keep built, hidden, while the active one is "off" (config.standby): the Sport layout, else the plain one. */
 +    _standbyName() {
-+        if (this.config.standby !== true) return null;
-+        const names = [this.setting('inSport'), this.setting('hudLayout')];
++        if (this.config.standby !== true || this._lacks()) return null;
++        const names = [this.setting(this._k('inSport')), this.setting(this._k('hudLayout'))];
 +        for (let i = 0; i < names.length; i++) if (names[i] && names[i] !== 'off') return names[i];
 +        return null;
 +    }
