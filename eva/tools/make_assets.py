@@ -12,7 +12,7 @@ import argparse, base64, json, os, sys
 ap = argparse.ArgumentParser()
 ap.add_argument('--kit', required=True)
 ap.add_argument('--pilot')
-ap.add_argument('--comfort', help='the unzipped EVA_Comfort_Full_Assets folder (icons, car) for the EVA Comfort layout')
+ap.add_argument('--comfort', help='the unzipped EVA_HUD_Icons folder (the owner\'s icons, car and stripes) for the EVA Comfort layout')
 a = ap.parse_args()
 
 sys.path.insert(0, os.path.join(a.kit, 'tools'))
@@ -73,8 +73,10 @@ if a.pilot:
     print('pilot %dx%d' % (W, H))
 
 if a.comfort:
-    # EVA Comfort: the car with its tyre sensors from the owner's asset pack; the footer icons and the red hazard dashes are drawn here.
-    # Straight (non-premultiplied) RGBA, as cluster-render's image layers take it. Sizes are what eva_comfort.json asks for.
+    # EVA Comfort: the owner's EVA_HUD_Icons pack (cut out of the reference render): the four icons of the bottom row, the car with its
+    # tyre sensors and the red slashed stripes; the small hazard dashes are drawn here. Straight (non-premultiplied) RGBA, as cluster-render's
+    # image layers take it. Sizes are what eva_comfort.json asks for.
+    from PIL import ImageDraw
     po = os.path.join(OUT, 'pictures')
     os.makedirs(po, exist_ok=True)
 
@@ -84,24 +86,20 @@ if a.comfort:
             json.dump({'w': im.width, 'h': im.height, 'rgba': base64.b64encode(im.tobytes()).decode('ascii')}, f, separators=(',', ':'))
         print('%s %dx%d' % (name, im.width, im.height))
 
-    comp = os.path.join(a.comfort, 'png', 'components')
-    load = lambda n: Image.open(os.path.join(comp, n + '.png')).convert('RGBA')
-    # the four icons of the bottom row: Material Design Icons (Apache 2.0, see eva/tools/icons/NOTICE.md), drawn to PNG by
-    # eva/tools/render_icons.js, baked at 36x36
-    icons = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icons')
-    for name, src in (('c_coolant', 'coolant-temperature'), ('c_oil', 'oil-temperature'), ('c_battery', 'car-battery'), ('c_fuel', 'gas-station')):
-        save(name, Image.open(os.path.join(icons, src + '.png')).convert('RGBA').resize((36, 36), Image.LANCZOS))
-    # the car (x 1650, y 295) and its four tyre sensors (x 1630, y 344) on one 122x238 canvas, then 0.9
-    car, tyres = load('17_car_top'), load('18_tyre_icons')
-    cv = Image.new('RGBA', (122, 238), (0, 0, 0, 0))
-    cv.alpha_composite(car, (1650 - 1630, 0))
-    cv.alpha_composite(tyres, (0, 344 - 295))
-    save('c_car', cv.resize((110, 214), Image.LANCZOS))
+    def load(n):
+        return Image.open(os.path.join(a.comfort, n + '.png')).convert('RGBA')
+
+    def fit(im, h):
+        return im.resize((round(im.width * h / im.height), h), Image.LANCZOS)
+
+    for name, src in (('c_coolant', '10_coolant_icon'), ('c_oil', '11_oil_icon'), ('c_battery', '12_battery_icon'), ('c_fuel', '13_fuel_icon')):
+        save(name, fit(load(src), 38))
+    save('c_car', fit(load('25_car_separate'), 156))
+    save('c_stripes', fit(load('03_top_stripes'), 28))
 
     def dashes(n, w=20, h=10, skew=7, gap=8, color=(236, 70, 42, 255)):
         W = n * (w + gap) - gap + skew
         im = Image.new('RGBA', (W * 4, h * 4), (0, 0, 0, 0))
-        from PIL import ImageDraw
         d = ImageDraw.Draw(im)
         for i in range(n):
             x0 = i * (w + gap)

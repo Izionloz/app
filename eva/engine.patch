@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..53403c2 100644
+index db817c2..62372c3 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -232,7 +232,7 @@ index db817c2..53403c2 100644
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
 +        else if (w.type === 'picture') this._paintPicture(x);
-+        else if (w.type === 'evadash') this._createEva(x);
++        else if (w.type === 'evadash' || w.type === 'evadash2') this._createEva(x);
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
@@ -271,12 +271,12 @@ index db817c2..53403c2 100644
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
-+        } else if (w.type === 'evadash') {
++        } else if (w.type === 'evadash' || w.type === 'evadash2') {
 +            this._updateEva(x, force);
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1484,141 @@ class HudApp {
+@@ -1396,6 +1484,145 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -302,9 +302,11 @@ index db817c2..53403c2 100644
 +    /** The EVA backdrop's constant uniforms: its frames (w.frames), rails (w.rails) and stripe. */
 +    _createEva(x) {
 +        const w = x.w, c = x.c, ref = x.ref;
-+        const frames = (Array.isArray(w.frames) ? w.frames : []).filter((f) => f && isNum(f.x) && isNum(f.y) && isNum(f.w) && isNum(f.h)).slice(0, 12);
++        // evadash: 12 frames and the plain look; evadash2 (EVA Comfort): 8 frames with cut corners, glow, a map hole and a transparent backdrop
++        const v2 = w.type === 'evadash2', NF = v2 ? 8 : 12;
++        const frames = (Array.isArray(w.frames) ? w.frames : []).filter((f) => f && isNum(f.x) && isNum(f.y) && isNum(f.w) && isNum(f.h)).slice(0, NF);
 +        const rects = [], styles = [], cuts = [];
-+        for (let i = 0; i < 12; i++) {
++        for (let i = 0; i < NF; i++) {
 +            const f = frames[i];
 +            rects.push(f ? f.x - w.x : 0, f ? f.y - w.y : 0, f ? f.w : 0, f ? f.h : 0);
 +            const ch = f ? (f.chamfer === undefined ? 22 : f.chamfer) : 0;
@@ -325,7 +327,7 @@ index db817c2..53403c2 100644
 +        c.uniform(ref, 'u_n', [frames.length]);
 +        c.uniform(ref, 'u_frame', rects, { type: 'vec4' });
 +        c.uniform(ref, 'u_fstyle', styles, { type: 'vec4' });
-+        c.uniform(ref, 'u_fcut', cuts, { type: 'vec4' });
++        if (v2) c.uniform(ref, 'u_fcut', cuts, { type: 'vec4' });
 +        c.uniform(ref, 'u_pal', [200 / 255, 57 / 255, 50 / 255, 1, 136 / 255, 53 / 255, 43 / 255, 1, 1, 173 / 255, 84 / 255, 1], { type: 'vec4' });
 +        c.uniform(ref, 'u_rail', rr, { type: 'vec4' });
 +        c.uniform(ref, 'u_railP', rp, { type: 'vec4' });
@@ -337,10 +339,12 @@ index db817c2..53403c2 100644
 +        const s = Array.isArray(w.stripe) && w.stripe.length === 4 ? w.stripe : [0, 0, 0, 0];
 +        c.uniform(ref, 'u_stripe', [s[0] - w.x, s[1] - w.y, s[2], s[3]]);
 +        // a see-through hole for BMW's map (hole: [x, y, w, h] in cluster px, holeRadius) and an optional transparent backdrop (bg: false)
-+        const H = Array.isArray(w.hole) && w.hole.length === 4 ? w.hole : null;
-+        c.uniform(ref, 'u_hole', H ? [H[0] - w.x, H[1] - w.y, H[2], H[3]] : [0, 0, 0, 0]);
-+        c.uniform(ref, 'u_holeR', [isNum(w.holeRadius) ? w.holeRadius : 40]);
-+        c.uniform(ref, 'u_bgA', [w.bg === false ? 0 : 1]);
++        if (v2) {
++            const H = Array.isArray(w.hole) && w.hole.length === 4 ? w.hole : null;
++            c.uniform(ref, 'u_hole', H ? [H[0] - w.x, H[1] - w.y, H[2], H[3]] : [0, 0, 0, 0]);
++            c.uniform(ref, 'u_holeR', [isNum(w.holeRadius) ? w.holeRadius : 40]);
++            c.uniform(ref, 'u_bgA', [w.bg === false ? 0 : 1]);
++        }
 +    }
 +
 +    /** The EVA rails: the rev rail lights round(rpm / rpmMax * segments), in the level colour (flashing at the redline); the coolant rail round(t / coolMax * segments). */
@@ -440,23 +444,24 @@ index 01149cd..5ae4140 100644
  // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
  Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
 diff --git a/shared/layouts.js b/shared/layouts.js
-index af2ad98..f3afe59 100644
+index af2ad98..1449a9d 100644
 --- a/shared/layouts.js
 +++ b/shared/layouts.js
-@@ -34,6 +34,8 @@ const TYPES = {
+@@ -34,6 +34,9 @@ const TYPES = {
      swatchimg: [],
      boxes: ['boxes'],
      atext: ['text', 'font'],
 +    evadash: [],
++    evadash2: [],
 +    picture: ['name'],
  };
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..c306a41 100644
+index c8679c1..619a608 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,188 @@ void main() {
+@@ -889,4 +889,340 @@ void main() {
  }
  `;
  
@@ -477,7 +482,159 @@ index c8679c1..c306a41 100644
 +uniform float u_n;
 +uniform vec4 u_frame[12];
 +uniform vec4 u_fstyle[12];
-+uniform vec4 u_fcut[12];  // the corner cuts px: top-left, top-right, bottom-right, bottom-left
++uniform vec4 u_pal[3];
++uniform vec4 u_rail[2];
++uniform vec4 u_railP[2];
++uniform vec4 u_railCol[2];
++uniform vec4 u_off;
++uniform vec4 u_stripe;
++uniform vec4 u_led;      // the shift lights: x, y, w, h in layer px (w 0: none)
++uniform vec4 u_ledP;     // count, lit, strobe (0 none, 1 red, 2 white-blue), tail (the last lights are blue)
++uniform vec4 u_fx;       // the rev rail's effects: sweep phase 0..1, pulse 0..1, level 0..3, the redline as a part of the rail
++
++float cham(vec2 p, vec4 r, float c) {
++    vec2 h = r.zw * 0.5;
++    vec2 q = abs(p - (r.xy + h)) - h;
++    return max(max(q.x, q.y), (q.x + q.y + c) * 0.70710678);
++}
++
++vec3 over(vec3 under, vec3 c, float a) { return mix(under, c, clamp(a, 0.0, 1.0)); }
++
++vec4 rail(vec2 p, vec4 r, vec4 sp, vec4 cl) {
++    vec2 q = p - r.xy;
++    if (q.x < 0.0 || q.y < 0.0 || q.x > r.z || q.y > r.w) return vec4(0.0);
++    bool rev = sp.w < 0.5;
++    float edge = min(min(q.x, r.z - q.x), min(q.y, r.w - q.y));
++    if (edge < 1.0) {
++        vec3 b = vec3(0.6, 0.2, 0.16);
++        if (rev) b = mix(b, cl.rgb, clamp(0.18 * u_fx.z + 0.6 * u_fx.y, 0.0, 1.0));
++        return vec4(b, 1.0);
++    }
++    float pad = 5.0;
++    vec2 s = vec2(q.x - pad, q.y - pad);
++    float n = sp.x, gap = sp.z;
++    float slot = (r.z - 2.0 * pad + gap) / n;
++    float i = floor(s.x / slot);
++    float fx = s.x - i * slot;
++    float inY = clamp(s.y + 0.5, 0.0, 1.0) * clamp(r.w - 2.0 * pad - s.y + 0.5, 0.0, 1.0);
++    float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0) * inY;
++    if (i < 0.0 || i >= n || a <= 0.0) return vec4(0.04, 0.0, 0.01, 1.0);
++    float fy = s.y / (r.w - 2.0 * pad);
++    float k = i / n;
++    vec3 col = u_off.rgb;
++    if (rev) {
++        // the zones are marked on the unlit segments: warm before the redline, red from it
++        if (k >= u_fx.w) col = vec3(0.46, 0.06, 0.09);
++        else if (k >= u_fx.w - 0.2) col = vec3(0.30, 0.10, 0.06);
++    }
++    if (i < sp.y) {
++        vec3 c = cl.rgb;
++        if (sp.w > 0.5) {
++            c = k >= 0.9500 ? vec3(0.98, 0.32, 0.30) : (k >= 0.8700 ? vec3(0.98, 0.74, 0.41) : vec3(0.40, 0.96, 0.72));
++        }
++        if (rev) {
++            float d = (sp.y - 1.0) - i;                       // how far behind the head: 0 at the last lit segment
++            c *= clamp(1.0 - d * 0.035, 0.6, 1.0);            // brighter towards the head
++            c = mix(c, vec3(1.0, 0.96, 0.82), 0.6 * (1.0 - clamp(d, 0.0, 1.0)));      // the head is white-hot
++            float sw = fract(u_fx.x) * (sp.y + 6.0) - 3.0;    // a bright band runs along the lit part
++            c += vec3(0.38, 0.30, 0.18) * clamp(1.0 - abs(i - sw) * 0.4, 0.0, 1.0) * step(0.5, u_fx.z);
++            c = mix(c, vec3(1.0, 0.12, 0.2), u_fx.y * 0.6 * step(1.5, u_fx.z));       // the redline strobe
++            // the last lit segments strobe on their own from the second level on (shift lights)
++            c = mix(c, vec3(1.0, 0.95, 0.8), step(1.5, u_fx.z) * u_fx.y * step(sp.y - 6.0, i) * 0.45);
++        }
++        col = mix(c * 1.18, c * 0.92, fy) * cl.a;
++    }
++    return vec4(col, a);
++}
++
++void main() {
++    vec2 p = v_uv * u_size;
++    vec3 c = vec3(0.0);
++    for (int i = 0; i < 12; i++) {
++        if (float(i) >= u_n) break;
++        vec4 r = u_frame[i];
++        vec4 st = u_fstyle[i];
++        vec4 col = u_pal[0];
++        if (st.w > 1.5) col = u_pal[2]; else if (st.w > 0.5) col = u_pal[1];
++        float a = 0.0;
++        if (st.z < 0.5) {
++            float d = cham(p, r, st.x);
++            float e = abs(d + 0.5 * st.y) - 0.5 * st.y;
++            a = clamp(0.5 - e, 0.0, 1.0);
++        } else if (st.z < 1.5) {
++            vec2 q = p - r.xy;
++            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) {
++                if (q.x < st.y || r.z - q.x < st.y || r.w - q.y < 3.0) a = 1.0;
++            }
++        } else {
++            vec2 q = p - r.xy;
++            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) a = 1.0;
++        }
++        c = over(c, col.rgb, a * col.a);
++    }
++    for (int k = 0; k < 2; k++) {
++        vec4 rr = rail(p, u_rail[k], u_railP[k], u_railCol[k]);
++        c = over(c, rr.rgb, rr.a);
++        if (k == 0 && u_railP[0].w < 0.5 && rr.a == 0.0) {
++            // a glow round the rev rail that grows with the level and breathes at the redline
++            vec4 r = u_rail[0];
++            vec2 h = r.zw * 0.5;
++            vec2 d2 = abs(p - (r.xy + h)) - h;
++            float d = length(max(d2, 0.0));
++            float g = exp(-d / 6.0) * (0.10 * u_fx.z + 0.6 * u_fx.y) * u_railCol[0].a;
++            c += u_railCol[0].rgb * g * step(0.5, u_fx.z);
++        }
++    }
++    if (u_led.z > 0.0) {
++        vec2 q = p - u_led.xy;
++        if (q.x >= 0.0 && q.y >= 0.0 && q.x <= u_led.z && q.y <= u_led.w) {
++            float n = u_ledP.x;
++            float slot = (u_led.z + 6.0) / n;
++            float idx = floor(q.x / slot);
++            float inSeg = q.x - idx * slot;
++            float segW = slot - 6.0;
++            if (inSeg <= segW && idx < n) {
++                vec2 hs = vec2(segW, u_led.w) * 0.5;
++                float rr = min(4.0, hs.y);
++                vec2 qq = abs(vec2(inSeg, q.y) - hs) - (hs - vec2(rr));
++                float d = length(max(qq, 0.0)) + min(max(qq.x, qq.y), 0.0) - rr;
++                float cover = clamp(0.5 - d, 0.0, 1.0);
++                float nMain = max(1.0, n - u_ledP.w);
++                float f = idx / max(1.0, nMain - 1.0);
++                vec3 lc = idx >= nMain ? vec3(0.16, 0.49, 1.0) : (f < 0.42 ? vec3(0.18, 0.82, 0.48) : (f < 0.75 ? vec3(1.0, 0.76, 0.10) : vec3(1.0, 0.16, 0.16)));
++                bool on = idx < u_ledP.y;
++                if (u_ledP.z > 0.5) { lc = u_ledP.z > 1.5 ? vec3(0.55, 0.75, 1.0) : vec3(1.0, 0.16, 0.16); on = true; }
++                c = over(c, on ? lc : lc * 0.2, cover);
++            }
++        }
++    }
++    if (u_stripe.z > 0.0) {
++        vec2 q = p - u_stripe.xy;
++        if (q.x >= 0.0 && q.y >= 0.0 && q.x <= u_stripe.z && q.y <= u_stripe.w) {
++            if (mod(q.x + q.y * 0.85, 20.0) < 13.0) c = over(c, u_pal[0].rgb * 1.25, 1.0);
++        }
++    }
++    gl_FragColor = vec4(c, 1.0);
++}
++`;
++
++const EVADASH2 = `// The EVA Comfort cluster's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00): black, up to 12 framed or ruled
++// rects from the layout (u_frame x, y, w, h in layer px; u_fstyle chamfer px, border px, kind, colour), two segmented
++// rails (u_rail geometry; u_railP segments, lit segments, gap px, kind; u_railCol lit colour and brightness) and one
++// hatched stripe (u_stripe). kind 0: a chamfered outline; 1: side lines and a bottom line only; 2: a solid rule.
++// kind of a rail 0: every lit segment in u_railCol; 1: the coolant ramp (mint, amber from 21/24 = 105 C, red at the last segment).
++// v_uv (0,0) is the top-left.
++#ifdef GL_FRAGMENT_PRECISION_HIGH
++precision highp float;
++#else
++precision mediump float;
++#endif
++varying vec2 v_uv;
++uniform vec2 u_size;
++uniform float u_n;
++uniform vec4 u_frame[8];
++uniform vec4 u_fstyle[8];
++uniform vec4 u_fcut[8];  // the corner cuts px: top-left, top-right, bottom-right, bottom-left
 +uniform vec4 u_pal[3];
 +uniform vec4 u_rail[2];
 +uniform vec4 u_railP[2];
@@ -557,7 +714,7 @@ index c8679c1..c306a41 100644
 +void main() {
 +    vec2 p = v_uv * u_size;
 +    vec3 c = vec3(0.0);
-+    for (int i = 0; i < 12; i++) {
++    for (int i = 0; i < 8; i++) {
 +        if (float(i) >= u_n) break;
 +        vec4 r = u_frame[i];
 +        vec4 st = u_fstyle[i];
@@ -645,4 +802,4 @@ index c8679c1..c306a41 100644
 +}
 +`;
 +
-+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, evadash: EVADASH };
++module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, evadash: EVADASH, evadash2: EVADASH2 };

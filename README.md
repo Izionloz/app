@@ -196,6 +196,11 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (coolant temperature, oil temperature, battery, fuel pump: Material Design Icons, Apache 2.0, `eva/tools/icons/`), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
   --comfort <folder>`; the baked pictures are committed). They join the text sheets (the layout still has 7 layers, 4.9 MiB). Not
   used: the pack's flat background, header frame and the map, route and turn-arrow art (the real map shows in the window).
+- **EVA Comfort from the owner's icon pack (0.11.1):** the layout now uses the `EVA_HUD_Icons` pack (cut out of the reference render):
+  its four icons for the bottom row, the glowing car with its tyre sensors and the red slashed stripes. The new frame shader is a
+  separate type, `evadash2` (8 frames a layer); EVA Sport and the HUD keep `evadash`, whose shader is the one that ran on the car in
+  0.10.1 (0.11.0 changed that shared shader, and the owner's cluster went dark; the cause is not confirmed, so the shared one is back
+  as it was and only EVA Comfort uses the new one).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
