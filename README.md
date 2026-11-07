@@ -193,8 +193,7 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   `{{sel:P}}` .. `{{sel:M}}` over dim letters), tyre pressures with their temperatures beside the car, and coolant, oil and fuel
   rails (a rail takes its own `signal`, `max`, `color` and `plain`; the fuel rail has E and F). Not done: the 3D map art (the real map
   shows in the window) and the italic type.
-  The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (thermometer, oil can, battery, fuel
-  pump), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
+  The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (coolant temperature, oil temperature, battery, fuel pump: Material Design Icons, Apache 2.0, `eva/tools/icons/`), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
   --comfort <folder>`; the baked pictures are committed). They join the text sheets (the layout still has 7 layers, 4.9 MiB). Not
   used: the pack's flat background, header frame and the map, route and turn-arrow art (the real map shows in the window).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)

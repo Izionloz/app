@@ -86,53 +86,11 @@ if a.comfort:
 
     comp = os.path.join(a.comfort, 'png', 'components')
     load = lambda n: Image.open(os.path.join(comp, n + '.png')).convert('RGBA')
-    # the four icons of the bottom row, drawn here as line art in one style (4x, then scaled down), cream with a warm edge
-    from PIL import ImageDraw
-    K = 4
-    CREAM = (255, 236, 214, 255)
-
-    def icon(name, w, draw):
-        im = Image.new('RGBA', (w * K, 36 * K), (0, 0, 0, 0))
-        d = ImageDraw.Draw(im)
-        P = lambda *pts: [(x * K, y * K) for x, y in pts]
-        draw(d, P, lambda x: round(x * K))
-        save(name, im.resize((w, 36), Image.LANCZOS))
-
-    def coolant(d, P, k):                      # a thermometer in a pool with two waves
-        d.rounded_rectangle([k(7), k(2), k(15), k(22)], radius=k(4), outline=CREAM, width=k(2.4))
-        d.ellipse([k(3.5), k(18), k(18.5), k(33)], outline=CREAM, width=k(2.4))
-        d.rectangle([k(10), k(11), k(12), k(27)], fill=CREAM)
-        d.ellipse([k(7), k(23), k(15), k(31)], fill=CREAM)
-        for y in (13, 22):
-            pts = [(22 + t, y + 2.2 * __import__('math').sin(t / 2.4)) for t in [i * 0.5 for i in range(0, 33)]]
-            d.line(P(*pts), fill=CREAM, width=k(2.4), joint='curve')
-
-    def oil(d, P, k):                          # an oil can with its spout and a drop
-        d.line(P((6, 14), (30, 14), (36, 22), (36, 29), (6, 29), (6, 14)), fill=CREAM, width=k(2.4), joint='curve')
-        d.line(P((10, 14), (10, 9), (26, 9)), fill=CREAM, width=k(2.4), joint='curve')
-        d.line(P((6, 17), (2, 13), (2, 9)), fill=CREAM, width=k(2.4), joint='curve')
-        d.line(P((36, 21), (47, 27)), fill=CREAM, width=k(2.4))
-        d.polygon(P((49, 30), (46.5, 34.5), (51.5, 34.5)), fill=CREAM)
-        d.line(P((14, 21), (28, 21)), fill=CREAM, width=k(2))
-
-    def battery(d, P, k):                      # a 12 V battery with its two terminals, minus and plus
-        d.rounded_rectangle([k(2), k(8), k(41), k(31)], radius=k(3), outline=CREAM, width=k(2.4))
-        d.rectangle([k(8), k(4), k(15), k(8)], fill=CREAM)
-        d.rectangle([k(28), k(4), k(35), k(8)], fill=CREAM)
-        d.line(P((9, 19.5), (16, 19.5)), fill=CREAM, width=k(2.4))
-        d.line(P((27, 19.5), (35, 19.5)), fill=CREAM, width=k(2.4))
-        d.line(P((31, 15.5), (31, 23.5)), fill=CREAM, width=k(2.4))
-
-    def fuel(d, P, k):                         # a fuel pump with its hose
-        d.rounded_rectangle([k(3), k(3), k(21), k(32)], radius=k(3), outline=CREAM, width=k(2.4))
-        d.rectangle([k(7), k(8), k(17), k(15)], outline=CREAM, width=k(2))
-        d.line(P((1, 33), (23, 33)), fill=CREAM, width=k(2.4))
-        d.line(P((21, 12), (27, 12), (30, 15), (30, 27), (33, 27)), fill=CREAM, width=k(2.4), joint='curve')
-
-    icon('c_coolant', 40, coolant)
-    icon('c_oil', 54, oil)
-    icon('c_battery', 44, battery)
-    icon('c_fuel', 34, fuel)
+    # the four icons of the bottom row: Material Design Icons (Apache 2.0, see eva/tools/icons/NOTICE.md), drawn to PNG by
+    # eva/tools/render_icons.js, baked at 36x36
+    icons = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icons')
+    for name, src in (('c_coolant', 'coolant-temperature'), ('c_oil', 'oil-temperature'), ('c_battery', 'car-battery'), ('c_fuel', 'gas-station')):
+        save(name, Image.open(os.path.join(icons, src + '.png')).convert('RGBA').resize((36, 36), Image.LANCZOS))
     # the car (x 1650, y 295) and its four tyre sensors (x 1630, y 344) on one 122x238 canvas, then 0.9
     car, tyres = load('17_car_top'), load('18_tyre_icons')
     cv = Image.new('RGBA', (122, 238), (0, 0, 0, 0))

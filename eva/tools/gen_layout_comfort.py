@@ -107,7 +107,7 @@ picture('dashSpeed', 'c_dash3', 44, 604, 83, 10, 7)
 picture('dashTyre', 'c_dash3', 1790, 617, 83, 10, 9)
 picture('dashGear', 'c_dash5', 1250, 606, 139, 10, 8)
 
-ICONS = {'COOLANT': ('c_coolant', 40), 'OIL': ('c_oil', 54), 'BATTERY': ('c_battery', 44), 'RANGE': ('c_fuel', 34)}
+ICONS = {'COOLANT': ('c_coolant', 36), 'OIL': ('c_oil', 36), 'BATTERY': ('c_battery', 36), 'RANGE': ('c_fuel', 36)}
 for (cx, cw), cap, val, unit, uw in zip(SEC, ('COOLANT', 'OIL', 'BATTERY', 'RANGE'), ('{{coolant}}', '{{oil}}', '{{battery}}', '{{range}}'),
                                          ('{{u:temp}}', '{{u:temp}}', '%', '{{u:distLc}}'), (50, 50, 40, 60)):
     right = cx + cw - 19
