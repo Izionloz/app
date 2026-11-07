@@ -152,6 +152,12 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
 - 0.5.1 to 0.5.4 listed cluster-render's status text and the helper's state on the app's page, to find why the map on the cluster was
   missing in Comfort: the KOMBI reported the map slot `0x100` "locked" (`target map: waiting slot locked`), i.e. the cluster's own
   layout has no map area; not EVA's doing. The lines are removed in 0.5.5.
+- **Speed correction and tyre pressure (0.8.0):** BMW's speedometer reads a little above the true speed the car sends, so EVA's speed
+  was always about 1 km/h lower: the setting "Speed correction" (0-5 km/h, 1 by default) is added to the speed while the car moves (a
+  stopped car still reads 0), on the cluster and the HUD. The cluster shows the four tyre pressures (FL FR RL RR, bar; psi with
+  the US units) under DRIVE MODE, from `de.bmw.infotainment.vehicle.TPMS` (declared in `app.json` again; the 0.1.0 install failed on
+  an interface the unit lacked, 0.1.1 dropped the optional ones, and which one it was is not known: if this install fails, the TPMS
+  declaration is the first thing to remove).
 - **EVA HUD on the windshield (0.6.0):** a second display of the same app on cluster-render's `hud` target, from the owner's
   "EVA Windshield HUD" design: the NERV mark, `DRIVE MODE : <mode>`, a 38-segment rev bar (0-8000, the level colours and the flashing
   redline as on the cluster), the gear box (P R N D with its word), the big speed with its unit, and a REDLINE / HIGH RPM warning.

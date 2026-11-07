@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -40,6 +40,11 @@
     },
     "de.bmw.infrastructure.EnvironmentalInformation": {
       "ExteriorTemperature": "s"
+    },
+    "de.bmw.infotainment.vehicle.TPMS": {
+      "statusTyrePressure": "rs",
+      "statusTyreTemperature": "rs",
+      "_optional": "tyre pressures on the cluster"
     }
   },
   "screens": [
@@ -282,6 +287,21 @@
           "eva_hud_bmw",
           "EVA HUD (BMW's speed, big rpm)"
         ]
+      ]
+    },
+    {
+      "key": "speedOffset",
+      "label": "Speed correction (BMW's speedometer reads a little above the true speed)",
+      "type": "number",
+      "unit": "km/h",
+      "default": 1,
+      "steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
       ]
     }
   ],

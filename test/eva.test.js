@@ -81,7 +81,9 @@ test('eva engine.patch only touches the engine files it names', () => {
 test('eva app: only the signals it shows are declared (an interface this car lacks fails the install)', () => {
     assert.deepStrictEqual(Object.keys(app.signals).sort(), [
         'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES', 'de.bmw.infotainment.vehicle.CDS',
-        'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation', 'de.bmw.infrastructure.VehicleInformation']);
+        'de.bmw.infotainment.vehicle.TPMS', 'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation',
+        'de.bmw.infrastructure.VehicleInformation']);
+    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.vehicle.TPMS']).filter((k) => k[0] !== '_'), ['statusTyrePressure', 'statusTyreTemperature']);
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI']);
 });
 
@@ -149,4 +151,10 @@ test('eva app: the HUD settings name layouts that exist, and Sport has the EVA H
     assert.strictEqual(s('windInComfort').default, 'off');
     assert.strictEqual(s('windInEco').default, 'off');
     assert.strictEqual(s('windHudLayout').default, 'off');
+});
+
+test('eva app: a speed correction setting (BMW\'s speedometer reads above the true speed), 1 km/h by default', () => {
+    const o = app.settings.find((x) => x.key === 'speedOffset');
+    assert.strictEqual(o.default, 1);
+    assert.ok(o.steps.includes(0) && o.steps.includes(o.default));
 });

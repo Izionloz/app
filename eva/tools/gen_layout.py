@@ -56,6 +56,10 @@ text('speedUnit', 850, 466, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 12
 text('pilotCap', 1130, 358, 250, 24, 'PILOT UNIT 01', 'e_mono', SUB, z=8)
 text('modeCap', 1130, 414, 250, 24, 'DRIVE MODE', 'e_mono', SUB, z=8)
 text('mode', 1130, 442, 250, 24, '{{mode}}', 'e_mono', VAL, z=8)
+# tyre pressure (TPMS): a caption and two rows of two, in bar (psi with the US units), clear of BMW's gear box (x 1406-1597)
+text('tyreCap', 1130, 474, 250, 24, 'TYRE PRESSURE', 'e_mono', SUB, z=8)
+text('tyreF', 1130, 500, 260, 32, 'FL {{tyreP:FL}}   FR {{tyreP:FR}}', 'e_tyre', VAL, z=8)
+text('tyreR', 1130, 532, 260, 32, 'RL {{tyreP:RL}}   RR {{tyreP:RR}}', 'e_tyre', VAL, z=8)
 
 text('coolCap', 142, 594, 200, 28, 'COOLANT', 'e_label', HEAD, z=9)
 text('cool', 715, 590, 120, 39, '{{coolant}}', 'e_val', VAL, 'right', z=9)
