@@ -177,6 +177,25 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the app already declares; M Vitals reads the same field). **S / M again:** `MDrive.dataDisplayGearbox` is declared again, this time with mode `s` (notify only), as
   the M Vitals app declares it (0.9.1 used `rs`, which is the likely reason that install failed); the gear then reads S3 / M3.
   If this install fails, remove that declaration first.
+- **EVA Comfort (0.11.0, with mgux-hud-ctl 2.15.0):** a second cluster layout from the owner's `EVA_Comfort_Cluster` design (header with
+  the drive mode, rev panel, speed, gear, tyre pressures, a bottom row of coolant, oil, battery and range), chosen per drive mode like
+  EVA (settings "Layout", "In Comfort", "In Sport", "In Eco Pro": *EVA Comfort (the map stays in its window)*; off by default, so
+  nothing changes until it is chosen). The map window is a see-through hole cut out of the backdrop (new `hole` of the `evadash`
+  widget, and `bg: false` for a second, transparent `evadash` layer that holds the car outline and the oil ramp, as the frame arrays
+  hold 12 each), and while it shows the helper hides no map layers (`evaOn` with `hide: "none"`, which is why it needs
+  mgux-hud-ctl 2.15.0). Where it differs from the design: the header and the rev panel sit as in EVA (the hood hides the top corners),
+  the middle row is a little shorter, the map window is 800 wide and BMW's black gear box (x 1406-1597, y 342-419) stays in the gear
+  section, the battery shows its charge in % and there are no icons. Only seen on the bench: whether the car's map shows in the
+  window (and above or below the panel) needs the car.
+  **Look of the reference render** (the second design the owner sent): frames with each corner cut on its own and a glow (`evadash`
+  frames take `cut: [tl, tr, br, bl]` and `glow`), a hexagonal gear box and map window, the header in three plates, slanted rules
+  (frame `kind: 3`) between the sections of the bottom row, the selector row P R N D M with the engaged letter lit (token
+  `{{sel:P}}` .. `{{sel:M}}` over dim letters), tyre pressures with their temperatures beside the car, and coolant, oil and fuel
+  rails (a rail takes its own `signal`, `max`, `color` and `plain`; the fuel rail has E and F). Not done: the 3D map art (the real map
+  shows in the window) and the italic type.
+  The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (coolant temperature, oil temperature, battery, fuel pump: Material Design Icons, Apache 2.0, `eva/tools/icons/`), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
+  --comfort <folder>`; the baked pictures are committed). They join the text sheets (the layout still has 7 layers, 4.9 MiB). Not
+  used: the pack's flat background, header frame and the map, route and turn-arrow art (the real map shows in the window).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

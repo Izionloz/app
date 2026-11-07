@@ -436,7 +436,7 @@ class Daemon {
                 const before = JSON.stringify(this.hideNow());
                 this.evaHolds = this.evaHolds || {};
                 if (msg.on) {
-                    this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : 'hud' };
+                    this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : msg.hide === 'none' ? 'none' : 'hud' };
                 } else {
                     delete this.evaHolds[who];
                 }
@@ -475,7 +475,7 @@ class Daemon {
         const now = Date.now(), out = [];
         Object.keys(this.evaHolds || {}).forEach((who) => {
             const h = this.evaHolds[who];
-            if (h.until > now && out.indexOf(h.hide) < 0) {
+            if (h.until > now && h.hide !== 'none' && out.indexOf(h.hide) < 0) {
                 out.push(h.hide);
             }
         });

@@ -158,3 +158,34 @@ test('eva app: a speed correction setting (BMW\'s speedometer reads above the tr
     assert.strictEqual(o.default, 1);
     assert.ok(o.steps.includes(0) && o.steps.includes(o.default));
 });
+
+test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fonts baked, the map window is a hole inside its frame', () => {
+    const l = json('hud', 'layouts', 'eva_comfort.json');
+    const ids = new Set();
+    const boxes = [[1406, 342, 1597, 419], [587, 663, 626, 700]];
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+    });
+    l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+        const pic = json('hud', 'pictures', `${w.name}.json`);
+        assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        assert.strictEqual(Buffer.from(pic.rgba, 'base64').length, pic.w * pic.h * 4);
+    });
+    const dash = l.widgets.filter((w) => w.type === 'evadash');
+    assert.strictEqual(dash.length, 2);
+    dash.forEach((d) => { assert.ok(d.frames.length <= 12); assert.ok(d.rails.length <= 2); });
+    const a = dash[0], map = a.frames[3];
+    assert.ok(a.hole[0] >= map.x && a.hole[1] >= map.y && a.hole[0] + a.hole[2] <= map.x + map.w && a.hole[1] + a.hole[3] <= map.y + map.h);
+    assert.strictEqual(dash[1].bg, false);
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort'), `${k} lacks EVA Comfort`);
+    });
+});

@@ -12,7 +12,9 @@ import argparse, base64, json, os, sys
 ap = argparse.ArgumentParser()
 ap.add_argument('--kit', required=True)
 ap.add_argument('--pilot')
+ap.add_argument('--comfort', help='the unzipped EVA_Comfort_Full_Assets folder (icons, car) for the EVA Comfort layout')
 a = ap.parse_args()
+
 sys.path.insert(0, os.path.join(a.kit, 'tools'))
 import bake_fonts as bf          # noqa: E402
 from PIL import Image            # noqa: E402
@@ -33,6 +35,7 @@ FONTS = [
     ('e_mono', 'BarlowCondensed-SemiBold.ttf', 24, U + D + ' .:-\u00b7'),
     ('e_val', 'BarlowCondensed-Bold.ttf', 50, D + '.+-'),
     ('e_gearn', 'BarlowCondensed-Bold.ttf', 118, 'PRNDSM' + D + '-'),
+    ('e_tp', 'BarlowCondensed-SemiBold.ttf', 26, D + '.°-' + U + L + ' '),
     ('e_tyre', 'BarlowCondensed-Bold.ttf', 28, U + L + D + ' .->'),
     # the EVA HUD on the windshield (800x480, the window the driver sees is about 485x278)
     ('w_title', 'BarlowCondensed-Bold.ttf', 26, U + ' '),
@@ -68,3 +71,41 @@ if a.pilot:
     with open(os.path.join(po, 'pilot.json'), 'w') as f:
         json.dump({'w': W, 'h': H, 'rgba': base64.b64encode(bytes(px)).decode('ascii')}, f, separators=(',', ':'))
     print('pilot %dx%d' % (W, H))
+
+if a.comfort:
+    # EVA Comfort: the car with its tyre sensors from the owner's asset pack; the footer icons and the red hazard dashes are drawn here.
+    # Straight (non-premultiplied) RGBA, as cluster-render's image layers take it. Sizes are what eva_comfort.json asks for.
+    po = os.path.join(OUT, 'pictures')
+    os.makedirs(po, exist_ok=True)
+
+    def save(name, im):
+        im = im.convert('RGBA')
+        with open(os.path.join(po, name + '.json'), 'w') as f:
+            json.dump({'w': im.width, 'h': im.height, 'rgba': base64.b64encode(im.tobytes()).decode('ascii')}, f, separators=(',', ':'))
+        print('%s %dx%d' % (name, im.width, im.height))
+
+    comp = os.path.join(a.comfort, 'png', 'components')
+    load = lambda n: Image.open(os.path.join(comp, n + '.png')).convert('RGBA')
+    # the four icons of the bottom row: Material Design Icons (Apache 2.0, see eva/tools/icons/NOTICE.md), drawn to PNG by
+    # eva/tools/render_icons.js, baked at 36x36
+    icons = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icons')
+    for name, src in (('c_coolant', 'coolant-temperature'), ('c_oil', 'oil-temperature'), ('c_battery', 'car-battery'), ('c_fuel', 'gas-station')):
+        save(name, Image.open(os.path.join(icons, src + '.png')).convert('RGBA').resize((36, 36), Image.LANCZOS))
+    # the car (x 1650, y 295) and its four tyre sensors (x 1630, y 344) on one 122x238 canvas, then 0.9
+    car, tyres = load('17_car_top'), load('18_tyre_icons')
+    cv = Image.new('RGBA', (122, 238), (0, 0, 0, 0))
+    cv.alpha_composite(car, (1650 - 1630, 0))
+    cv.alpha_composite(tyres, (0, 344 - 295))
+    save('c_car', cv.resize((110, 214), Image.LANCZOS))
+
+    def dashes(n, w=20, h=10, skew=7, gap=8, color=(236, 70, 42, 255)):
+        W = n * (w + gap) - gap + skew
+        im = Image.new('RGBA', (W * 4, h * 4), (0, 0, 0, 0))
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(im)
+        for i in range(n):
+            x0 = i * (w + gap)
+            d.polygon([((x0 + skew) * 4, 0), ((x0 + skew + w) * 4, 0), ((x0 + w) * 4, h * 4 - 1), (x0 * 4, h * 4 - 1)], fill=color)
+        return im.resize((W, h), Image.LANCZOS)
+    save('c_dash5', dashes(5))
+    save('c_dash3', dashes(3))
