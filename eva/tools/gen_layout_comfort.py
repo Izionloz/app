@@ -22,9 +22,9 @@ def text(id, x, y, w, h, t, font, color, align='left', z=5, **k):
 def build(wide):
     global W
     W[:] = []
-    GX = 1406 if wide else 1119                                   # the gear panel's left edge (it ends at x 1597)
+    GX = 1394 if wide else 1119                                   # the gear panel's left edge; it ends at x 1603 and takes in BMW's gear box (x 1406-1597, y 342-419) with a margin
     MY, MH = 332, 296                                            # the middle row: below the hood line everywhere, so it can use the full width
-    MAP = (432, MY, 962, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
+    MAP = (432, MY, 952, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
     SPW = 394 if wide else 463                                    # the speed panel's width
     TYRE = (1610, MY, 284, MH)
     FY, FH = 636, 64                                             # the bottom row
@@ -39,7 +39,7 @@ def build(wide):
         {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
         {'x': 26, 'y': MY, 'w': SPW, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
         {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
-        {'x': GX, 'y': 340, 'w': 1597 - GX, 'h': 252, 'chamfer': 24, 'glow': 1},          # the gear box
+        {'x': GX, 'y': 332, 'w': 1603 - GX, 'h': 260, 'chamfer': 24, 'glow': 1},          # the gear box
     ]
     framesB = [
         {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
@@ -53,7 +53,7 @@ def build(wide):
     # and under the text and pictures, class alert): opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
     W.append({'id': 'eva', 'type': 'evadash2', 'class': 'overlay', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
               'frames': framesA, 'rpmMax': 8000, 'coolMax': 120,
-              'hole': [440, 336, 946, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
+              'hole': [440, 336, 936, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
               'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
               'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 64, 'gap': 3},
                         {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
@@ -88,7 +88,7 @@ def build(wide):
     text('speed', SPW // 2 + 26 - 172, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=7, rate=1)
     text('speedUnit', SPW // 2 + 26 - 172, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
 
-    GC = (GX + 1597) // 2                                       # the gear panel's middle
+    GC = (GX + 1603) // 2                                       # the gear panel's middle
     if wide:
         text('gearCap', GX + 14, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
         text('gear', GC - 88, 372, 176, 127, '{{gear}}', 'e_gearx', VAL, 'center', glow=True, z=11)
