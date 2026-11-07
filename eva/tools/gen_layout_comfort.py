@@ -92,16 +92,16 @@ for k, L in enumerate('PRNDM'):                              # the selector row:
 text('gearWord', 1246, 560, 330, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
 
 text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
-for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1808, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1808, 514, 'right')):
-    text('tyre' + key, x, y, 72 if al == 'left' else 68, 31, '{{tyreP:%s}} {{u:pressure}}' % key, 'e_tp', [255, 214, 160, 255], al, z=9)
-    text('tyreT' + key, x, y + 31, 72 if al == 'left' else 68, 31, '{{tyreT:%s}} {{u:temp}}' % key, 'e_tp', [236, 150, 110, 255], al, z=9)
+for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1801, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1801, 514, 'right')):
+    text('tyre' + key, x, y, 70 if al == 'left' else 79, 31, '{{tyreP:%s}} {{u:pressure}}' % key, 'e_tp', [255, 214, 160, 255], al, z=9)
+    text('tyreT' + key, x, y + 31, 70 if al == 'left' else 79, 31, '{{tyreT:%s}} {{u:temp}}' % key, 'e_tp', [236, 150, 110, 255], al, z=9)
 
 
 def picture(id, name, x, y, w, h, z):
     W.append({'id': id, 'type': 'picture', 'class': 'content', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'name': name})
 
 # the owner's EVA_HUD_Icons pack: the car with its tyre sensors, the red slashed stripes and an icon in each section of the bottom row; small hazard dashes
-picture('car', 'c_car', 1705, 402, 95, 156, 9)
+picture('car', 'c_car', 1714, 402, 77, 156, 9)       # symmetric, centred on x 1752
 picture('dashHead', 'c_dash5', 575, 112, 139, 10, 5)
 picture('dashHead2', 'c_dash5', 1205, 112, 139, 10, 5)
 picture('stripes', 'c_stripes', 70, 588, 173, 28, 7)
