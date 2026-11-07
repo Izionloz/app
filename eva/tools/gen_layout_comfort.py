@@ -85,7 +85,7 @@ text('speedUnit', 36, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121
 
 # the gear section: BMW's black box (its own letter, never covered) stays top right; our gear number is centred under it, with GEAR top left, the selector row and its word
 text('gearCap', 1244, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
-text('gear', 1341, 428, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+text('gear', 1341, 416, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
 for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own
     text('selDim' + L, 1385 + (k - 2) * 62 - 26, 524, 52, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
     text('sel' + L, 1385 + (k - 2) * 62 - 26, 524, 52, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
