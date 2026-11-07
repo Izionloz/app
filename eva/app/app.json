@@ -26,6 +26,10 @@
       "statusEngineTemperature": "rs",
       "statusBattery2": "rs"
     },
+    "de.bmw.infotainment.misc.MDrive": {
+      "dataDisplayGearbox": "s",
+      "_optional": "S or M next to the gear"
+    },
     "de.bmw.infotainment.vehicle.Vehicle2": {
       "statusCarSpeed2": "rs"
     },
