@@ -191,3 +191,24 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort'), `${k} lacks EVA Comfort`);
     });
 });
+
+test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, transparent frame layer, fonts baked, offered in the HUD settings', () => {
+    const l = json('hud', 'layouts', 'eva_hud_comfort.json');
+    const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
+    l.widgets.forEach((w) => {
+        assert.ok(w.x >= win[0] && w.y >= win[1] && w.x + w.w <= win[2] && w.y + w.h <= win[3], `${w.id} is outside the visible window`);
+        if (w.type === 'text') {
+            assert.ok(!(w.x < bmw[2] && w.x + w.w > bmw[0] && w.y < bmw[3] && w.y + w.h > bmw[1]), `${w.id} is over BMW's speed`);
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+    });
+    const d = l.widgets.filter((w) => w.type === 'evadash2');
+    assert.strictEqual(d.length, 1);
+    assert.strictEqual(d[0].bg, false);
+    assert.ok(d[0].frames.length <= 8);
+    ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_hud_comfort'), `${k} lacks EVA HUD Comfort`);
+    });
+});

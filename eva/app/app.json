@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -248,6 +248,10 @@
         [
           "eva_hud_bmw",
           "EVA HUD (BMW's speed, big rpm)"
+        ],
+        [
+          "eva_hud_comfort",
+          "EVA HUD Comfort (the HUD map stays)"
         ]
       ]
     },
@@ -268,6 +272,10 @@
         [
           "eva_hud_bmw",
           "EVA HUD (BMW's speed, big rpm)"
+        ],
+        [
+          "eva_hud_comfort",
+          "EVA HUD Comfort (the HUD map stays)"
         ]
       ]
     },
@@ -288,6 +296,10 @@
         [
           "eva_hud_bmw",
           "EVA HUD (BMW's speed, big rpm)"
+        ],
+        [
+          "eva_hud_comfort",
+          "EVA HUD Comfort (the HUD map stays)"
         ]
       ]
     },
@@ -308,6 +320,10 @@
         [
           "eva_hud_bmw",
           "EVA HUD (BMW's speed, big rpm)"
+        ],
+        [
+          "eva_hud_comfort",
+          "EVA HUD Comfort (the HUD map stays)"
         ]
       ]
     },

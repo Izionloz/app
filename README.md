@@ -201,6 +201,10 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   separate type, `evadash2` (8 frames a layer); EVA Sport and the HUD keep `evadash`, whose shader is the one that ran on the car in
   0.10.1 (0.11.0 changed that shared shader, and the owner's cluster went dark; the cause is not confirmed, so the shared one is back
   as it was and only EVA Comfort uses the new one).
+- **EVA HUD Comfort (0.12.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort (the HUD map stays)*; off
+  by default). The HUD map keeps showing: nothing is drawn over its middle, only a header (mode, outside temperature, clock), the shift
+  lights and a thin rev rail, the gear box at the left and BMW's own speed under its rule. It draws its lines with one transparent
+  `evadash2` layer, and while it shows the helper hides no HUD map layers (`evaOn` with `hide: "none"` for the HUD, which 2.15.0 has).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
