@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.13.3",
+  "version": "0.13.4",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -69,56 +69,6 @@
           "text",
           "HUDSTATUS",
           "Starting the HUD"
-        ],
-        [
-          "text",
-          "SLOT0",
-          "Cluster slots (asked every 15 s)"
-        ],
-        [
-          "text",
-          "SLOT1",
-          " "
-        ],
-        [
-          "text",
-          "SLOT2",
-          " "
-        ],
-        [
-          "text",
-          "SLOT3",
-          " "
-        ],
-        [
-          "text",
-          "SLOT4",
-          " "
-        ],
-        [
-          "text",
-          "SLOT5",
-          " "
-        ],
-        [
-          "text",
-          "SLOT6",
-          " "
-        ],
-        [
-          "text",
-          "SLOT7",
-          " "
-        ],
-        [
-          "text",
-          "SLOT8",
-          " "
-        ],
-        [
-          "text",
-          "SLOT9",
-          " "
         ]
       ]
     }
