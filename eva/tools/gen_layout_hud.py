@@ -3,7 +3,7 @@
 """Writes eva/app/hud/layouts/eva_hud.json: the EVA design of the windshield HUD (EVA_Windshield_HUD, supplied by the owner:
 NERV mark, drive mode, segmented rev bar, gear box, big speed, redline warning; no road, no coolant, fuel or character).
 800x480 HUD target; the part the driver sees through the windshield is about 485x278 at x 120, y 100 (shared/visible.js), and BMW's
-own content sits at the lower left of it, so nothing is put at x < 290, y > 312. On the glass black is no light: only the lines and
+own content sits at the lower left of it, so nothing is put at x < 360, y > 312. On the glass black is no light: only the lines and
 the numbers are drawn. Run it again after changing the numbers; it reads the fonts' cell heights from hud/fonts."""
 import json, os
 
@@ -56,7 +56,9 @@ text('gearWord', 138, 291, 80, '{{gearWord}}', 'w_small', SUB, 'center', z=7)
 text('speed', 252, 222, 214, '{{speed}}', 'w_speed', VAL, 'right', z=8, glow=True, rate=1)
 text('speedUnit', 474, 278, 100, '{{u:speedLc}}', 'w_unit', [255, 187, 121, 255], z=8)
 
-text('alert', 300, 322, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
+# BMW's own white speed (it cannot be removed: turning the speed off in the HUD settings turns the whole HUD off) sits at about
+# x 287-353, y 335-372, so the warning is centred well to the right of it
+text('alert', 380, 322, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
 
 with open(OUT, 'w') as f:
     json.dump({'schemaVersion': 2, 'name': 'EVA HUD', 'theme': 'eva',

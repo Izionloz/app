@@ -160,7 +160,8 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   data and drive mode (engine patch: `new HudApp(ctx, { follow })`, `config.settingsPrefix` "wind", `config.needs` "separate"), and
   is set per drive mode with the settings "HUD in Sport / Comfort / Eco Pro" (Sport by default). On the glass black is no light, so
   only lines and numbers are drawn, inside the part the driver sees (x 120, y 100, 485x278), clear of BMW's own content at the lower
-  left. While it shows, `mgux-hud-ctl` (2.14.0: `evaOn` has `who`, the holds of the cluster and the HUD are kept apart) hides the HUD
+  left (BMW's white speed there cannot be removed: turning the speed off in the iDrive HUD settings turns the whole HUD off; the
+  REDLINE warning is centred to the right of it). While it shows, `mgux-hud-ctl` (2.14.0: `evaOn` has `who`, the holds of the cluster and the HUD are kept apart) hides the HUD
   map's layers, so in Sport with the EVA HUD the HUD map gives way; in the other modes the HUD map shows as before. It needs
   "EVA and the HUD map together" on (the HUD and the cluster then have their own scenes). Checked on the bench only.
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster

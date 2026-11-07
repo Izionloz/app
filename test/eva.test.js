@@ -97,7 +97,7 @@ test('eva HUD layout: ids are unique, widgets are inside the part of the HUD the
         assert.ok(w.x >= WINDOW[0] && w.y >= WINDOW[1] && w.x + w.w <= WINDOW[0] + WINDOW[2] && w.y + w.h <= WINDOW[1] + WINDOW[3],
             `${w.id} is outside the visible HUD window`);
         if (w.type === 'text') {
-            assert.ok(!(w.x < 290 && w.y + w.h > 312), `${w.id} is where BMW's own HUD content sits (lower left)`);
+            assert.ok(!(w.x < 360 && w.y + w.h > 312), `${w.id} is where BMW's own HUD content sits (lower left)`);
         }
     });
     assert.strictEqual(hudLayout.schemaVersion, 2);
