@@ -357,3 +357,37 @@ test('evaOn panelMap: the rectangle moves to the panel (x 416, y 120) only while
     d.handle({ cmd: 'evaOn', who: 'hud', on: false });
     clearTimeout(d.evaT);
 });
+
+test('designer while EVA Comfort holds the map: the designer starts from the layout\'s rectangle, its changes are kept for that layout, Centre puts it back', () => {
+    const d = new ctl.Daemon();
+    d.proxy.update = () => {};
+    d.saveSoon = () => {};
+    const mapRect = { x: 90, y: 216, w: 594, h: 262 };
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', layout: 'eva_comfort', panelMap: true, mapRect });
+    let v = d.view();
+    assert.deepStrictEqual([v.map.x, v.map.y, v.map.w, v.map.h], [90, 216, 594, 262], 'the designer shows the layout\'s rectangle');
+    assert.strictEqual(v.eva.map, true);
+    d.handle({ cmd: 'adjust', which: 'map', dx: 20, dy: -10 });
+    assert.deepStrictEqual([d.state.map.custom, d.state.map.placed], [false, false], 'the display\'s own rectangle is untouched');
+    let pm = d.layout().panelMap;
+    assert.deepStrictEqual([pm.x, pm.y, pm.w, pm.h], [416 + 110, 120 + 206, 594, 262]);
+    d.handle({ cmd: 'rect', which: 'map', zoom: 1.5, opacity: 0.7 });
+    pm = d.layout().panelMap;
+    assert.deepStrictEqual([pm.zoom, pm.opacity], [1.5, 0.7]);
+    assert.match(d.view().note, /EVA/);
+    /* EVA goes and comes back: the owner's rectangle is still there; another layout has its own */
+    d.handle({ cmd: 'evaOn', who: 'panel', on: false });
+    assert.strictEqual(d.layout().panelMap, null);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', layout: 'eva_comfort', panelMap: true, mapRect });
+    assert.strictEqual(d.layout().panelMap.zoom, 1.5);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', layout: 'eva_comfort_wide', panelMap: true, mapRect });
+    assert.strictEqual(d.layout().panelMap.zoom, undefined, 'another layout starts from its own');
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', layout: 'eva_comfort', panelMap: true, mapRect });
+    d.handle({ cmd: 'centre', which: 'map' });
+    pm = d.layout().panelMap;
+    assert.deepStrictEqual([pm.x, pm.y, pm.zoom], [506, 336, undefined]);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: false });
+    d.handle({ cmd: 'adjust', which: 'map', dx: 10 });
+    assert.strictEqual(d.state.map.placed, true, 'without EVA the display\'s own rectangle changes as before');
+    clearTimeout(d.evaT);
+});

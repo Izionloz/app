@@ -363,7 +363,9 @@ class Link {
         /* EVA Comfort draws the cluster's map in the panel's scene (L.panelMap, panel pixels): the BMW cluster shows the map slot only in its
          * map view, the panel is always there. Only the cluster's map moves; the HUD's, if waze draws one, stays. */
         if (L.panelMap && this.base.target !== HUD && L.mode !== HUD) {
-            const rect = Object.assign({}, L.map || {}, { x: L.panelMap.x, y: L.panelMap.y, w: L.panelMap.w, h: L.panelMap.h, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 });
+            const P = L.panelMap;
+            const rect = Object.assign({}, L.map || {}, { x: P.x, y: P.y, w: P.w, h: P.h, zoom: typeof P.zoom === 'number' ? P.zoom : 1, rot: typeof P.rot === 'number' ? P.rot : 0,
+                fx: typeof P.fx === 'number' ? P.fx : 0.5, fy: typeof P.fy === 'number' ? P.fy : 0.5 }, typeof P.opacity === 'number' ? { opacity: P.opacity } : {});
             return !L.native && L.mode === 'both' ? [one(this.ref, 'panel', rect), one(this.ref + DUP, HUD, L.hud)] : [one(this.ref, 'panel', rect)];
         }
         if (L.native) {

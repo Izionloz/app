@@ -487,3 +487,18 @@ test('proxy: panelMap puts the cluster map in the panel\'s scene at the given re
         h.close();
     }
 });
+
+test('proxy: panelMap with the owner\'s zoom, focus and brightness (set in the designer) is a layer with them', async () => {
+    const layout = { mode: 'map', native: true, hide: null, map: null, hud: null,
+        panelMap: { x: 508, y: 336, w: 594, h: 262, opacity: 0.6, zoom: 1.5, rot: 0, fx: 0.25, fy: 0.5 } };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 3, target: 'map', class: 'content', x: 0, y: 0, w: 1088, h: 480, vw: 1088, vh: 480 }));
+        r.waze.write(frameMsg(3, 64, 7));
+        await r.waitUp(3);
+        const l = jsonOf(r.upMsgs, 0).find((j) => j.op === 'layer');
+        assert.deepStrictEqual([l.target, l.sx, l.sy, l.opacity], ['panel', 1.5, 1.5, 0.6]);
+    } finally {
+        r.close();
+    }
+});

@@ -217,9 +217,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   bottom of the cluster, about x 1380-1445, y 670-710, not at the Sport spot (x 1406-1597, y 342-419). EVA Comfort's bottom row now leaves
   x 1350-1460 free for it (range moved right) and the gear panel no longer keeps clear of the Sport spot.
 - **EVA Comfort (big map) (0.13.0):** a second Comfort layout, `eva_comfort_wide` (settings "In Comfort" etc.: *EVA Comfort (big map, the CarPlay
-  picture cropped)*), for the wider map the owner asked for: the window is 946x264 (cluster x 440, y 336) between a narrower speed panel and a
-  gear panel as wide as BMW's gear box (x 1406-1597). A window that wide cannot have the map's shape, so the map is drawn at its own shape (946x418) behind the window, with its
-  top 154 px above it, and the window crops it: the backdrop, which is above the map, hides what is outside, and CarPlay's guidance bar at
+  picture cropped)*), for the wider map the owner asked for: the window is 936x264 (cluster x 440, y 336) between a narrower speed panel and a
+  gear panel that takes BMW's gear box (x 1406-1597, y 342-419) in whole, with a margin (x 1394-1603, y 332-592). A window that wide cannot have the map's shape, so the map is drawn at its own shape (936x414) behind the window, with its
+  top 150 px above it, and the window crops it: the backdrop, which is above the map, hides what is outside, and CarPlay's guidance bar at
   the top of its picture goes with it. That relies on the panel being above the map layer (it is what the README says of EVA covering the
   cluster map; not checked in a photo): if the map shows over the rev panel, use *EVA Comfort* (the first one) instead. `evaOn`'s `mapRect`
   is the rectangle for either layout; the helper needs no change.
@@ -239,6 +239,13 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   0x01000300), `0x101 s2 0x1000312 c1024 m1, 0x1000311 c0 m3`, `0x102 s0 0x1000313`, `0x103 s1`, `0x104 s1`, `0x105 s0`, `0x111 s1`, `0x200 s0`,
   `0x201 s1 0x1000600`, `0x202 s1` (status 0 disabled, 1 free, 2 taken). 0x101's box is only a candidate. The page rows that showed the table (and what
   changed in it) were taken out at the owner's request; the app log still has cluster-render's status, slot rows included.
+- **Adjusting EVA's map windows in the HUD map app (0.13.5, with mgux-hud-ctl 2.18.0):** while an EVA layout holds a display's map (EVA Comfort's cluster
+  window, EVA HUD Comfort's middle), the designer's sliders and buttons for that display work on *that rectangle*: the page shows the layout's
+  rectangle (a note says the change is for EVA's window), and a move, a size, the zoom, the focus, the turn or the brightness set there is
+  kept for that layout (`evaRects` in the helper's state, per display and layout: `map:eva_comfort_wide`) and used in place of the layout's own,
+  also after EVA stops and comes back; Centre or Reset on that display puts the layout's rectangle back. The display's own rectangle (when EVA
+  does not hold it) is not changed by these edits and works as before. For the big-map layout (the map is cropped by the window) a move or a
+  zoom pans the map behind the window.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
