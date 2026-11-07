@@ -47,7 +47,8 @@ text('rpmUnit', 1684, 236, 100, 37, 'rpm', 'e_unit', TITLE, z=6)
 text('alert', 1500, 290, 232, 24, '{{evaAlert}}', 'e_mono', VAL, 'right', byRpm=True, z=6)
 
 text('gearCap', 162, 356, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], z=7)
-text('gear', 162, 390, 156, 111, '{{stage}}', 'e_gear', VAL, 'center', glow=True, z=7)
+# the gear as BMW's selector shows it: P R N, or D with the engaged gear (D1 .. D8), S / M by the shifter programme
+text('gear', 160, 408, 160, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=7)
 text('gearWord', 156, 516, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7)
 
 text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8, rate=1)
@@ -56,6 +57,10 @@ text('speedUnit', 850, 466, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 12
 text('pilotCap', 1130, 358, 250, 24, 'PILOT UNIT 01', 'e_mono', SUB, z=8)
 text('modeCap', 1130, 414, 250, 24, 'DRIVE MODE', 'e_mono', SUB, z=8)
 text('mode', 1130, 442, 250, 24, '{{mode}}', 'e_mono', VAL, z=8)
+# tyre pressure (TPMS): a caption and two rows of two, in bar (psi with the US units), clear of BMW's gear box (x 1406-1597)
+text('tyreCap', 1130, 474, 250, 24, 'TYRE PRESSURE', 'e_mono', SUB, z=8)
+text('tyreF', 1130, 500, 260, 32, 'FL {{tyreP:FL}}   FR {{tyreP:FR}}', 'e_tyre', VAL, z=8)
+text('tyreR', 1130, 532, 260, 32, 'RL {{tyreP:RL}}   RR {{tyreP:RR}}', 'e_tyre', VAL, z=8)
 
 text('coolCap', 142, 594, 200, 28, 'COOLANT', 'e_label', HEAD, z=9)
 text('cool', 715, 590, 120, 39, '{{coolant}}', 'e_val', VAL, 'right', z=9)

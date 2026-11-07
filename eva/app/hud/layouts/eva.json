@@ -371,12 +371,12 @@
    "id": "gear",
    "type": "text",
    "z": 7,
-   "x": 162,
-   "y": 390,
-   "w": 156,
-   "h": 111,
-   "text": "{{stage}}",
-   "font": "e_gear",
+   "x": 160,
+   "y": 408,
+   "w": 160,
+   "h": 89,
+   "text": "{{gear}}",
+   "font": "e_gearn",
    "color": [
     255,
     173,
@@ -488,6 +488,60 @@
    "h": 24,
    "text": "{{mode}}",
    "font": "e_mono",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "tyreCap",
+   "type": "text",
+   "z": 8,
+   "x": 1130,
+   "y": 474,
+   "w": 250,
+   "h": 24,
+   "text": "TYRE PRESSURE",
+   "font": "e_mono",
+   "color": [
+    255,
+    118,
+    91,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "tyreF",
+   "type": "text",
+   "z": 8,
+   "x": 1130,
+   "y": 500,
+   "w": 260,
+   "h": 32,
+   "text": "FL {{tyreP:FL}}   FR {{tyreP:FR}}",
+   "font": "e_tyre",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "tyreR",
+   "type": "text",
+   "z": 8,
+   "x": 1130,
+   "y": 532,
+   "w": 260,
+   "h": 32,
+   "text": "RL {{tyreP:RL}}   RR {{tyreP:RR}}",
+   "font": "e_tyre",
    "color": [
     255,
     173,

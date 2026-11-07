@@ -152,6 +152,14 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
 - 0.5.1 to 0.5.4 listed cluster-render's status text and the helper's state on the app's page, to find why the map on the cluster was
   missing in Comfort: the KOMBI reported the map slot `0x100` "locked" (`target map: waiting slot locked`), i.e. the cluster's own
   layout has no map area; not EVA's doing. The lines are removed in 0.5.5.
+- **Speed correction and tyre pressure (0.8.0):** BMW's speedometer reads a little above the true speed the car sends, so EVA's speed
+  was always about 1 km/h lower: the setting "Speed correction" (0-5 km/h, 1 by default) is added to the speed while the car moves (a
+  stopped car still reads 0), on the cluster and the HUD. The cluster shows the four tyre pressures (FL FR RL RR, bar; psi with
+  the US units) under DRIVE MODE, from `de.bmw.infotainment.vehicle.TPMS` (declared in `app.json` again; the 0.1.0 install failed on
+  an interface the unit lacked, 0.1.1 dropped the optional ones, and which one it was is not known: if this install fails, the TPMS
+  declaration is the first thing to remove).
+- **The gear (0.8.1):** the gear box shows what BMW's selector shows, P R N or D with the engaged gear (D1 .. D8; S / M by the shifter
+  programme when known), on the cluster and the HUD (`{{gear}}` instead of `{{stage}}`; fonts `e_gearn`, `w_gear`).
 - **EVA HUD on the windshield (0.6.0):** a second display of the same app on cluster-render's `hud` target, from the owner's
   "EVA Windshield HUD" design: the NERV mark, `DRIVE MODE : <mode>`, a 38-segment rev bar (0-8000, the level colours and the flashing
   redline as on the cluster), the gear box (P R N D with its word), the big speed with its unit, and a REDLINE / HIGH RPM warning.
@@ -160,7 +168,11 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   data and drive mode (engine patch: `new HudApp(ctx, { follow })`, `config.settingsPrefix` "wind", `config.needs` "separate"), and
   is set per drive mode with the settings "HUD in Sport / Comfort / Eco Pro" (Sport by default). On the glass black is no light, so
   only lines and numbers are drawn, inside the part the driver sees (x 120, y 100, 485x278), clear of BMW's own content at the lower
-  left. While it shows, `mgux-hud-ctl` (2.14.0: `evaOn` has `who`, the holds of the cluster and the HUD are kept apart) hides the HUD
+  left (BMW's white speed there cannot be removed: turning the speed off in the iDrive HUD settings turns the whole HUD off; the
+  REDLINE warning is centred to the right of it). A trial layout (0.7.0, `eva_hud_bmw`, the default for Sport) builds the HUD around that
+  number instead: no big speed of ours; the big number is the rev count, with a bracket over BMW's speed and "SPEED" at its
+  left; the other layout (`eva_hud`) stays selectable in the settings. The position of BMW's number is an estimate from one photo.
+  While it shows, `mgux-hud-ctl` (2.14.0: `evaOn` has `who`, the holds of the cluster and the HUD are kept apart) hides the HUD
   map's layers, so in Sport with the EVA HUD the HUD map gives way; in the other modes the HUD map shows as before. It needs
   "EVA and the HUD map together" on (the HUD and the cluster then have their own scenes). Checked on the bench only.
 - It needs `cluster-render` (Store source `robertnisipeanu/idrive-apps`). cluster-render has one screen slot for the cluster
