@@ -199,7 +199,7 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
     });
 });
 
-test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, a rev count in the middle, transparent frame layer, fonts baked, offered in the HUD settings', () => {
+test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, the HUD map rectangle clear, transparent frame layer, fonts baked, offered in the HUD settings', () => {
     const l = json('hud', 'layouts', 'eva_hud_comfort.json');
     const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
     l.widgets.forEach((w) => {
@@ -211,12 +211,49 @@ test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s spe
             if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
         }
     });
-    assert.ok(l.widgets.some((w) => w.id === 'rpm'), 'the rev count is the middle of the layout');
+    // the HUD map goes into HUD_COMFORT_MAP: nothing over it
+    const mm = /HUD_COMFORT_MAP = \{ x: (\d+), y: (\d+), w: (\d+), h: (\d+) \}/.exec(fs.readFileSync(path.join(APP, 'main.js'), 'utf8'));
+    assert.ok(mm, 'HUD_COMFORT_MAP is not in main.js');
+    const mr = [Number(mm[1]), Number(mm[2]), Number(mm[3]), Number(mm[4])];
+    assert.ok(Math.abs(mr[2] / mr[3] - 1088 / 480) < 0.05, 'the HUD map rectangle is not the map\'s shape');
+    assert.ok(mr[0] >= 120 && mr[1] >= 100 && mr[0] + mr[2] <= 605 && mr[1] + mr[3] <= 378, 'the HUD map is outside the visible window');
+    l.widgets.filter((w) => w.type === 'text').forEach((w) => assert.ok(!(w.x < mr[0] + mr[2] && w.x + w.w > mr[0] && w.y < mr[1] + mr[3] && w.y + w.h > mr[1]), `${w.id} is over the HUD map`));
     const d = l.widgets.filter((w) => w.type === 'evadash2');
     assert.strictEqual(d.length, 1);
     assert.strictEqual(d[0].bg, false);
     assert.ok(d[0].frames.length <= 8);
     ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_hud_comfort'), `${k} lacks EVA HUD Comfort`);
+    });
+});
+
+test('eva comfort wide layout: the hole is inside the map target and covered by main.js\'s rectangle (the map\'s shape), the rest is as in eva_comfort', () => {
+    const l = json('hud', 'layouts', 'eva_comfort_wide.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+    });
+    const dash = l.widgets.filter((w) => w.type === 'evadash2');
+    assert.strictEqual(dash.length, 2);
+    dash.forEach((d) => assert.ok(d.frames.length <= 8));
+    const a = dash[0], map = a.frames[3], h = a.hole;
+    assert.ok(h[0] >= map.x && h[1] >= map.y && h[0] + h[2] <= map.x + map.w && h[1] + h[3] <= map.y + map.h);
+    const m = /COMFORT_WIDE_MAP = \{ x: (\d+) - 416, y: (\d+), w: (\d+), h: (\d+) \}/.exec(fs.readFileSync(path.join(APP, 'main.js'), 'utf8'));
+    assert.ok(m, 'COMFORT_WIDE_MAP is not in main.js');
+    const r = { x: Number(m[1]), y: 120 + Number(m[2]), w: Number(m[3]), h: Number(m[4]) };      // in cluster pixels
+    assert.ok(Math.abs(r.w / r.h - 1088 / 480) < 0.03, 'the map rectangle is not the map\'s shape');
+    assert.ok(r.x >= 416 && r.y >= 120 && r.x + r.w <= 416 + 1088 && r.y + r.h <= 120 + 480, 'the map rectangle is outside the map target');
+    assert.ok(h[0] >= r.x && h[1] >= r.y && h[0] + h[2] <= r.x + r.w && h[1] + h[3] <= r.y + r.h, 'the map does not cover the window');
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort_wide'), `${k} lacks the big map`);
     });
 });

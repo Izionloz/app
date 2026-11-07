@@ -451,3 +451,39 @@ test('proxy: with hide "map" the cluster map gives way (EVA has its scene) and t
         m.close();
     }
 });
+
+test('proxy: panelMap puts the cluster map in the panel\'s scene at the given rectangle; the HUD layer, if any, stays; mode hud leaves it alone', async () => {
+    const layout = { mode: 'map', native: true, hide: null, panelMap: { x: 508, y: 336, w: 594, h: 262 },
+        hud: { x: 150, y: 90, w: 300, h: 150, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0, placed: false },
+        map: { custom: true, x: 0, y: 0, w: 1088, h: 480, opacity: 0.8, zoom: 2, rot: 30, fx: 0.5, fy: 0.5 } };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 3, target: 'map', class: 'content', x: 0, y: 0, w: 1088, h: 480, vw: 1088, vh: 480 }));
+        r.waze.write(frameMsg(3, 64, 7));
+        await r.waitUp(3);
+        const l = jsonOf(r.upMsgs, 0).filter((j) => j.op === 'layer');
+        assert.strictEqual(l.length, 1);
+        assert.deepStrictEqual([l[0].ref, l[0].target, l[0].class, l[0].x, l[0].y, l[0].w, l[0].h], [3, 'panel', 'content', 508, 336, 594, 262]);
+        assert.strictEqual(l[0].opacity, 0.8, 'the map\'s own brightness is kept');
+        assert.deepStrictEqual([l[0].sx, l[0].sy, l[0].rotate], [1, 1, 0], 'no zoom or turn in the window');
+        /* EVA goes: the map is made again on its own target */
+        const n = r.upMsgs.length;
+        layout.panelMap = null;
+        r.proxy.apply();
+        await r.waitUp(n + 3);
+        const after = jsonOf(r.upMsgs, n);
+        assert.ok(after.some((j) => j.op === 'drop') && after.some((j) => j.op === 'layer' && j.target === 'map'));
+    } finally {
+        r.close();
+    }
+    const h = await rig({ mode: 'hud', native: false, hide: null, panelMap: { x: 508, y: 336, w: 594, h: 262 }, hud: { x: 100, y: 50, w: 400, h: 176, opacity: 1, zoom: 1, rot: 0, fx: 0.5, fy: 0.5, fe: 0 }, map: null });
+    try {
+        h.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 4, target: 'map', x: 0, y: 0, w: 1088, h: 480 }));
+        h.waze.write(frameMsg(4, 64, 1));
+        await h.waitUp(3);
+        const l = jsonOf(h.upMsgs, 0).filter((j) => j.op === 'layer');
+        assert.deepStrictEqual(l.map((j) => j.target), ['hud'], 'mode hud: the map is on the HUD only');
+    } finally {
+        h.close();
+    }
+});

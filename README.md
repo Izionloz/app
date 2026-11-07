@@ -201,20 +201,36 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   separate type, `evadash2` (8 frames a layer); EVA Sport and the HUD keep `evadash`, whose shader is the one that ran on the car in
   0.10.1 (0.11.0 changed that shared shader, and the owner's cluster went dark; the cause is not confirmed, so the shared one is back
   as it was and only EVA Comfort uses the new one).
-- **EVA HUD Comfort (0.12.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort*; off by default): a header
-  (mode, outside temperature, clock), the shift lights and a thin rev rail, the gear box at the left and the rev count big in the middle;
-  BMW's own speed is left alone and the HUD map is hidden while it shows (as for the other EVA HUD layouts). It draws its lines with one
-  transparent `evadash2` layer.
+- **EVA HUD Comfort (0.12.0, the map back in 0.13.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort*; off by
+  default): a header (mode, outside temperature, clock), the shift lights and a thin rev rail, the gear box at the left and the HUD map in the
+  middle. The app sends `evaOn` with `mapRect` for the HUD (800x480 pixels: 350x154 at x 242, y 200, the map's shape; `HUD_COMFORT_MAP`) and
+  `hide: "none"`; the helper puts the HUD map there (its brightness and soft edges are kept) and does not hide it. The HUD map is a layer of
+  the same `hud` target as the EVA HUD's own layers, which are transparent and above it, so it is in EVA's own scene and does not depend on
+  anything but the HUD itself. BMW's own speed is left alone. The lines are drawn by one transparent `evadash2` layer.
 - **The CarPlay map in EVA Comfort's window (0.12.0, with mgux-hud-ctl 2.16.0):** while EVA Comfort shows, the app sends the helper the
   window's rectangle (`evaOn` with `mapRect`, in the map target's own 1088x480 pixels: the window 594x262 at cluster x 506, y 336, the
   map target sitting at x 416, y 120 as in the bimmer-lab cluster themes) and the helper puts the cluster map there (its place, size
   and brightness setting for the map are left alone and nothing is saved; the zoom and turn are 1 and 0 while it does), then gives
   the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
   frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
-  The helper takes a `mapRect` from the EVA HUD as well (the HUD map's rectangle in 800x480 pixels), which no layout uses now.
 - **BMW's gear box in Comfort Plus (0.12.1):** a photo from the car (Nov 7 2026, EVA Comfort) shows BMW's white gear indicator ("D2") at the
   bottom of the cluster, about x 1380-1445, y 670-710, not at the Sport spot (x 1406-1597, y 342-419). EVA Comfort's bottom row now leaves
   x 1350-1460 free for it (range moved right) and the gear panel no longer keeps clear of the Sport spot.
+- **EVA Comfort (big map) (0.13.0):** a second Comfort layout, `eva_comfort_wide` (settings "In Comfort" etc.: *EVA Comfort (big map, the CarPlay
+  picture cropped)*), for the wider map the owner asked for: the window is 1000x264 (cluster x 440, y 336) between a narrower speed panel and a
+  narrow gear panel. A window that wide cannot have the map's shape, so the map is drawn at its own shape (1000x442) behind the window, with its
+  top 178 px above it, and the window crops it: the backdrop, which is above the map, hides what is outside, and CarPlay's guidance bar at
+  the top of its picture goes with it. That relies on the panel being above the map layer (it is what the README says of EVA covering the
+  cluster map; not checked in a photo): if the map shows over the rev panel, use *EVA Comfort* (the first one) instead. `evaOn`'s `mapRect`
+  is the rectangle for either layout; the helper needs no change.
+- **The CarPlay map in EVA Comfort's own layer (0.13.0, with mgux-hud-ctl 2.17.0):** the BMW cluster shows the map slot (0x100, "the central map area
+  under the gauges") only in its map view, so the map vanished whenever the cluster changed view or drive mode. Now, with the setting
+  "EVA Comfort: draw the CarPlay map in EVA's own layer" (on by default), the app sends `evaOn` with `panelMap: true` and its `mapRect`, and the
+  helper's proxy makes waze-on-cluster's video layer on the **panel** target (the whole-panel slot 0x203, where waze-on-cluster itself puts the
+  map at x 416, y 120 when told to run `panel`) in that rectangle instead of on `map`: it is part of EVA's own scene, whatever the BMW cluster
+  shows. EVA Comfort's backdrop is class `overlay` and its texts and pictures `alert`, so the map (class `content`) sits under the backdrop and
+  shows through its hole, and what the map has outside the window is hidden by the backdrop (the big-map layout relies on that). Only the
+  cluster's map moves (the HUD's stays); with the setting off, or the helper older than 2.17.0, it is as before. Not checked on the car.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

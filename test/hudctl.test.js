@@ -341,3 +341,19 @@ test('evaOn mapRect from the EVA HUD goes to the HUD map, from the cluster to th
     d.handle({ cmd: 'evaOn', who: 'panel', on: false });
     clearTimeout(d.evaT);
 });
+
+test('evaOn panelMap: the rectangle moves to the panel (x 416, y 120) only while the cluster holds it and asked for the panel', () => {
+    const d = new ctl.Daemon();
+    d.proxy.update = () => {};
+    assert.strictEqual(d.layout().panelMap, null);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', mapRect: { x: 90, y: 216, w: 594, h: 262 } });
+    assert.strictEqual(d.layout().panelMap, null, 'not asked for');
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', panelMap: true, mapRect: { x: 90, y: 216, w: 594, h: 262 } });
+    assert.deepStrictEqual(d.layout().panelMap, { x: 506, y: 336, w: 594, h: 262 });
+    d.handle({ cmd: 'evaOn', who: 'hud', on: true, hide: 'hud', panelMap: true, mapRect: { x: 10, y: 10, w: 100, h: 50 } });
+    assert.deepStrictEqual(d.layout().panelMap, { x: 506, y: 336, w: 594, h: 262 }, 'the HUD\'s hold is not the cluster\'s');
+    d.handle({ cmd: 'evaOn', who: 'panel', on: false });
+    assert.strictEqual(d.layout().panelMap, null);
+    d.handle({ cmd: 'evaOn', who: 'hud', on: false });
+    clearTimeout(d.evaT);
+});

@@ -60,6 +60,7 @@ const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
 const MIN_W = 40, MIN_H = 20;
 const FEATHER_HUD = 0.15, FEATHER_MAX = 0.45;    /* the HUD map's soft edges: default and most */
 const MAP_ASPECT = 1088 / 480;
+const PANEL_MAP_X = 416, PANEL_MAP_Y = 120;      /* where the map target's 1088x480 sits on the 1920x720 panel (waze-on-cluster: the centred rect) */
 
 /* mkdir -p for Node 8, whose mkdirSync has no recursive option. */
 function mkdirp(dir, mode) {
@@ -263,7 +264,19 @@ class Daemon {
         const overMap = this.evaRect('panel'), overHud = this.evaRect('hud');
         const map = overMap ? place('map', overMap) : (s.map.custom ? s.map : null);
         const hud = overHud ? place('hud', overHud) : s.hud;
-        return { mode: s.mode, hud, map, native: this.waze.native(), hide: this.hideNow() };
+        const pm = this.evaPanelMap();
+        return { mode: s.mode, hud, map, native: this.waze.native(), hide: this.hideNow(), panelMap: pm };
+    }
+
+    /* EVA Comfort draws the cluster map in the panel's own scene instead of the map slot's (which the BMW cluster shows only in its map
+     * view): the rectangle it asked for (the map target's pixels) moved to where the map target sits on the panel (x 416, y 120). */
+    evaPanelMap() {
+        const h = (this.evaHolds || {}).panel;
+        if (!h || h.until <= Date.now() || !h.mapRect || h.panelMap !== true) {
+            return null;
+        }
+        const r = h.mapRect;
+        return { x: even(PANEL_MAP_X + r.x), y: even(PANEL_MAP_Y + r.y), w: even(r.w), h: even(r.h) };
     }
 
     /* While an EVA display that asked for it shows (EVA Comfort's map window, the EVA HUD Comfort's free middle), the map of that display
@@ -445,20 +458,20 @@ class Daemon {
              * HUD itself), or the cluster map's when the panel has a scene of its own (it uses the map's slot). */
             if (typeof msg.on === 'boolean') {
                 const who = msg.who === 'hud' ? 'hud' : 'panel';
-                const before = JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]);
+                const before = JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud'), this.evaPanelMap()]);
                 this.evaHolds = this.evaHolds || {};
                 if (msg.on) {
                     const r = msg.mapRect;
                     const ok = r && [r.x, r.y, r.w, r.h].every((v) => Number.isFinite(Number(v))) && r.w >= MIN_W && r.h >= MIN_H;
                     this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : msg.hide === 'none' ? 'none' : 'hud',
-                        mapRect: ok ? { x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) } : null };
+                        mapRect: ok ? { x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) } : null, panelMap: msg.panelMap === true };
                 } else {
                     delete this.evaHolds[who];
                 }
                 clearTimeout(this.evaT);
                 this.evaT = Object.keys(this.evaHolds).length
                     ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
-                if (JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]) !== before) {
+                if (JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud'), this.evaPanelMap()]) !== before) {
                     try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
                 }
             }

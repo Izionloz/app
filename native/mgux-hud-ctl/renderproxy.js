@@ -360,6 +360,12 @@ class Link {
             /* hide: the EVA cluster app shows, and a layer of this target shown would hold the slot (the HUD, while the panel
              * shares its scene; the cluster's map, when the panel has the map's scene so that the HUD can show with it) */
             hide: L.hide === target });
+        /* EVA Comfort draws the cluster's map in the panel's scene (L.panelMap, panel pixels): the BMW cluster shows the map slot only in its
+         * map view, the panel is always there. Only the cluster's map moves; the HUD's, if waze draws one, stays. */
+        if (L.panelMap && this.base.target !== HUD && L.mode !== HUD) {
+            const rect = Object.assign({}, L.map || {}, { x: L.panelMap.x, y: L.panelMap.y, w: L.panelMap.w, h: L.panelMap.h, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 });
+            return !L.native && L.mode === 'both' ? [one(this.ref, 'panel', rect), one(this.ref + DUP, HUD, L.hud)] : [one(this.ref, 'panel', rect)];
+        }
         if (L.native) {
             /* waze-on-cluster 0.9.0 and later draws the cluster's map and the HUD's each as a layer of its own (the
              * HUD's scaled to its size, black background, rounded corners): each is only placed and looked after here,
