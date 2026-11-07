@@ -324,3 +324,20 @@ test('evaOn mapRect: the cluster map goes into the rectangle while EVA Comfort s
     assert.deepStrictEqual(d.state.map.custom, false);                          /* nothing was saved */
     clearTimeout(d.evaT);
 });
+
+test('evaOn mapRect from the EVA HUD goes to the HUD map, from the cluster to the cluster map; each only while it holds', () => {
+    const d = new ctl.Daemon();
+    d.proxy.update = () => {};
+    const hud0 = JSON.stringify(d.layout().hud);
+    d.handle({ cmd: 'evaOn', who: 'hud', on: true, hide: 'none', mapRect: { x: 258, y: 198, w: 330, h: 146 } });
+    const l = d.layout();
+    assert.deepStrictEqual([l.hud.x, l.hud.y, l.hud.w, l.hud.h, l.hud.placed], [258, 198, 330, 146, true]);
+    assert.strictEqual(l.map, null);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: true, hide: 'none', mapRect: { x: 90, y: 216, w: 594, h: 262 } });
+    assert.deepStrictEqual([d.layout().map.x, d.layout().hud.x], [90, 258]);
+    d.handle({ cmd: 'evaOn', who: 'hud', on: false });
+    assert.strictEqual(JSON.stringify(d.layout().hud), hud0);
+    assert.strictEqual(d.layout().map.x, 90);
+    d.handle({ cmd: 'evaOn', who: 'panel', on: false });
+    clearTimeout(d.evaT);
+});

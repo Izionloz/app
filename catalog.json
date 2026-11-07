@@ -10,8 +10,8 @@
             "version": "2.16.0",
             "artifact": {
                 "name": "mgux-hud-ctl@2.16.0.tgz",
-                "size": 18709,
-                "sha256": "13a77780df021826afa96d4c5b51bf722fa40ecc04bbb5aaff11dc4c4444a81e",
+                "size": 18783,
+                "sha256": "6b7707517f3e6f82fd08e41391c1bf4254c5c7ea66fde3f6026ea2a2d2b7b07f",
                 "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.16.0/mgux-hud-ctl%402.16.0.tgz"
             },
             "requires": {
@@ -51,8 +51,8 @@
             "version": "0.12.0",
             "artifact": {
                 "name": "eva_cluster@0.12.0.tgz",
-                "size": 1237843,
-                "sha256": "3c5be09a8b7e36c74d53906ab8d30569aae5f44e749336f9abefd9e2beb2f67f",
+                "size": 1237966,
+                "sha256": "0fc7dc6db9bddb11c5f92f61f6a29613cda1e7d8fc35a113c8a89e521d7de7f5",
                 "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.12.0/eva_cluster%400.12.0.tgz"
             },
             "mguHmi": [

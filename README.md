@@ -211,7 +211,7 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   and brightness setting for the map are left alone and nothing is saved; the zoom and turn are 1 and 0 while it does), then gives
   the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
   frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
-  The EVA HUD Comfort no longer draws a rule and "SPEED" at BMW's speed: its middle is free for the HUD map.
+  The EVA HUD Comfort no longer draws a rule and "SPEED" at BMW's speed, and does the same for the HUD map: it sends `mapRect` for the HUD (800x480 pixels: 330x146 at x 258, y 198, the map's shape, free of anything the layout draws) and the helper puts the HUD map there while the layout shows (the map's own brightness and soft edges are kept).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

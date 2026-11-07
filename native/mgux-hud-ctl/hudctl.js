@@ -259,17 +259,19 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        const over = this.evaMapRect();
-        const map = over ? normaliseRect('map', Object.assign({}, s.map, { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, over)) : (s.map.custom ? s.map : null);
-        return { mode: s.mode, hud: s.hud, map, native: this.waze.native(), hide: this.hideNow() };
+        const place = (which, over) => normaliseRect(which, Object.assign({}, s[which], { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, over));
+        const overMap = this.evaRect('panel'), overHud = this.evaRect('hud');
+        const map = overMap ? place('map', overMap) : (s.map.custom ? s.map : null);
+        const hud = overHud ? place('hud', overHud) : s.hud;
+        return { mode: s.mode, hud, map, native: this.waze.native(), hide: this.hideNow() };
     }
 
-    /* While an EVA display that asked for it shows (EVA Comfort's map window), the cluster's map goes into that rectangle (x, y, w, h in
-     * the map target's own pixels, 1088x480), and back to its own place when it stops or goes silent; nothing is saved. */
-    evaMapRect() {
-        const now = Date.now();
-        const who = Object.keys(this.evaHolds || {}).filter((k) => this.evaHolds[k].until > now && this.evaHolds[k].mapRect)[0];
-        return who ? this.evaHolds[who].mapRect : null;
+    /* While an EVA display that asked for it shows (EVA Comfort's map window, the EVA HUD Comfort's free middle), the map of that display
+     * goes into the rectangle it sent (x, y, w, h in the map target's own 1088x480 pixels for the cluster, the HUD's 800x480 for the HUD),
+     * and back to its own place when it stops or goes silent; nothing is saved. */
+    evaRect(who) {
+        const h = (this.evaHolds || {})[who];
+        return h && h.until > Date.now() && h.mapRect ? h.mapRect : null;
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -443,7 +445,7 @@ class Daemon {
              * HUD itself), or the cluster map's when the panel has a scene of its own (it uses the map's slot). */
             if (typeof msg.on === 'boolean') {
                 const who = msg.who === 'hud' ? 'hud' : 'panel';
-                const before = JSON.stringify([this.hideNow(), this.evaMapRect()]);
+                const before = JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]);
                 this.evaHolds = this.evaHolds || {};
                 if (msg.on) {
                     const r = msg.mapRect;
@@ -456,7 +458,7 @@ class Daemon {
                 clearTimeout(this.evaT);
                 this.evaT = Object.keys(this.evaHolds).length
                     ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
-                if (JSON.stringify([this.hideNow(), this.evaMapRect()]) !== before) {
+                if (JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]) !== before) {
                     try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
                 }
             }
