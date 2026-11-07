@@ -179,9 +179,10 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
         assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
         assert.strictEqual(Buffer.from(pic.rgba, 'base64').length, pic.w * pic.h * 4);
     });
-    const dash = l.widgets.filter((w) => w.type === 'evadash');
+    const dash = l.widgets.filter((w) => w.type === 'evadash2');
     assert.strictEqual(dash.length, 2);
-    dash.forEach((d) => { assert.ok(d.frames.length <= 12); assert.ok(d.rails.length <= 2); });
+    assert.ok(!l.widgets.some((w) => w.type === 'evadash'), 'EVA Comfort uses the evadash2 shader only; evadash is the one that ran on the car');
+    dash.forEach((d) => { assert.ok(d.frames.length <= 8); assert.ok(d.rails.length <= 2); });
     const a = dash[0], map = a.frames[3];
     assert.ok(a.hole[0] >= map.x && a.hole[1] >= map.y && a.hole[0] + a.hole[2] <= map.x + map.w && a.hole[1] + a.hole[3] <= map.y + map.h);
     assert.strictEqual(dash[1].bg, false);
