@@ -24,7 +24,7 @@ MAP = (502, MY, 604, 268)                                    # the map window's 
 GEAR = (1217, MY, 380, MH)
 TYRE = (1610, MY, 284, MH)
 FY, FH = 636, 64                                             # the bottom row
-SEC = [(26, 531), (557, 427), (984, 398), (1382, 512)]       # its four sections: coolant, oil, battery, range
+SEC = [(26, 531), (557, 427), (984, 366), (1460, 434)]       # its four sections: coolant, oil, battery, range; x 1350-1460 is left for BMW's gear box
 
 # the frames take the owner's reference render: corners cut one by one (cut: top-left, top-right, bottom-right, bottom-left), a glow
 framesA = [                                                         # evadash2 holds 8 frames a layer
@@ -43,7 +43,7 @@ framesB = [
     {'x': 1517, 'y': 104, 'w': 14, 'h': 50, 'kind': 3, 'border': 2, 'color': 2},       # slanted rules: in the header and between the bottom sections
     {'x': 541, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
     {'x': 968, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
-    {'x': 1366, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
+    {'x': 1450, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
 ]
 # the backdrop: opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
 W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
@@ -56,7 +56,7 @@ W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': 0,
 W.append({'id': 'eva2', 'type': 'evadash2', 'class': 'ambient', 'z': -9, 'x': 0, 'y': 0, 'w': 1920, 'h': 720, 'bg': False,
           'frames': framesB, 'rpmMax': 8000,
           'rails': [{'x': 640, 'y': 682, 'w': 310, 'h': 14, 'segs': 22, 'gap': 3, 'ramp': True, 'signal': 'oil', 'max': 140},
-                    {'x': 1736, 'y': 664, 'w': 112, 'h': 14, 'segs': 10, 'gap': 3, 'plain': True, 'signal': 'fuel', 'max': 1, 'color': [1.0, 0.72, 0.3]}]})
+                    {'x': 1768, 'y': 664, 'w': 96, 'h': 14, 'segs': 8, 'gap': 3, 'plain': True, 'signal': 'fuel', 'max': 1, 'color': [1.0, 0.72, 0.3]}]})
 
 text('title', 232, 98, 330, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
 text('sub', 233, 144, 400, 18, 'COMFORT MODE / NAVIGATION', 'e_sub', SUB)
@@ -85,7 +85,7 @@ text('speedUnit', 85, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121
 
 # the gear section: BMW's black box (its own letter, never covered) stays top right; our gear number is centred under it, with GEAR top left, the selector row and its word
 text('gearCap', 1139, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
-text('gear', 1288, 416, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+text('gear', 1288, 410, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
 for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own
     text('selDim' + L, 1358 + (k - 2) * 62 - 26, 524, 52, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
     text('sel' + L, 1358 + (k - 2) * 62 - 26, 524, 52, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
@@ -112,16 +112,16 @@ for (cx, cw), cap, val, unit, uw in zip(SEC, ('COOLANT', 'OIL', 'BATTERY', 'RANG
                                          ('{{u:temp}}', '{{u:temp}}', '%', '{{u:distLc}}'), (50, 50, 40, 60)):
     right = cx + cw - 19
     if cap == 'RANGE':
-        right = 1700                                          # the fuel rail with E and F takes the right of the section
+        right = 1740                                          # the fuel rail with E and F takes the right of the section
     name, iw = ICONS[cap]
-    ix = cx + 75 if cap == 'OIL' else cx + 22                 # BMW's seat-belt light covers x 587-626 on the oil section
+    ix = cx + 75 if cap == 'OIL' else cx + (12 if cap == 'RANGE' else 22)                 # BMW's seat-belt light covers x 587-626 on the oil section
     picture('ic_' + cap.lower(), name, ix, 641, iw, 38, 10)
-    text('cap_' + cap.lower(), ix + iw + 14, 646, {'OIL': 72, 'RANGE': 80}.get(cap, 110), 28, cap, 'e_label', HEAD, z=10)
-    vw = 88 if cap == 'RANGE' else 110
+    text('cap_' + cap.lower(), ix + iw + (8 if cap == 'RANGE' else 14), 646, {'OIL': 72, 'RANGE': 68}.get(cap, 110), 28, cap, 'e_label', HEAD, z=10)
+    vw = 72 if cap == 'RANGE' else 110
     text('val_' + cap.lower(), right - uw - 8 - vw, 641, vw, 39, val, 'e_val', VAL, 'right', z=10)
     text('u_' + cap.lower(), right - uw, 644, uw, 37, unit, 'e_unit', TITLE, z=10)
-text('fuelE', 1718, 640, 16, 24, 'E', 'e_mono', SUB, 'center', z=10)
-text('fuelF', 1850, 640, 16, 24, 'F', 'e_mono', SUB, 'center', z=10)
+text('fuelE', 1748, 640, 16, 24, 'E', 'e_mono', SUB, 'center', z=10)
+text('fuelF', 1868, 640, 16, 24, 'F', 'e_mono', SUB, 'center', z=10)
 
 with open(OUT, 'w') as f:
     json.dump({'schemaVersion': 2, 'name': 'EVA Comfort', 'theme': 'eva',

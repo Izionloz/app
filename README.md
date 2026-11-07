@@ -212,6 +212,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
   frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
   The helper takes a `mapRect` from the EVA HUD as well (the HUD map's rectangle in 800x480 pixels), which no layout uses now.
+- **BMW's gear box in Comfort Plus (0.12.1):** a photo from the car (Nov 7 2026, EVA Comfort) shows BMW's white gear indicator ("D2") at the
+  bottom of the cluster, about x 1380-1445, y 670-710, not at the Sport spot (x 1406-1597, y 342-419). EVA Comfort's bottom row now leaves
+  x 1350-1460 free for it (range moved right) and the gear panel no longer keeps clear of the Sport spot.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

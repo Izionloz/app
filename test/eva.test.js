@@ -162,14 +162,14 @@ test('eva app: a speed correction setting (BMW\'s speedometer reads above the tr
 test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fonts baked, the map window is a hole inside its frame', () => {
     const l = json('hud', 'layouts', 'eva_comfort.json');
     const ids = new Set();
-    const boxes = [[1406, 342, 1597, 419], [587, 663, 626, 700]];
+    // in Comfort Plus BMW draws its gear indicator at the bottom (photo, Nov 7 2026: x ~1380-1445, y ~670-710), not at the Sport spot
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
     l.widgets.forEach((w) => {
         assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
         ids.add(w.id);
         assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
         if (w.type === 'text') {
-            // the gear number may reach up into BMW's box a little (the owner asked for it; the box hides what it covers)
-            if (w.id !== 'gear') boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
             const f = json('hud', 'fonts', `${w.font}.json`);
             assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
             if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
