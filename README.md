@@ -201,17 +201,18 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   separate type, `evadash2` (8 frames a layer); EVA Sport and the HUD keep `evadash`, whose shader is the one that ran on the car in
   0.10.1 (0.11.0 changed that shared shader, and the owner's cluster went dark; the cause is not confirmed, so the shared one is back
   as it was and only EVA Comfort uses the new one).
-- **EVA HUD Comfort (0.12.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort*; off by default): a header
-  (mode, outside temperature, clock), the shift lights and a thin rev rail, the gear box at the left and the rev count big in the middle;
-  BMW's own speed is left alone and the HUD map is hidden while it shows (as for the other EVA HUD layouts). It draws its lines with one
-  transparent `evadash2` layer.
+- **EVA HUD Comfort (0.12.0, the map back in 0.13.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort*; off by
+  default): a header (mode, outside temperature, clock), the shift lights and a thin rev rail, the gear box at the left and the HUD map in the
+  middle. The app sends `evaOn` with `mapRect` for the HUD (800x480 pixels: 350x154 at x 242, y 200, the map's shape; `HUD_COMFORT_MAP`) and
+  `hide: "none"`; the helper puts the HUD map there (its brightness and soft edges are kept) and does not hide it. The HUD map is a layer of
+  the same `hud` target as the EVA HUD's own layers, which are transparent and above it, so it is in EVA's own scene and does not depend on
+  anything but the HUD itself. BMW's own speed is left alone. The lines are drawn by one transparent `evadash2` layer.
 - **The CarPlay map in EVA Comfort's window (0.12.0, with mgux-hud-ctl 2.16.0):** while EVA Comfort shows, the app sends the helper the
   window's rectangle (`evaOn` with `mapRect`, in the map target's own 1088x480 pixels: the window 594x262 at cluster x 506, y 336, the
   map target sitting at x 416, y 120 as in the bimmer-lab cluster themes) and the helper puts the cluster map there (its place, size
   and brightness setting for the map are left alone and nothing is saved; the zoom and turn are 1 and 0 while it does), then gives
   the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
   frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
-  The helper takes a `mapRect` from the EVA HUD as well (the HUD map's rectangle in 800x480 pixels), which no layout uses now.
 - **BMW's gear box in Comfort Plus (0.12.1):** a photo from the car (Nov 7 2026, EVA Comfort) shows BMW's white gear indicator ("D2") at the
   bottom of the cluster, about x 1380-1445, y 670-710, not at the Sport spot (x 1406-1597, y 342-419). EVA Comfort's bottom row now leaves
   x 1350-1460 free for it (range moved right) and the gear panel no longer keeps clear of the Sport spot.
