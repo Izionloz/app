@@ -23,6 +23,10 @@ function visit(ctx, msg, tries) {
 }
 
 const HudApp = require('./hud');
+const page = require('./settingsui');
+
+// what the page shows under STATUS (the engine's own lines for the cluster and the HUD)
+const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD' };
 
 // EVA Comfort's map window (the hole in eva_comfort.json, cluster px): the cluster map is put there while that layout shows. The map target
 // (1088x480) sits at x 416, y 120 on the cluster, so the rectangle is in its own pixels; its shape is the map's (1088:480).
@@ -36,6 +40,15 @@ const COMFORT_MAP = { x: 506 - 416, y: 336 - 120, w: 594, h: 262 };
 const HUD_COMFORT_MAP = { x: 242, y: 200, w: 350, h: 154 };
 const COMFORT_WIDE_MAP = { x: 440 - 416, y: 66, w: 936, h: 414 };
 
+// the center screen's page (settingsui.js): drawn on the kit's canvas about ten times a second while it shows
+function drawPage(ctx) {
+    ctx.loop('MAIN', 10, () => {
+        const cv = ctx.canvas(1600, 520);
+        page.draw(cv, ctx.settings, status);
+        return ctx.ui.image('MAIN_GFX', cv);
+    });
+}
+
 mgu.run({
     start(ctx) {
         let hud;
@@ -44,11 +57,13 @@ mgu.run({
         } catch (e) {
             // nothing drawn, but stay up: an exit here would count as a crash on the car
             ctx.log.error('Cluster failed to start: ' + (e && e.stack || e));
-            ctx.ui.text('STATUS', 'Cluster failed to start: ' + (e && e.message || e));
+            status.cluster = 'Cluster failed to start: ' + (e && e.message || e);
+            drawPage(ctx);
             return;
         }
-        hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
+        hud.onStatus((s) => { status.cluster = s; });
         hud.start();
+        drawPage(ctx);
 
         // The EVA HUD on the windshield: a second display of this app on cluster-render's "hud" target, with a connection of
         // its own and layouts of its own (hud/layouts/eva_hud.json, settings windHudLayout / windInSport / ...). It follows
@@ -61,11 +76,11 @@ mgu.run({
             });
             const wctx = Object.create(ctx, { spec: { value: wspec } });
             whud = new HudApp(wctx, { follow: hud });
-            whud.onStatus((s) => { ctx.ui.text('HUDSTATUS', s); });
+            whud.onStatus((s) => { status.hud = s; });
             whud.start();
         } catch (e) {
             ctx.log.error('EVA HUD failed to start: ' + (e && e.stack || e));
-            ctx.ui.text('HUDSTATUS', 'EVA HUD failed to start: ' + (e && e.message || e));
+            status.hud = 'EVA HUD failed to start: ' + (e && e.message || e);
             whud = null;
         }
 
