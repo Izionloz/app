@@ -248,6 +248,12 @@
       "default": true
     },
     {
+      "key": "mapOnPanel",
+      "label": "EVA Comfort: draw the CarPlay map in EVA's own layer (it shows in every cluster view, not only BMW's map view)",
+      "type": "bool",
+      "default": true
+    },
+    {
       "key": "windHudLayout",
       "label": "HUD layout (when not by drive mode)",
       "type": "choice",

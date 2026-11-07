@@ -15,7 +15,7 @@ HEAD, VAL, WHITE = [255, 172, 112, 255], [255, 173, 97, 255], [255, 240, 217, 25
 W = []
 
 def text(id, x, y, w, h, t, font, color, align='left', z=5, **k):
-    d = {'id': id, 'type': 'text', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'text': t, 'font': font, 'color': color, 'align': align}
+    d = {'id': id, 'type': 'text', 'class': 'alert', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'text': t, 'font': font, 'color': color, 'align': align}
     d.update(k)
     W.append(d)
 
@@ -49,15 +49,16 @@ def build(wide):
         {'x': 968, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
         {'x': 1450, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
     ]
-    # the backdrop: opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
-    W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
+    # the backdrop (class overlay: above the CarPlay map, which waze-on-cluster draws as a content layer when EVA Comfort puts it in the panel's scene,
+    # and under the text and pictures, class alert): opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
+    W.append({'id': 'eva', 'type': 'evadash2', 'class': 'overlay', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
               'frames': framesA, 'rpmMax': 8000, 'coolMax': 120,
               'hole': [440, 336, 1000, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
               'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
               'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 64, 'gap': 3},
                         {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
     # a second layer over it with nothing but what is drawn: the gear box, the car's box, the bottom row, the slanted rules, the oil ramp and the fuel rail
-    W.append({'id': 'eva2', 'type': 'evadash2', 'class': 'ambient', 'z': -9, 'x': 0, 'y': 0, 'w': 1920, 'h': 720, 'bg': False,
+    W.append({'id': 'eva2', 'type': 'evadash2', 'class': 'overlay', 'z': -9, 'x': 0, 'y': 0, 'w': 1920, 'h': 720, 'bg': False,
               'frames': framesB, 'rpmMax': 8000,
               'rails': [{'x': 640, 'y': 682, 'w': 310, 'h': 14, 'segs': 22, 'gap': 3, 'ramp': True, 'signal': 'oil', 'max': 140},
                         {'x': 1768, 'y': 664, 'w': 96, 'h': 14, 'segs': 8, 'gap': 3, 'plain': True, 'signal': 'fuel', 'max': 1, 'color': [1.0, 0.72, 0.3]}]})
@@ -110,7 +111,7 @@ def build(wide):
 
 
     def picture(id, name, x, y, w, h, z):
-        W.append({'id': id, 'type': 'picture', 'class': 'content', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'name': name})
+        W.append({'id': id, 'type': 'picture', 'class': 'alert', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'name': name})
 
     # the owner's EVA_HUD_Icons pack: the car with its tyre sensors, the red slashed stripes and an icon in each section of the bottom row; small hazard dashes
     picture('car', 'c_car', 1714, 402, 77, 156, 9)       # symmetric, centred on x 1752

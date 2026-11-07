@@ -7,7 +7,7 @@
   {
    "id": "eva",
    "type": "evadash2",
-   "class": "ambient",
+   "class": "overlay",
    "z": -10,
    "x": 0,
    "y": 0,
@@ -144,7 +144,7 @@
   {
    "id": "eva2",
    "type": "evadash2",
-   "class": "ambient",
+   "class": "overlay",
    "z": -9,
    "x": 0,
    "y": 0,
@@ -240,6 +240,7 @@
   {
    "id": "title",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 232,
    "y": 98,
@@ -259,6 +260,7 @@
   {
    "id": "sub",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 233,
    "y": 144,
@@ -277,6 +279,7 @@
   {
    "id": "comfort",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 745,
    "y": 100,
@@ -296,6 +299,7 @@
   {
    "id": "clock",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1360,
    "y": 112,
@@ -315,6 +319,7 @@
   {
    "id": "amb",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1550,
    "y": 110,
@@ -333,6 +338,7 @@
   {
    "id": "ambU",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1656,
    "y": 113,
@@ -351,6 +357,7 @@
   {
    "id": "rpmLabel",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 112,
    "y": 190,
@@ -370,6 +377,7 @@
   {
    "id": "coldNote",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 276,
    "y": 191,
@@ -388,6 +396,7 @@
   {
    "id": "alert",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1350,
    "y": 191,
@@ -407,6 +416,7 @@
   {
    "id": "tick0",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 100,
    "y": 278,
@@ -425,6 +435,7 @@
   {
    "id": "tick1",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 238,
    "y": 278,
@@ -443,6 +454,7 @@
   {
    "id": "tick2",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 415,
    "y": 278,
@@ -461,6 +473,7 @@
   {
    "id": "tick3",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 592,
    "y": 278,
@@ -479,6 +492,7 @@
   {
    "id": "tick4",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 770,
    "y": 278,
@@ -497,6 +511,7 @@
   {
    "id": "tick5",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 948,
    "y": 278,
@@ -515,6 +530,7 @@
   {
    "id": "tick6",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1125,
    "y": 278,
@@ -533,6 +549,7 @@
   {
    "id": "tick7",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1302,
    "y": 278,
@@ -551,6 +568,7 @@
   {
    "id": "tick8",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1440,
    "y": 278,
@@ -569,6 +587,7 @@
   {
    "id": "rpm",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1530,
    "y": 206,
@@ -590,6 +609,7 @@
   {
    "id": "rpmUnit",
    "type": "text",
+   "class": "alert",
    "z": 5,
    "x": 1768,
    "y": 236,
@@ -608,6 +628,7 @@
   {
    "id": "speed",
    "type": "text",
+   "class": "alert",
    "z": 7,
    "x": 85,
    "y": 350,
@@ -628,6 +649,7 @@
   {
    "id": "speedUnit",
    "type": "text",
+   "class": "alert",
    "z": 7,
    "x": 85,
    "y": 522,
@@ -646,6 +668,7 @@
   {
    "id": "gearCap",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1139,
    "y": 352,
@@ -664,6 +687,7 @@
   {
    "id": "gear",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1288,
    "y": 410,
@@ -683,6 +707,7 @@
   {
    "id": "selDimP",
    "type": "text",
+   "class": "alert",
    "z": 8,
    "x": 1208,
    "y": 524,
@@ -701,6 +726,7 @@
   {
    "id": "selP",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1208,
    "y": 524,
@@ -720,6 +746,7 @@
   {
    "id": "selDimR",
    "type": "text",
+   "class": "alert",
    "z": 8,
    "x": 1270,
    "y": 524,
@@ -738,6 +765,7 @@
   {
    "id": "selR",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1270,
    "y": 524,
@@ -757,6 +785,7 @@
   {
    "id": "selDimN",
    "type": "text",
+   "class": "alert",
    "z": 8,
    "x": 1332,
    "y": 524,
@@ -775,6 +804,7 @@
   {
    "id": "selN",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1332,
    "y": 524,
@@ -794,6 +824,7 @@
   {
    "id": "selDimD",
    "type": "text",
+   "class": "alert",
    "z": 8,
    "x": 1394,
    "y": 524,
@@ -812,6 +843,7 @@
   {
    "id": "selD",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1394,
    "y": 524,
@@ -831,6 +863,7 @@
   {
    "id": "selDimM",
    "type": "text",
+   "class": "alert",
    "z": 8,
    "x": 1456,
    "y": 524,
@@ -849,6 +882,7 @@
   {
    "id": "selM",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1456,
    "y": 524,
@@ -868,6 +902,7 @@
   {
    "id": "gearWord",
    "type": "text",
+   "class": "alert",
    "z": 11,
    "x": 1193,
    "y": 560,
@@ -886,6 +921,7 @@
   {
    "id": "tyreCap",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1630,
    "y": 338,
@@ -904,6 +940,7 @@
   {
    "id": "tyreFL",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1624,
    "y": 435,
@@ -922,6 +959,7 @@
   {
    "id": "tyreTFL",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1624,
    "y": 466,
@@ -940,6 +978,7 @@
   {
    "id": "tyreFR",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1801,
    "y": 435,
@@ -958,6 +997,7 @@
   {
    "id": "tyreTFR",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1801,
    "y": 466,
@@ -976,6 +1016,7 @@
   {
    "id": "tyreRL",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1624,
    "y": 514,
@@ -994,6 +1035,7 @@
   {
    "id": "tyreTRL",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1624,
    "y": 545,
@@ -1012,6 +1054,7 @@
   {
    "id": "tyreRR",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1801,
    "y": 514,
@@ -1030,6 +1073,7 @@
   {
    "id": "tyreTRR",
    "type": "text",
+   "class": "alert",
    "z": 9,
    "x": 1801,
    "y": 545,
@@ -1048,7 +1092,7 @@
   {
    "id": "car",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 9,
    "x": 1714,
    "y": 402,
@@ -1059,7 +1103,7 @@
   {
    "id": "dashHead",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 5,
    "x": 575,
    "y": 112,
@@ -1070,7 +1114,7 @@
   {
    "id": "dashHead2",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 5,
    "x": 1205,
    "y": 112,
@@ -1081,7 +1125,7 @@
   {
    "id": "stripes",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 7,
    "x": 90,
    "y": 588,
@@ -1092,7 +1136,7 @@
   {
    "id": "dashTyre",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 9,
    "x": 1790,
    "y": 617,
@@ -1103,7 +1147,7 @@
   {
    "id": "ic_coolant",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 10,
    "x": 48,
    "y": 641,
@@ -1114,6 +1158,7 @@
   {
    "id": "cap_coolant",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 107,
    "y": 646,
@@ -1132,6 +1177,7 @@
   {
    "id": "val_coolant",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 370,
    "y": 641,
@@ -1150,6 +1196,7 @@
   {
    "id": "u_coolant",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 488,
    "y": 644,
@@ -1168,7 +1215,7 @@
   {
    "id": "ic_oil",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 10,
    "x": 632,
    "y": 641,
@@ -1179,6 +1226,7 @@
   {
    "id": "cap_oil",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 698,
    "y": 646,
@@ -1197,6 +1245,7 @@
   {
    "id": "val_oil",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 797,
    "y": 641,
@@ -1215,6 +1264,7 @@
   {
    "id": "u_oil",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 915,
    "y": 644,
@@ -1233,7 +1283,7 @@
   {
    "id": "ic_battery",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 10,
    "x": 1006,
    "y": 641,
@@ -1244,6 +1294,7 @@
   {
    "id": "cap_battery",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1061,
    "y": 646,
@@ -1262,6 +1313,7 @@
   {
    "id": "val_battery",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1173,
    "y": 641,
@@ -1280,6 +1332,7 @@
   {
    "id": "u_battery",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1291,
    "y": 644,
@@ -1298,7 +1351,7 @@
   {
    "id": "ic_range",
    "type": "picture",
-   "class": "content",
+   "class": "alert",
    "z": 10,
    "x": 1472,
    "y": 641,
@@ -1309,6 +1362,7 @@
   {
    "id": "cap_range",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1516,
    "y": 646,
@@ -1327,6 +1381,7 @@
   {
    "id": "val_range",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1600,
    "y": 641,
@@ -1345,6 +1400,7 @@
   {
    "id": "u_range",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1680,
    "y": 644,
@@ -1363,6 +1419,7 @@
   {
    "id": "fuelE",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1748,
    "y": 640,
@@ -1381,6 +1438,7 @@
   {
    "id": "fuelF",
    "type": "text",
+   "class": "alert",
    "z": 10,
    "x": 1868,
    "y": 640,

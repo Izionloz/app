@@ -222,6 +222,14 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the top of its picture goes with it. That relies on the panel being above the map layer (it is what the README says of EVA covering the
   cluster map; not checked in a photo): if the map shows over the rev panel, use *EVA Comfort* (the first one) instead. `evaOn`'s `mapRect`
   is the rectangle for either layout; the helper needs no change.
+- **The CarPlay map in EVA Comfort's own layer (0.13.0, with mgux-hud-ctl 2.17.0):** the BMW cluster shows the map slot (0x100, "the central map area
+  under the gauges") only in its map view, so the map vanished whenever the cluster changed view or drive mode. Now, with the setting
+  "EVA Comfort: draw the CarPlay map in EVA's own layer" (on by default), the app sends `evaOn` with `panelMap: true` and its `mapRect`, and the
+  helper's proxy makes waze-on-cluster's video layer on the **panel** target (the whole-panel slot 0x203, where waze-on-cluster itself puts the
+  map at x 416, y 120 when told to run `panel`) in that rectangle instead of on `map`: it is part of EVA's own scene, whatever the BMW cluster
+  shows. EVA Comfort's backdrop is class `overlay` and its texts and pictures `alert`, so the map (class `content`) sits under the backdrop and
+  shows through its hole, and what the map has outside the window is hidden by the backdrop (the big-map layout relies on that). Only the
+  cluster's map moves (the HUD's stays); with the setting off, or the helper older than 2.17.0, it is as before. Not checked on the car.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
