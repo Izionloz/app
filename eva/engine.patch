@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..df300c9 100644
+index db817c2..107fb52 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -116,7 +116,7 @@ index db817c2..df300c9 100644
              this._status();
          }), 60000);
          this.statusTimer = setInterval(() => this._guard('status', () => this._status()), 5000);
-+        if (!this.parent) this.slotTimer = setInterval(() => this._guard('slots', () => { if (this.client.ready) this.client.status(); }), 15000);
++        if (!this.parent) this.slotTimer = setInterval(() => this._guard('slots', () => { if (this.client.ready) this.client.status(); }), 4000);
          this._status();
          this._startDme();
      }
@@ -208,7 +208,7 @@ index db817c2..df300c9 100644
 +        this._shownChanged();
 +    }
 +
-+    /** fn(lines) with the slot rows of cluster-render's status ("0x105 status 2: content ..."), asked for every 15 s while running. */
++    /** fn(lines) with the slot rows of cluster-render's status ("0x105 status 2: content ..."), asked for every 4 s while running. */
 +    onSlots(fn) { this.slotListeners.push(fn); if (this.slotLines) fn(this.slotLines); }
 +
 +    /** fn(on) whenever the layers are shown or hidden (config.standby: Sport on, other modes off). */
