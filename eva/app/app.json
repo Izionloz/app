@@ -34,7 +34,8 @@
       "statusCarSpeed2": "rs"
     },
     "de.bmw.infotainment.drivingexcitement.FES": {
-      "statusFESVehicleDynamicSwitchHMI": "rs"
+      "statusFESVehicleDynamicSwitchHMI": "rs",
+      "statusSwitchDriveDynamicSport2": "rs"
     },
     "de.bmw.infrastructure.VehicleInformation": {
       "statusGearboxDrive": "s",

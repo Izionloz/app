@@ -173,7 +173,8 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   and the cluster has a LAST SHIFT line: the gears, the rpm and the verdict (SPOT ON / EARLY / LATE / LIMITER / COLD REV), coloured by it.
 - **Battery and a clean HUD (0.10.1):** the cluster header shows the 12 V battery's charge (`{{battery}}` %, from CDS `statusBattery2`, an
   interface the app already declares; the voltage itself is not on the signals the app can reach). The HUD no longer shows oil or water
-  (the oil stays on the cluster). **S / M again:** `MDrive.dataDisplayGearbox` is declared again, this time with mode `s` (notify only), as
+  (the oil stays on the cluster). **Boost:** a BOOST readout in the cluster header (`{{boost}}`, from the FES sport display's `displayBoostPressure`, the interface
+  the app already declares; M Vitals reads the same field). **S / M again:** `MDrive.dataDisplayGearbox` is declared again, this time with mode `s` (notify only), as
   the M Vitals app declares it (0.9.1 used `rs`, which is the likely reason that install failed); the gear then reads S3 / M3.
   If this install fails, remove that declaration first.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)

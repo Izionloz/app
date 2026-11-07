@@ -179,10 +179,64 @@
    "align": "left"
   },
   {
+   "id": "boostCap",
+   "type": "text",
+   "z": 5,
+   "x": 790,
+   "y": 112,
+   "w": 100,
+   "h": 28,
+   "text": "BOOST",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "boost",
+   "type": "text",
+   "z": 5,
+   "x": 878,
+   "y": 108,
+   "w": 100,
+   "h": 39,
+   "text": "{{boost}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "boostU",
+   "type": "text",
+   "z": 5,
+   "x": 986,
+   "y": 111,
+   "w": 50,
+   "h": 37,
+   "text": "{{u:boost}}",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
    "id": "batCap",
    "type": "text",
    "z": 5,
-   "x": 1010,
+   "x": 1070,
    "y": 112,
    "w": 150,
    "h": 28,
@@ -200,7 +254,7 @@
    "id": "bat",
    "type": "text",
    "z": 5,
-   "x": 1150,
+   "x": 1210,
    "y": 108,
    "w": 90,
    "h": 39,
@@ -218,7 +272,7 @@
    "id": "batU",
    "type": "text",
    "z": 5,
-   "x": 1248,
+   "x": 1308,
    "y": 111,
    "w": 40,
    "h": 37,

@@ -84,7 +84,7 @@ test('eva app: only the signals it shows are declared (an interface this car lac
         'de.bmw.infotainment.vehicle.TPMS', 'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation',
         'de.bmw.infrastructure.VehicleInformation']);
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.vehicle.TPMS']).filter((k) => k[0] !== '_'), ['statusTyrePressure', 'statusTyreTemperature']);
-    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI']);
+    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI', 'statusSwitchDriveDynamicSport2']);
 });
 
 const hudLayout = json('hud', 'layouts', 'eva_hud.json');
