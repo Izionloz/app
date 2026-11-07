@@ -502,3 +502,24 @@ test('proxy: panelMap with the owner\'s zoom, focus and brightness (set in the d
         r.close();
     }
 });
+
+test('proxy: every designer setting on the HUD map (size, place, zoom, turn, focus, brightness, soft edges) reaches the layers, also when EVA HUD Comfort holds it', async () => {
+    const { FX } = require('../native/mgux-hud-ctl/renderproxy.js');
+    const layout = { mode: 'hud', native: true, hide: null, map: null,
+        hud: { custom: true, placed: true, x: 242, y: 200, w: 350, h: 154, opacity: 0.5, zoom: 1.5, rot: 20, fx: 0.25, fy: 0.75, fe: 0.2 } };
+    const r = await rig(layout);
+    try {
+        r.waze.write(jsonMsg({ op: 'layer', kind: 'video', ref: 2, target: 'hud', x: 200, y: 140, w: 400, h: 176, vw: 400, vh: 176, visible: 1 }));
+        r.waze.write(frameMsg(2, 64, 5));
+        await r.waitUp(4);
+        const msgs = jsonOf(r.upMsgs, 0);
+        const l = msgs.find((j) => j.op === 'layer' && j.ref === 2);
+        assert.deepStrictEqual([l.x, l.y, l.w, l.h, l.sx, l.sy, l.rotate, l.opacity], [242, 200, 350, 154, 1.5, 1.5, 20, 0.5]);
+        assert.ok(l.px >= 0 && l.py >= 0, 'the pivot of the focus is sent');
+        const fe = msgs.find((j) => j.op === 'layer' && j.ref === 2 + FX);
+        assert.ok(fe, 'the soft edges are an effect layer above the map');
+        assert.deepStrictEqual([fe.x, fe.y, fe.w, fe.h, fe.rotate], [242, 200, 350, 154, 20]);
+    } finally {
+        r.close();
+    }
+});
