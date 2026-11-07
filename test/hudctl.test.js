@@ -311,14 +311,14 @@ test('evaOn mapRect: the cluster map goes into the rectangle while EVA Comfort s
     const d = new ctl.Daemon();
     d.proxy.update = () => {};
     assert.strictEqual(d.layout().map, null);                                   /* waze's own place until it is customised */
-    d.handle({ cmd: 'evaOn', on: true, hide: 'none', mapRect: { x: 92, y: 216, w: 594, h: 262 } });
+    d.handle({ cmd: 'evaOn', on: true, hide: 'none', mapRect: { x: 90, y: 216, w: 594, h: 262 } });
     const m = d.layout().map;
     assert.ok(m && m.custom && m.placed);
-    assert.deepStrictEqual([m.x, m.y, m.w, m.h, m.zoom, m.rot], [92, 216, 594, 262, 1, 0]);
+    assert.deepStrictEqual([m.x, m.y, m.w, m.h, m.zoom, m.rot], [90, 216, 594, 262, 1, 0]);
     assert.strictEqual(d.layout().hide, null);
     d.handle({ cmd: 'evaOn', on: true, hide: 'none', mapRect: { x: 'a', y: 1, w: 5, h: 5 } });   /* not numbers / too small */
     assert.strictEqual(d.layout().map, null);
-    d.handle({ cmd: 'evaOn', on: true, hide: 'none', mapRect: { x: 92, y: 216, w: 594, h: 262 } });
+    d.handle({ cmd: 'evaOn', on: true, hide: 'none', mapRect: { x: 90, y: 216, w: 594, h: 262 } });
     d.handle({ cmd: 'evaOn', on: false });
     assert.strictEqual(d.layout().map, null);
     assert.deepStrictEqual(d.state.map.custom, false);                          /* nothing was saved */

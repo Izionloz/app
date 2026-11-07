@@ -206,11 +206,11 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   lights and a thin rev rail, the gear box at the left and BMW's own speed under its rule. It draws its lines with one transparent
   `evadash2` layer, and while it shows the helper hides no HUD map layers (`evaOn` with `hide: "none"` for the HUD, which 2.15.0 has).
 - **The CarPlay map in EVA Comfort's window (0.12.0, with mgux-hud-ctl 2.16.0):** while EVA Comfort shows, the app sends the helper the
-  window's rectangle (`evaOn` with `mapRect`, in the map target's own 1088x480 pixels: the window 594x262 at cluster x 508, y 336, the
+  window's rectangle (`evaOn` with `mapRect`, in the map target's own 1088x480 pixels: the window 594x262 at cluster x 506, y 336, the
   map target sitting at x 416, y 120 as in the bimmer-lab cluster themes) and the helper puts the cluster map there (its place, size
   and brightness setting for the map are left alone and nothing is saved; the zoom and turn are 1 and 0 while it does), then gives
-  the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched; the
-  frame round it is wider and its two sides are black. Where the map target really sits on the cluster is not measured on this car.
+  the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
+  frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
   The EVA HUD Comfort no longer draws a rule and "SPEED" at BMW's speed: its middle is free for the HUD map.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;

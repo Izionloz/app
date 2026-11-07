@@ -26,7 +26,7 @@ const HudApp = require('./hud');
 
 // EVA Comfort's map window (the hole in eva_comfort.json, cluster px): the cluster map is put there while that layout shows. The map target
 // (1088x480) sits at x 416, y 120 on the cluster, so the rectangle is in its own pixels; its shape is the map's (1088:480).
-const COMFORT_MAP = { x: 508 - 416, y: 336 - 120, w: 594, h: 262 };
+const COMFORT_MAP = { x: 506 - 416, y: 336 - 120, w: 594, h: 262 };
 
 mgu.run({
     start(ctx) {
