@@ -163,10 +163,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   3500 rpm, 1.4 s), the frame and a glow round the bar grow with the level and breathe from 5000 rpm, and at the redline the whole bar and
   its last six segments strobe (shift lights). The effects are uniform values (`u_fx`) sent a few times a second, no new layers. The HUD
   layouts also show the coolant (a 14-segment ramp rail and the number, bottom right, clear of BMW's speed; the cluster already had it).
-- **S and M (0.9.1):** the shifter programme (S, or M for manual / paddles) comes from `de.bmw.infotainment.misc.MDrive`
-  (`dataDisplayGearbox`), declared again in `app.json`: the gear then reads S3 / M3 instead of D3, with SPORT / MANUAL under it. That
-  interface was one of those dropped in 0.1.1 (the 0.1.0 install failed on one the unit lacks, which one is not known), so if this
-  install fails, the MDrive declaration is the first thing to remove (the gear then reads D1 .. D8 only).
+- **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
+  and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
+  it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
 - **The gear (0.8.1):** the gear box shows what BMW's selector shows, P R N or D with the engaged gear (D1 .. D8; S / M by the shifter
   programme when known), on the cluster and the HUD (`{{gear}}` instead of `{{stage}}`; fonts `e_gearn`, `w_gear`).
 - **EVA HUD on the windshield (0.6.0):** a second display of the same app on cluster-render's `hud` target, from the owner's

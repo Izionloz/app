@@ -80,9 +80,9 @@ test('eva engine.patch only touches the engine files it names', () => {
 
 test('eva app: only the signals it shows are declared (an interface this car lacks fails the install)', () => {
     assert.deepStrictEqual(Object.keys(app.signals).sort(), [
-        'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES', 'de.bmw.infotainment.misc.MDrive',
-        'de.bmw.infotainment.vehicle.CDS', 'de.bmw.infotainment.vehicle.TPMS', 'de.bmw.infotainment.vehicle.Vehicle2',
-        'de.bmw.infrastructure.EnvironmentalInformation', 'de.bmw.infrastructure.VehicleInformation']);
+        'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES', 'de.bmw.infotainment.vehicle.CDS',
+        'de.bmw.infotainment.vehicle.TPMS', 'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation',
+        'de.bmw.infrastructure.VehicleInformation']);
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.vehicle.TPMS']).filter((k) => k[0] !== '_'), ['statusTyrePressure', 'statusTyreTemperature']);
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI']);
 });

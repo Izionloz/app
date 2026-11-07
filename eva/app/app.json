@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -45,10 +45,6 @@
       "statusTyrePressure": "rs",
       "statusTyreTemperature": "rs",
       "_optional": "tyre pressures on the cluster"
-    },
-    "de.bmw.infotainment.misc.MDrive": {
-      "dataDisplayGearbox": "rs",
-      "_optional": "S or M next to the gear"
     }
   },
   "screens": [
