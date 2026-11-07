@@ -39,7 +39,7 @@ def build(wide):
         {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
         {'x': 26, 'y': MY, 'w': SPW, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
         {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
-        {'x': GX, 'y': 332, 'w': 1603 - GX, 'h': 260, 'chamfer': 24, 'glow': 1},          # the gear box
+        {'x': GX, 'y': 332, 'w': 1603 - GX, 'h': 260, 'cut': [8, 8, 24, 24], 'glow': 1},   # small top corners: BMW's box (its corners at x 1406 / 1597, y 342) stays inside          # the gear box
     ]
     framesB = [
         {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
