@@ -97,17 +97,6 @@ if a.comfort:
     save('c_car', fit(load('25_car_separate'), 156))
     save('c_stripes', fit(load('03_top_stripes'), 28))
 
-    # the gear panel: the pack's slanted bars and hexagon at half size, its static P R N D M row (the D lit) replaced by gray letters drawn
-    # here, so the engaged letter can be lit by the layout over them; the gear itself and its word are text widgets in the hexagon
-    from PIL import ImageFont
-    gp = load('23_gear_panel_blank_D').convert('RGB')
-    gd = ImageDraw.Draw(gp)
-    gd.rectangle([0, 376, gp.width, 458], fill=(0, 0, 0))
-    ft = ImageFont.truetype(os.path.join(a.kit, 'tools', 'fonts-src', 'BarlowCondensed-Bold.ttf'), 60)
-    for ch, cx in zip('PRNDM', (90, 158, 232, 322, 412)):
-        gd.text((cx, 416), ch, font=ft, fill=(168, 168, 176), anchor='mm')
-    save('c_gear', gp.resize((243, 260), Image.LANCZOS))
-
     def dashes(n, w=20, h=10, skew=7, gap=8, color=(236, 70, 42, 255)):
         W = n * (w + gap) - gap + skew
         im = Image.new('RGBA', (W * 4, h * 4), (0, 0, 0, 0))

@@ -35,6 +35,7 @@ framesA = [                                                         # evadash2 h
     {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
     {'x': 26, 'y': MY, 'w': 365, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
     {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
+    {'x': 1232, 'y': 352, 'w': 168, 'h': 240, 'chamfer': 24, 'glow': 1},               # the gear box, as in EVA Sport
 ]
 framesB = [
     {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
@@ -82,11 +83,10 @@ text('rpmUnit', 1768, 236, 76, 37, 'rpm', 'e_unit', TITLE, z=5)
 text('speed', 36, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=7, rate=1)
 text('speedUnit', 36, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
 
-# the gear panel is a picture (bars, hexagon, P R N D M row); the gear and the lit selector letter are text over it (one group, z 11)
-GX, GY = 1222, 350
-text('gear', GX + 66, 421, 117, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
-for L, cx in zip('PRNDM', (90, 158, 232, 322, 412)):         # the engaged letter lit over the dim ones in the picture
-    text('sel' + L, GX + round(cx * 0.499) - 15, 543, 30, 28, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
+# the gear box as in EVA Sport: a frame, GEAR, the gear big, its word (P R N, D1 .. D8, S3, M3) under it; x stays left of BMW's box (x 1406)
+text('gearCap', 1244, 362, 144, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'center', z=11)
+text('gear', 1244, 410, 144, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+text('gearWord', 1244, 530, 144, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
 
 text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
 for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1808, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1808, 514, 'right')):
@@ -103,7 +103,6 @@ picture('dashHead', 'c_dash5', 575, 112, 139, 10, 5)
 picture('dashHead2', 'c_dash5', 1205, 112, 139, 10, 5)
 picture('stripes', 'c_stripes', 70, 588, 173, 28, 7)
 picture('dashTyre', 'c_dash3', 1790, 617, 83, 10, 9)
-picture('gearPanel', 'c_gear', GX, GY, 243, 260, 8)
 
 ICONS = {'COOLANT': ('c_coolant', 45), 'OIL': ('c_oil', 52), 'BATTERY': ('c_battery', 41), 'RANGE': ('c_fuel', 36)}
 for (cx, cw), cap, val, unit, uw in zip(SEC, ('COOLANT', 'OIL', 'BATTERY', 'RANGE'), ('{{coolant}}', '{{oil}}', '{{battery}}', '{{range}}'),
