@@ -7,12 +7,12 @@
             "kind": "tool",
             "title": "HUD map (background service)",
             "description": "Installed with HUD map: keeps the HUD map's and the cluster map's size, place, brightness, soft edges, zoom and rotation, and puts the map where HUD map says",
-            "version": "2.14.0",
+            "version": "2.15.0",
             "artifact": {
-                "name": "mgux-hud-ctl@2.14.0.tgz",
-                "size": 18389,
-                "sha256": "921cccea5e8ba017bbfe8eacf751fca06f286b656582f5199e9a2624a21fcce0",
-                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.14.0/mgux-hud-ctl%402.14.0.tgz"
+                "name": "mgux-hud-ctl@2.15.0.tgz",
+                "size": 18406,
+                "sha256": "a090a65a6a9a9656af56c58ea61adfdd30f9352d25c390761ab4dbbd8883eb35",
+                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.15.0/mgux-hud-ctl%402.15.0.tgz"
             },
             "requires": {
                 "mgu-deploy": "0.4.0"
@@ -36,7 +36,7 @@
                 "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.1/hud_designer%401.6.1.tgz"
             },
             "requires": {
-                "mgux-hud-ctl": "2.14.0"
+                "mgux-hud-ctl": "2.15.0"
             },
             "mguHmi": [
                 "ID7"
@@ -48,19 +48,19 @@
             "kind": "app",
             "title": "EVA cluster and HUD",
             "description": "In Sport the instrument cluster and the windshield HUD become an EVA-style display: segmented rev bar (flashes at the redline), big speed, gear and drive mode; the cluster also shows coolant, range and outside temperature, and the pilot picture. The HUD map gives way while the EVA HUD shows",
-            "version": "0.10.1",
+            "version": "0.11.0",
             "artifact": {
-                "name": "eva_cluster@0.10.1.tgz",
-                "size": 1160870,
-                "sha256": "bccc414cf175f041c13a0b6b5581e6e237d5baa5c21688c9a90468d93afba0c3",
-                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.10.1/eva_cluster%400.10.1.tgz"
+                "name": "eva_cluster@0.11.0.tgz",
+                "size": 1162817,
+                "sha256": "345ab76d4c3f6f99cb78cbb46b960ad13fdec3acf59811454b13be10a5e258ec",
+                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.11.0/eva_cluster%400.11.0.tgz"
             },
             "mguHmi": [
                 "ID7"
             ],
             "uninstallable": true,
             "requires": {
-                "mgux-hud-ctl": "2.14.0"
+                "mgux-hud-ctl": "2.15.0"
             }
         }
     ]

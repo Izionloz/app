@@ -67,12 +67,13 @@ mgu.run({
             const h = holds[who] || (holds[who] = { on: false, keep: null });
             clearInterval(h.keep);
             h.keep = null;
-            const msg = () => ({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? 'map' : 'hud') });
+            // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
+            const msg = () => ({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? (h.layout === 'eva_comfort' ? 'none' : 'map') : 'hud') });
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };
         visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
-        hud.onShown((shown) => { (holds.panel || (holds.panel = { on: false, keep: null })).on = shown; tell('panel'); });
+        hud.onShown((shown, name) => { const h = holds.panel || (holds.panel = { on: false, keep: null }); h.on = shown; h.layout = name; tell('panel'); });
         if (whud) whud.onShown((shown) => { (holds.hud || (holds.hud = { on: false, keep: null })).on = shown; tell('hud'); });
         ctx.settings.onChange((key) => {
             if (key !== 'separate') return;

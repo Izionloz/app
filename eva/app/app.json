@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -87,6 +87,10 @@
         [
           "eva",
           "EVA"
+        ],
+        [
+          "eva_comfort",
+          "EVA Comfort (the map stays in its window)"
         ]
       ]
     },
@@ -109,6 +113,10 @@
         [
           "eva",
           "EVA"
+        ],
+        [
+          "eva_comfort",
+          "EVA Comfort (the map stays in its window)"
         ]
       ]
     },
@@ -125,6 +133,10 @@
         [
           "eva",
           "EVA"
+        ],
+        [
+          "eva_comfort",
+          "EVA Comfort (the map stays in its window)"
         ]
       ]
     },
@@ -141,6 +153,10 @@
         [
           "eva",
           "EVA"
+        ],
+        [
+          "eva_comfort",
+          "EVA Comfort (the map stays in its window)"
         ]
       ]
     },
@@ -152,11 +168,11 @@
       "options": [
         [
           "us",
-          "mph, \u00b0F, psi"
+          "mph, °F, psi"
         ],
         [
           "metric",
-          "km/h, \u00b0C, bar"
+          "km/h, °C, bar"
         ]
       ]
     },

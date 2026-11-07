@@ -286,6 +286,8 @@ test('panelScene and evaOn hide: the panel gets the map\'s scene so the HUD can 
     assert.deepStrictEqual(d.layout().hide, ['map']);
     d.handle({ cmd: 'evaOn', on: true, hide: 'hud' });          /* the setting changed while it shows */
     assert.deepStrictEqual(d.layout().hide, ['hud']);
+    d.handle({ cmd: 'evaOn', on: true, hide: 'none' });         /* EVA Comfort: a window for the map, nothing is hidden */
+    assert.strictEqual(d.layout().hide, null);
     d.handle({ cmd: 'evaOn', on: false });
     assert.strictEqual(d.layout().hide, null);
     clearTimeout(d.evaT);
