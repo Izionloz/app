@@ -27,9 +27,6 @@ const HudApp = require('./hud');
 // EVA Comfort's map window (the hole in eva_comfort.json, cluster px): the cluster map is put there while that layout shows. The map target
 // (1088x480) sits at x 416, y 120 on the cluster, so the rectangle is in its own pixels; its shape is the map's (1088:480).
 const COMFORT_MAP = { x: 506 - 416, y: 336 - 120, w: 594, h: 262 };
-// EVA HUD Comfort: the HUD map goes into the free middle of the window (800x480 HUD pixels), in the map's shape, between the gear box and the
-// right edge and under the rev rail (eva_hud_comfort.json keeps that rectangle clear)
-const HUD_COMFORT_MAP = { x: 258, y: 198, w: 330, h: 146 };
 
 mgu.run({
     start(ctx) {
@@ -75,7 +72,7 @@ mgu.run({
             clearInterval(h.keep);
             h.keep = null;
             // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
-            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort' ? 'none' : 'map') : 'hud') }, who === 'panel' && h.layout === 'eva_comfort' && separate() ? { mapRect: COMFORT_MAP } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
+            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? (h.layout === 'eva_comfort' ? 'none' : 'map') : 'hud') }, who === 'panel' && h.layout === 'eva_comfort' && separate() ? { mapRect: COMFORT_MAP } : {});
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };

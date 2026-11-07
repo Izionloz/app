@@ -199,7 +199,7 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
     });
 });
 
-test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, transparent frame layer, fonts baked, offered in the HUD settings', () => {
+test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, a rev count in the middle, transparent frame layer, fonts baked, offered in the HUD settings', () => {
     const l = json('hud', 'layouts', 'eva_hud_comfort.json');
     const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
     l.widgets.forEach((w) => {
@@ -211,12 +211,7 @@ test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s spe
             if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
         }
     });
-    // the HUD map goes into HUD_COMFORT_MAP: no widget over it
-    const mm = /HUD_COMFORT_MAP = \{ x: (\d+), y: (\d+), w: (\d+), h: (\d+) \}/.exec(fs.readFileSync(path.join(APP, 'main.js'), 'utf8'));
-    assert.ok(mm, 'HUD_COMFORT_MAP is not in main.js');
-    const mr = [Number(mm[1]), Number(mm[2]), Number(mm[3]), Number(mm[4])];
-    assert.ok(Math.abs(mr[2] / mr[3] - 1088 / 480) < 0.05, 'the HUD map rectangle is not the map\'s shape');
-    l.widgets.filter((w) => w.type === 'text').forEach((w) => assert.ok(!(w.x < mr[0] + mr[2] && w.x + w.w > mr[0] && w.y < mr[1] + mr[3] && w.y + w.h > mr[1]), `${w.id} is over the HUD map`));
+    assert.ok(l.widgets.some((w) => w.id === 'rpm'), 'the rev count is the middle of the layout');
     const d = l.widgets.filter((w) => w.type === 'evadash2');
     assert.strictEqual(d.length, 1);
     assert.strictEqual(d[0].bg, false);
