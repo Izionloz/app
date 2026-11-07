@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..27b0d27 100644
+index db817c2..53403c2 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -139,7 +139,15 @@ index db817c2..27b0d27 100644
              case 'u:speed': return us ? 'MPH' : 'KM/H';
              case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
              case 'boost': { const v = this._raw('boost'); return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
-@@ -829,6 +876,21 @@ class HudApp {
+@@ -825,10 +872,29 @@ class HudApp {
+                 const d = this.car.data();
+                 return d.stage === 'D' || (!d.stage && isNum(d.gear) && d.gear > 0) ? this._program(d) : (d.stage || '-');
+             }
++            case 'sel:P': case 'sel:R': case 'sel:N': case 'sel:D': case 'sel:M': {   // the selector letter while it is the one engaged, else nothing (to light it in a row of dim letters)
++                const L = tok.charAt(4), s = this._token('stage');
++                return (L === 'D' ? (s === 'D' || s === 'S') : s === L) ? L : '';
++            }
+             case 'gearInD': {        // the gear number while driving, else nothing (the M "2D")
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
@@ -161,7 +169,7 @@ index db817c2..27b0d27 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -871,6 +933,15 @@ class HudApp {
+@@ -871,6 +937,15 @@ class HudApp {
      _rebuild() {
          this._guard('rebuild', () => this._rebuildInner());
          this._status();
@@ -177,7 +185,7 @@ index db817c2..27b0d27 100644
      }
  
      _rebuildInner() {
-@@ -885,15 +956,20 @@ class HudApp {
+@@ -885,15 +960,20 @@ class HudApp {
          this.car.setRedline(this.setting('redline'));
          const name = this._layoutName();
          this.activeName = name;
@@ -201,7 +209,7 @@ index db817c2..27b0d27 100644
              return;
          }
          this.problem = null;
-@@ -977,7 +1053,7 @@ class HudApp {
+@@ -977,7 +1057,7 @@ class HudApp {
      /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
      _createSheet(s) {
          const c = this._clientAt(s.conn);
@@ -210,7 +218,7 @@ index db817c2..27b0d27 100644
          if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
          s.ref = ref; s.c = c; s.ci = s.conn;
          s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1111,7 @@ class HudApp {
+@@ -1035,7 +1115,7 @@ class HudApp {
          if (sheet) { ref = sheet.ref; c = sheet.c; }
          else {
              c = this._clientAt(this._connOf(w));
@@ -219,7 +227,7 @@ index db817c2..27b0d27 100644
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1134,8 @@ class HudApp {
+@@ -1058,6 +1138,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -228,7 +236,7 @@ index db817c2..27b0d27 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1221,7 +1299,7 @@ class HudApp {
+@@ -1221,7 +1303,7 @@ class HudApp {
      _tick() {
          const now = Date.now();
          this._smoothRpm(now);
@@ -237,7 +245,7 @@ index db817c2..27b0d27 100644
          // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
          const rpm = this._raw('rpm');
          const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
-@@ -1235,8 +1313,11 @@ class HudApp {
+@@ -1235,8 +1317,11 @@ class HudApp {
          const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
          this.lastTickT = now;
          if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -251,7 +259,7 @@ index db817c2..27b0d27 100644
      }
  
      _update(x, now, force) {
-@@ -1258,6 +1339,7 @@ class HudApp {
+@@ -1258,6 +1343,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -259,7 +267,7 @@ index db817c2..27b0d27 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1378,8 @@ class HudApp {
+@@ -1296,6 +1382,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -268,7 +276,7 @@ index db817c2..27b0d27 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1480,132 @@ class HudApp {
+@@ -1396,6 +1484,141 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -295,24 +303,29 @@ index db817c2..27b0d27 100644
 +    _createEva(x) {
 +        const w = x.w, c = x.c, ref = x.ref;
 +        const frames = (Array.isArray(w.frames) ? w.frames : []).filter((f) => f && isNum(f.x) && isNum(f.y) && isNum(f.w) && isNum(f.h)).slice(0, 12);
-+        const rects = [], styles = [];
++        const rects = [], styles = [], cuts = [];
 +        for (let i = 0; i < 12; i++) {
 +            const f = frames[i];
 +            rects.push(f ? f.x - w.x : 0, f ? f.y - w.y : 0, f ? f.w : 0, f ? f.h : 0);
-+            styles.push(f ? (f.chamfer === undefined ? 22 : f.chamfer) : 0, f ? (f.border === undefined ? 2 : f.border) : 0, f ? f.kind || 0 : 0, f ? f.color || 0 : 0);
++            const ch = f ? (f.chamfer === undefined ? 22 : f.chamfer) : 0;
++            // glow 0..3 rides on the colour number (colour + 4 * glow); cut: the four corners' cuts, else chamfer on all
++            styles.push(ch, f ? (f.border === undefined ? 2 : f.border) : 0, f ? f.kind || 0 : 0, f ? (f.color || 0) + 4 * (f.glow || 0) : 0);
++            const cu = f && Array.isArray(f.cut) && f.cut.length === 4 ? f.cut : [ch, ch, ch, ch];
++            cuts.push(cu[0], cu[1], cu[2], cu[3]);
 +        }
 +        const rails = Array.isArray(w.rails) ? w.rails.slice(0, 2) : [];
 +        const rr = [], rp = [];
 +        for (let i = 0; i < 2; i++) {
 +            const r = rails[i];
 +            rr.push(r ? r.x - w.x : 0, r ? r.y - w.y : 0, r ? r.w : 0, r ? r.h : 0);
-+            rp.push(r ? r.segs : 1, 0, r ? (r.gap === undefined ? 4 : r.gap) : 4, r && r.ramp ? 1 : 0);
++            rp.push(r ? r.segs : 1, 0, r ? (r.gap === undefined ? 4 : r.gap) : 4, r && r.plain ? 2 : r && r.ramp ? 1 : 0);
 +        }
 +        x.eva = { segs: [rp[0], rp[4]], rp };
 +        c.uniform(ref, 'u_size', [w.w, w.h]);
 +        c.uniform(ref, 'u_n', [frames.length]);
 +        c.uniform(ref, 'u_frame', rects, { type: 'vec4' });
 +        c.uniform(ref, 'u_fstyle', styles, { type: 'vec4' });
++        c.uniform(ref, 'u_fcut', cuts, { type: 'vec4' });
 +        c.uniform(ref, 'u_pal', [200 / 255, 57 / 255, 50 / 255, 1, 136 / 255, 53 / 255, 43 / 255, 1, 1, 173 / 255, 84 / 255, 1], { type: 'vec4' });
 +        c.uniform(ref, 'u_rail', rr, { type: 'vec4' });
 +        c.uniform(ref, 'u_railP', rp, { type: 'vec4' });
@@ -334,9 +347,12 @@ index db817c2..27b0d27 100644
 +    _updateEva(x, force) {
 +        const w = x.w, e = x.eva;
 +        if (!e) return;
-+        const rpm = this._raw('rpm'), cool = this._raw(w.rail1Signal || 'coolant');
-+        const lit0 = isNum(rpm) ? Math.max(0, Math.min(e.segs[0], Math.round(rpm / (w.rpmMax || 8000) * e.segs[0]))) : 0;
-+        const lit1 = isNum(cool) ? Math.max(0, Math.min(e.segs[1], Math.round(cool / (w.coolMax || 120) * e.segs[1]))) : 0;
++        // each rail follows a signal: the first the rev count (rpmMax), the second the coolant (coolMax) or w.rail1Signal; a rail's own
++        // "signal" and "max" override that (the oil, the fuel level)
++        const R = Array.isArray(w.rails) ? w.rails : [];
++        const rpm = this._raw((R[0] && R[0].signal) || 'rpm'), cool = this._raw((R[1] && R[1].signal) || w.rail1Signal || 'coolant');
++        const lit0 = isNum(rpm) ? Math.max(0, Math.min(e.segs[0], Math.round(rpm / ((R[0] && R[0].max) || w.rpmMax || 8000) * e.segs[0]))) : 0;
++        const lit1 = isNum(cool) ? Math.max(0, Math.min(e.segs[1], Math.round(cool / ((R[1] && R[1].max) || w.coolMax || 120) * e.segs[1]))) : 0;
 +        const lvl = this._evaLevel();
 +        const dim = lvl >= 3 && Math.floor(Date.now() / EVA_FLASH_MS) % 2 === 1 ? 0.55 : 1;
 +        // effects of the rev rail: a band sweeping along the lit part (1.4 s, from 3500 rpm), a breathing glow from the second level,
@@ -366,7 +382,8 @@ index db817c2..27b0d27 100644
 +        x.c.uniform(x.ref, 'u_fx', [phase, pulse, lvl, redFrac]);
 +        if (LD) x.c.uniform(x.ref, 'u_ledP', [LD.count || 12, lit, strobe, LD.tail || 0]);
 +        x.c.uniform(x.ref, 'u_railP', rp, { type: 'vec4' });
-+        x.c.uniform(x.ref, 'u_railCol', [lc[0] / 255, lc[1] / 255, lc[2] / 255, dim, 0.4, 0.96, 0.72, 1], { type: 'vec4' });
++        const c0 = (R[0] && R[0].color) || [lc[0] / 255, lc[1] / 255, lc[2] / 255], c1 = (R[1] && R[1].color) || [0.4, 0.96, 0.72];
++        x.c.uniform(x.ref, 'u_railCol', [c0[0], c0[1], c0[2], (R[0] && R[0].color) ? 1 : dim, c1[0], c1[1], c1[2], 1], { type: 'vec4' });
 +    }
 +
 +    /** The layout to keep built, hidden, while the active one is "off" (config.standby): the Sport layout, else the plain one. */
@@ -436,10 +453,10 @@ index af2ad98..f3afe59 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..b5f328d 100644
+index c8679c1..c306a41 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,167 @@ void main() {
+@@ -889,4 +889,188 @@ void main() {
  }
  `;
  
@@ -460,6 +477,7 @@ index c8679c1..b5f328d 100644
 +uniform float u_n;
 +uniform vec4 u_frame[12];
 +uniform vec4 u_fstyle[12];
++uniform vec4 u_fcut[12];  // the corner cuts px: top-left, top-right, bottom-right, bottom-left
 +uniform vec4 u_pal[3];
 +uniform vec4 u_rail[2];
 +uniform vec4 u_railP[2];
@@ -473,10 +491,17 @@ index c8679c1..b5f328d 100644
 +uniform float u_holeR;
 +uniform float u_bgA;     // the backdrop's opacity: 1 black, 0 only what is drawn shows (a second layer of frames)
 +
-+float cham(vec2 p, vec4 r, float c) {
++float cham(vec2 p, vec4 r, vec4 c) {
 +    vec2 h = r.zw * 0.5;
 +    vec2 q = abs(p - (r.xy + h)) - h;
-+    return max(max(q.x, q.y), (q.x + q.y + c) * 0.70710678);
++    vec2 a = p - r.xy;
++    vec2 b = r.zw - a;
++    float d = max(q.x, q.y);
++    d = max(d, (c.x - (a.x + a.y)) * 0.70710678);
++    d = max(d, (c.y - (b.x + a.y)) * 0.70710678);
++    d = max(d, (c.z - (b.x + b.y)) * 0.70710678);
++    d = max(d, (c.w - (a.x + b.y)) * 0.70710678);
++    return d;
 +}
 +
 +vec3 over(vec3 under, vec3 c, float a) { return mix(under, c, clamp(a, 0.0, 1.0)); }
@@ -485,6 +510,7 @@ index c8679c1..b5f328d 100644
 +    vec2 q = p - r.xy;
 +    if (q.x < 0.0 || q.y < 0.0 || q.x > r.z || q.y > r.w) return vec4(0.0);
 +    bool rev = sp.w < 0.5;
++    bool ramp = sp.w > 0.5 && sp.w < 1.5;
 +    float edge = min(min(q.x, r.z - q.x), min(q.y, r.w - q.y));
 +    if (edge < 1.0) {
 +        vec3 b = vec3(0.6, 0.2, 0.16);
@@ -510,7 +536,7 @@ index c8679c1..b5f328d 100644
 +    }
 +    if (i < sp.y) {
 +        vec3 c = cl.rgb;
-+        if (sp.w > 0.5) {
++        if (ramp) {
 +            c = k >= 0.9500 ? vec3(0.98, 0.32, 0.30) : (k >= 0.8700 ? vec3(0.98, 0.74, 0.41) : vec3(0.40, 0.96, 0.72));
 +        }
 +        if (rev) {
@@ -536,22 +562,34 @@ index c8679c1..b5f328d 100644
 +        vec4 r = u_frame[i];
 +        vec4 st = u_fstyle[i];
 +        vec4 col = u_pal[0];
-+        if (st.w > 1.5) col = u_pal[2]; else if (st.w > 0.5) col = u_pal[1];
++        float gl = floor(st.w / 4.0);
++        float ci = st.w - 4.0 * gl;
++        if (ci > 1.5) col = u_pal[2]; else if (ci > 0.5) col = u_pal[1];
 +        float a = 0.0;
++        float glow = 0.0;
 +        if (st.z < 0.5) {
-+            float d = cham(p, r, st.x);
++            float d = cham(p, r, u_fcut[i]);
 +            float e = abs(d + 0.5 * st.y) - 0.5 * st.y;
 +            a = clamp(0.5 - e, 0.0, 1.0);
++            glow = gl * 0.16 * exp(-abs(d) / 7.0);
 +        } else if (st.z < 1.5) {
 +            vec2 q = p - r.xy;
 +            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) {
 +                if (q.x < st.y || r.z - q.x < st.y || r.w - q.y < 3.0) a = 1.0;
 +            }
-+        } else {
++        } else if (st.z < 2.5) {
 +            vec2 q = p - r.xy;
 +            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) a = 1.0;
++        } else {
++            // a slanted rule from the rect's bottom-left to its top-right corner, st.y px thick
++            vec2 q = p - r.xy;
++            if (q.x >= 0.0 && q.y >= 0.0 && q.x <= r.z && q.y <= r.w) {
++                float dd = abs(q.x * r.w + q.y * r.z - r.z * r.w) / length(vec2(r.w, r.z));
++                a = clamp(0.5 * st.y + 0.5 - dd, 0.0, 1.0);
++            }
 +        }
 +        c = over(c, col.rgb, a * col.a);
++        c += col.rgb * glow * col.a * (1.0 - a);
 +    }
 +    for (int k = 0; k < 2; k++) {
 +        vec4 rr = rail(p, u_rail[k], u_railP[k], u_railCol[k]);

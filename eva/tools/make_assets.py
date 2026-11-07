@@ -35,6 +35,7 @@ FONTS = [
     ('e_mono', 'BarlowCondensed-SemiBold.ttf', 24, U + D + ' .:-\u00b7'),
     ('e_val', 'BarlowCondensed-Bold.ttf', 50, D + '.+-'),
     ('e_gearn', 'BarlowCondensed-Bold.ttf', 118, 'PRNDSM' + D + '-'),
+    ('e_tp', 'BarlowCondensed-SemiBold.ttf', 26, D + '.°-' + U + L + ' '),
     ('e_tyre', 'BarlowCondensed-Bold.ttf', 28, U + L + D + ' .->'),
     # the EVA HUD on the windshield (800x480, the window the driver sees is about 485x278)
     ('w_title', 'BarlowCondensed-Bold.ttf', 26, U + ' '),

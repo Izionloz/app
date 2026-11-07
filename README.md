@@ -187,6 +187,12 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the middle row is a little shorter, the map window is 800 wide and BMW's black gear box (x 1406-1597, y 342-419) stays in the gear
   section, the battery shows its charge in % and there are no icons. Only seen on the bench: whether the car's map shows in the
   window (and above or below the panel) needs the car.
+  **Look of the reference render** (the second design the owner sent): frames with each corner cut on its own and a glow (`evadash`
+  frames take `cut: [tl, tr, br, bl]` and `glow`), a hexagonal gear box and map window, the header in three plates, slanted rules
+  (frame `kind: 3`) between the sections of the bottom row, the selector row P R N D M with the engaged letter lit (token
+  `{{sel:P}}` .. `{{sel:M}}` over dim letters), tyre pressures with their temperatures beside the car, and coolant, oil and fuel
+  rails (a rail takes its own `signal`, `max`, `color` and `plain`; the fuel rail has E and F). Not done: the 3D map art (the real map
+  shows in the window) and the italic type.
   The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (thermometer, oil can, battery, fuel
   pump), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
   --comfort <folder>`; the baked pictures are committed). They join the text sheets (the layout still has 7 layers, 4.9 MiB). Not
