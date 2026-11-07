@@ -24,6 +24,10 @@ function visit(ctx, msg, tries) {
 
 const HudApp = require('./hud');
 
+// EVA Comfort's map window (the hole in eva_comfort.json, cluster px): the cluster map is put there while that layout shows. The map target
+// (1088x480) sits at x 416, y 120 on the cluster, so the rectangle is in its own pixels; its shape is the map's (1088:480).
+const COMFORT_MAP = { x: 506 - 416, y: 336 - 120, w: 594, h: 262 };
+
 mgu.run({
     start(ctx) {
         let hud;
@@ -68,13 +72,13 @@ mgu.run({
             clearInterval(h.keep);
             h.keep = null;
             // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
-            const msg = () => ({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? (h.layout === 'eva_comfort' ? 'none' : 'map') : 'hud') });
+            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, hide: who === 'hud' ? 'hud' : (separate() ? (h.layout === 'eva_comfort' ? 'none' : 'map') : 'hud') }, who === 'panel' && h.layout === 'eva_comfort' && separate() ? { mapRect: COMFORT_MAP } : {});
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };
         visit(ctx, { cmd: 'panelScene', on: separate() }, 6);
         hud.onShown((shown, name) => { const h = holds.panel || (holds.panel = { on: false, keep: null }); h.on = shown; h.layout = name; tell('panel'); });
-        if (whud) whud.onShown((shown) => { (holds.hud || (holds.hud = { on: false, keep: null })).on = shown; tell('hud'); });
+        if (whud) whud.onShown((shown, name) => { const h = holds.hud || (holds.hud = { on: false, keep: null }); h.on = shown; h.layout = name; tell('hud'); });
         ctx.settings.onChange((key) => {
             if (key !== 'separate') return;
             visit(ctx, { cmd: 'panelScene', on: separate() }, 6);

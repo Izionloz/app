@@ -94,7 +94,14 @@ if a.comfort:
 
     for name, src in (('c_coolant', '10_coolant_icon'), ('c_oil', '11_oil_icon'), ('c_battery', '12_battery_icon'), ('c_fuel', '13_fuel_icon')):
         save(name, fit(load(src), 38))
-    save('c_car', fit(load('25_car_separate'), 156))
+    # the pack's car is cut a little at its right edge: keep its left half and mirror it, so the car is symmetric and can be centred
+    car = load('25_car_separate')
+    L, _, R, _ = car.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
+    half = car.crop((L, 0, (L + R) // 2, car.height))
+    sym = Image.new('RGBA', (half.width * 2, car.height), (0, 0, 0, 0))
+    sym.paste(half, (0, 0))
+    sym.paste(half.transpose(Image.FLIP_LEFT_RIGHT), (half.width, 0))
+    save('c_car', fit(sym, 156))
     save('c_stripes', fit(load('03_top_stripes'), 28))
 
     def dashes(n, w=20, h=10, skew=7, gap=8, color=(236, 70, 42, 255)):

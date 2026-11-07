@@ -259,7 +259,19 @@ class Daemon {
     /* what the proxy builds layers from; the cluster keeps waze's own place until it is customised */
     layout() {
         const s = this.state;
-        return { mode: s.mode, hud: s.hud, map: s.map.custom ? s.map : null, native: this.waze.native(), hide: this.hideNow() };
+        const place = (which, over) => normaliseRect(which, Object.assign({}, s[which], { custom: true, placed: true, zoom: 1, rot: 0, fx: 0.5, fy: 0.5 }, over));
+        const overMap = this.evaRect('panel'), overHud = this.evaRect('hud');
+        const map = overMap ? place('map', overMap) : (s.map.custom ? s.map : null);
+        const hud = overHud ? place('hud', overHud) : s.hud;
+        return { mode: s.mode, hud, map, native: this.waze.native(), hide: this.hideNow() };
+    }
+
+    /* While an EVA display that asked for it shows (EVA Comfort's map window, the EVA HUD Comfort's free middle), the map of that display
+     * goes into the rectangle it sent (x, y, w, h in the map target's own 1088x480 pixels for the cluster, the HUD's 800x480 for the HUD),
+     * and back to its own place when it stops or goes silent; nothing is saved. */
+    evaRect(who) {
+        const h = (this.evaHolds || {})[who];
+        return h && h.until > Date.now() && h.mapRect ? h.mapRect : null;
     }
 
     /* ---- waze-on-cluster 0.9.0 and later draws the HUD's map itself, and its own app chooses the cluster, the HUD
@@ -433,17 +445,20 @@ class Daemon {
              * HUD itself), or the cluster map's when the panel has a scene of its own (it uses the map's slot). */
             if (typeof msg.on === 'boolean') {
                 const who = msg.who === 'hud' ? 'hud' : 'panel';
-                const before = JSON.stringify(this.hideNow());
+                const before = JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]);
                 this.evaHolds = this.evaHolds || {};
                 if (msg.on) {
-                    this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : msg.hide === 'none' ? 'none' : 'hud' };
+                    const r = msg.mapRect;
+                    const ok = r && [r.x, r.y, r.w, r.h].every((v) => Number.isFinite(Number(v))) && r.w >= MIN_W && r.h >= MIN_H;
+                    this.evaHolds[who] = { until: Date.now() + EVA_HOLD_MS, hide: msg.hide === 'map' ? 'map' : msg.hide === 'none' ? 'none' : 'hud',
+                        mapRect: ok ? { x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) } : null };
                 } else {
                     delete this.evaHolds[who];
                 }
                 clearTimeout(this.evaT);
                 this.evaT = Object.keys(this.evaHolds).length
                     ? setTimeout(() => { this.evaT = null; try { this.proxy.update(); } catch (e) { /* closing */ } }, EVA_HOLD_MS + 100) : null;
-                if (JSON.stringify(this.hideNow()) !== before) {
+                if (JSON.stringify([this.hideNow(), this.evaRect('panel'), this.evaRect('hud')]) !== before) {
                     try { this.proxy.update(); } catch (e) { this.note = `proxy: ${e.message}`; }
                 }
             }

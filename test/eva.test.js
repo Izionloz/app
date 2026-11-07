@@ -186,8 +186,37 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
     dash.forEach((d) => { assert.ok(d.frames.length <= 8); assert.ok(d.rails.length <= 2); });
     const a = dash[0], map = a.frames[3];
     assert.ok(a.hole[0] >= map.x && a.hole[1] >= map.y && a.hole[0] + a.hole[2] <= map.x + map.w && a.hole[1] + a.hole[3] <= map.y + map.h);
+    // the hole is where main.js puts the cluster's map (COMFORT_MAP, in the map target's pixels: the target sits at x 416, y 120), in the map's shape
+    const main = fs.readFileSync(path.join(APP, 'main.js'), 'utf8');
+    const m = /COMFORT_MAP = \{ x: (\d+) - 416, y: (\d+) - 120, w: (\d+), h: (\d+) \}/.exec(main);
+    assert.ok(m, 'COMFORT_MAP is not in main.js');
+    assert.deepStrictEqual(a.hole, [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]);
+    assert.ok(Math.abs(a.hole[2] / a.hole[3] - 1088 / 480) < 0.03, 'the map window is not the map\'s shape');
+    assert.ok(a.hole[0] >= 416 && a.hole[1] >= 120 && a.hole[0] + a.hole[2] <= 416 + 1088 && a.hole[1] + a.hole[3] <= 120 + 480, 'the map window is outside the map target');
     assert.strictEqual(dash[1].bg, false);
     ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort'), `${k} lacks EVA Comfort`);
+    });
+});
+
+test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, a rev count in the middle, transparent frame layer, fonts baked, offered in the HUD settings', () => {
+    const l = json('hud', 'layouts', 'eva_hud_comfort.json');
+    const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
+    l.widgets.forEach((w) => {
+        assert.ok(w.x >= win[0] && w.y >= win[1] && w.x + w.w <= win[2] && w.y + w.h <= win[3], `${w.id} is outside the visible window`);
+        if (w.type === 'text') {
+            assert.ok(!(w.x < bmw[2] && w.x + w.w > bmw[0] && w.y < bmw[3] && w.y + w.h > bmw[1]), `${w.id} is over BMW's speed`);
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+    });
+    assert.ok(l.widgets.some((w) => w.id === 'rpm'), 'the rev count is the middle of the layout');
+    const d = l.widgets.filter((w) => w.type === 'evadash2');
+    assert.strictEqual(d.length, 1);
+    assert.strictEqual(d[0].bg, false);
+    assert.ok(d[0].frames.length <= 8);
+    ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_hud_comfort'), `${k} lacks EVA HUD Comfort`);
     });
 });

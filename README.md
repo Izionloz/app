@@ -201,6 +201,17 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   separate type, `evadash2` (8 frames a layer); EVA Sport and the HUD keep `evadash`, whose shader is the one that ran on the car in
   0.10.1 (0.11.0 changed that shared shader, and the owner's cluster went dark; the cause is not confirmed, so the shared one is back
   as it was and only EVA Comfort uses the new one).
+- **EVA HUD Comfort (0.12.0):** a third HUD layout, `eva_hud_comfort` (settings "HUD in Comfort" etc.: *EVA HUD Comfort*; off by default): a header
+  (mode, outside temperature, clock), the shift lights and a thin rev rail, the gear box at the left and the rev count big in the middle;
+  BMW's own speed is left alone and the HUD map is hidden while it shows (as for the other EVA HUD layouts). It draws its lines with one
+  transparent `evadash2` layer.
+- **The CarPlay map in EVA Comfort's window (0.12.0, with mgux-hud-ctl 2.16.0):** while EVA Comfort shows, the app sends the helper the
+  window's rectangle (`evaOn` with `mapRect`, in the map target's own 1088x480 pixels: the window 594x262 at cluster x 506, y 336, the
+  map target sitting at x 416, y 120 as in the bimmer-lab cluster themes) and the helper puts the cluster map there (its place, size
+  and brightness setting for the map are left alone and nothing is saved; the zoom and turn are 1 and 0 while it does), then gives
+  the map back its own place when EVA Comfort stops. The window has the map's shape (1088:480), so the picture is not stretched, and the
+  frame fits it (604x268); the speed and gear panels take the room that frees. Where the map target really sits on the cluster is not measured on this car.
+  The helper takes a `mapRect` from the EVA HUD as well (the HUD map's rectangle in 800x480 pixels), which no layout uses now.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
