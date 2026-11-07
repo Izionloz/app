@@ -235,7 +235,7 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   has, and nothing in cluster-render's layer protocol can cover it. cluster-render can, however, *hold a slot* so that a box of BMW's is not shown: it
   does so for the turn-guidance box (`guide_hold`, `guide_slots`: it maps its own scene into the box's slot and the KOMBI hides the box, verified on
   a car for 0x105 and 0x103 in its README). If the gear indicator is a slot box of that kind, the same would hide it. Which slot it is has to be read
-  from the car, so the page of the EVA app (the center screen) now shows a "Cluster slots" line, the slot table cluster-render gets from the KOMBI
+  from the car, so the page of the EVA app (the center screen) now shows "Cluster slots" rows (0.13.3: one slot a row, as 0.13.2 had one line cut at the screen edge), the slot table cluster-render gets from the KOMBI
   (asked every 15 s; also in the app's log): the owner's photo of that line, taken while the gear indicator shows, tells the slot (and whether it is
   one at all).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
