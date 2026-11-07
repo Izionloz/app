@@ -217,9 +217,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   bottom of the cluster, about x 1380-1445, y 670-710, not at the Sport spot (x 1406-1597, y 342-419). EVA Comfort's bottom row now leaves
   x 1350-1460 free for it (range moved right) and the gear panel no longer keeps clear of the Sport spot.
 - **EVA Comfort (big map) (0.13.0):** a second Comfort layout, `eva_comfort_wide` (settings "In Comfort" etc.: *EVA Comfort (big map, the CarPlay
-  picture cropped)*), for the wider map the owner asked for: the window is 1000x264 (cluster x 440, y 336) between a narrower speed panel and a
-  narrow gear panel. A window that wide cannot have the map's shape, so the map is drawn at its own shape (1000x442) behind the window, with its
-  top 178 px above it, and the window crops it: the backdrop, which is above the map, hides what is outside, and CarPlay's guidance bar at
+  picture cropped)*), for the wider map the owner asked for: the window is 946x264 (cluster x 440, y 336) between a narrower speed panel and a
+  gear panel as wide as BMW's gear box (x 1406-1597). A window that wide cannot have the map's shape, so the map is drawn at its own shape (946x418) behind the window, with its
+  top 154 px above it, and the window crops it: the backdrop, which is above the map, hides what is outside, and CarPlay's guidance bar at
   the top of its picture goes with it. That relies on the panel being above the map layer (it is what the README says of EVA covering the
   cluster map; not checked in a photo): if the map shows over the rev panel, use *EVA Comfort* (the first one) instead. `evaOn`'s `mapRect`
   is the rectangle for either layout; the helper needs no change.

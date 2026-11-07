@@ -22,9 +22,9 @@ def text(id, x, y, w, h, t, font, color, align='left', z=5, **k):
 def build(wide):
     global W
     W[:] = []
-    GX = 1460 if wide else 1119                                   # the gear panel's left edge (it ends at x 1597)
+    GX = 1406 if wide else 1119                                   # the gear panel's left edge (it ends at x 1597)
     MY, MH = 332, 296                                            # the middle row: below the hood line everywhere, so it can use the full width
-    MAP = (432, MY, 1016, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
+    MAP = (432, MY, 962, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
     SPW = 394 if wide else 463                                    # the speed panel's width
     TYRE = (1610, MY, 284, MH)
     FY, FH = 636, 64                                             # the bottom row
@@ -53,7 +53,7 @@ def build(wide):
     # and under the text and pictures, class alert): opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
     W.append({'id': 'eva', 'type': 'evadash2', 'class': 'overlay', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
               'frames': framesA, 'rpmMax': 8000, 'coolMax': 120,
-              'hole': [440, 336, 1000, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
+              'hole': [440, 336, 946, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
               'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
               'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 64, 'gap': 3},
                         {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
@@ -90,10 +90,10 @@ def build(wide):
 
     GC = (GX + 1597) // 2                                       # the gear panel's middle
     if wide:
-        text('gearCap', GX + 10, 352, 118, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
-        text('gear', GC - 59, 410, 118, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
-        step, bw = 26, 26
-        word = (GX + 6, 126)
+        text('gearCap', GX + 14, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
+        text('gear', GC - 70, 410, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+        step, bw = 34, 32
+        word = (GC - 85, 170)
     else:
         text('gearCap', GX + 20, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
         text('gear', GC - 70, 410, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
