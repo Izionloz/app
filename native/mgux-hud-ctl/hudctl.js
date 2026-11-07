@@ -60,6 +60,7 @@ const CANVAS = { hud: { w: 800, h: 480 }, map: { w: 1088, h: 480 } };
 const MIN_W = 40, MIN_H = 20;
 const FEATHER_HUD = 0.15, FEATHER_MAX = 0.45;    /* the HUD map's soft edges: default and most */
 const MAP_ASPECT = 1088 / 480;
+const EVA_FOCUS_ZOOM = 1.3;     /* dragging the focus + of an EVA map window at a zoom of 100 % raises the zoom to this */
 const PANEL_MAP_X = 416, PANEL_MAP_Y = 120;      /* where the map target's 1088x480 sits on the 1920x720 panel (waze-on-cluster: the centred rect) */
 
 /* mkdir -p for Node 8, whose mkdirSync has no recursive option. */
@@ -491,7 +492,15 @@ class Daemon {
                         next[k] = num(msg[k], cur[k]);
                     }
                 });
+                /* the focus (the orange +) only shows from a zoom above 100 %: dragging it at 100 % raises the zoom so that it does something */
+                const focusMoved = (msg.fx !== undefined || msg.fy !== undefined) && msg.zoom === undefined && cur.zoom <= 1.001;
+                if (focusMoved) {
+                    next.zoom = EVA_FOCUS_ZOOM;
+                }
                 this.setEvaRect(which, normaliseRect(which, next));
+                if (focusMoved) {
+                    this.note = `EVA: the focus works from a zoom above 100 %, so the zoom is ${Math.round(EVA_FOCUS_ZOOM * 100)} % now (change it with the zoom slider)`;
+                }
                 return;
             }
             /* absolute values from the graphical designer: any of x, y, w, h, opacity, zoom, rot */

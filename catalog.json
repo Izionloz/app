@@ -7,12 +7,12 @@
             "kind": "tool",
             "title": "HUD map (background service)",
             "description": "Installed with HUD map: keeps the HUD map's and the cluster map's size, place, brightness, soft edges, zoom and rotation, and puts the map where HUD map says",
-            "version": "2.18.0",
+            "version": "2.18.1",
             "artifact": {
-                "name": "mgux-hud-ctl@2.18.0.tgz",
-                "size": 20232,
-                "sha256": "4e293091b4174e00bca4c195503094549680b710ec2242d0373a5ceec56bd9c6",
-                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.18.0/mgux-hud-ctl%402.18.0.tgz"
+                "name": "mgux-hud-ctl@2.18.1.tgz",
+                "size": 20483,
+                "sha256": "c748f7f398593ad6ea027f8b7815090e520cce4a742ceee0b6acbb6c093dde1d",
+                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.18.1/mgux-hud-ctl%402.18.1.tgz"
             },
             "requires": {
                 "mgu-deploy": "0.4.0"
@@ -36,7 +36,7 @@
                 "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.1/hud_designer%401.6.1.tgz"
             },
             "requires": {
-                "mgux-hud-ctl": "2.18.0"
+                "mgux-hud-ctl": "2.18.1"
             },
             "mguHmi": [
                 "ID7"
@@ -60,7 +60,7 @@
             ],
             "uninstallable": true,
             "requires": {
-                "mgux-hud-ctl": "2.18.0"
+                "mgux-hud-ctl": "2.18.1"
             }
         }
     ]

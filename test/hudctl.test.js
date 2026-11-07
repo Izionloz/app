@@ -391,3 +391,19 @@ test('designer while EVA Comfort holds the map: the designer starts from the lay
     assert.strictEqual(d.state.map.placed, true, 'without EVA the display\'s own rectangle changes as before');
     clearTimeout(d.evaT);
 });
+
+test('designer: dragging the orange focus + of an EVA map window at a zoom of 100 % raises the zoom so that it shows', () => {
+    const d = new ctl.Daemon();
+    d.proxy.update = () => {};
+    d.saveSoon = () => {};
+    d.handle({ cmd: 'evaOn', who: 'hud', on: true, hide: 'none', layout: 'eva_hud_comfort', mapRect: { x: 242, y: 200, w: 350, h: 154 } });
+    d.handle({ cmd: 'rect', which: 'hud', fx: 0.7, fy: 0.6 });
+    let h = d.layout().hud;
+    assert.deepStrictEqual([h.fx, h.fy, h.zoom], [0.7, 0.6, 1.3]);
+    assert.match(d.view().note, /zoom/);
+    d.handle({ cmd: 'rect', which: 'hud', zoom: 2 });
+    d.handle({ cmd: 'rect', which: 'hud', fx: 0.2 });
+    h = d.layout().hud;
+    assert.deepStrictEqual([h.fx, h.zoom], [0.2, 2], 'above 100 % the zoom is left alone');
+    clearTimeout(d.evaT);
+});

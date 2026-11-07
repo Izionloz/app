@@ -104,6 +104,8 @@ CarPlay's cluster map has the car below and right of the middle, so a zoom about
 edge. Each map has a focus (`fx`, `fy`, 0-1 of the picture, the middle by default): the zoom keeps that point in the
 middle of the map's rectangle, as far as the zoomed picture still fills it. In the designer, set the zoom to 100 %,
 drag the orange + onto the car, then zoom in. The helper sends it as cluster-render's pivot (`px`, `py`).
+The focus only acts above 100 % zoom. While an EVA layout holds the display, dragging the + at 100 % raises the zoom to
+130 % so the move is visible at once (the note in the designer says so).
 
 ### Moving the map without a blink
 A move, resize, zoom, turn or brightness change is sent to cluster-render as a `set` on the layer, which re-places
