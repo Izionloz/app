@@ -117,6 +117,27 @@ test('eva HUD layout: each text widget\'s font is baked and has the letters of i
     assert.ok(d.frames.length <= 12 && d.rails.length <= 2);
 });
 
+test('eva HUD layout (BMW speed): nothing of ours is drawn over BMW\'s own white speed (about x 282-362, y 330-376)', () => {
+    const l = json('hud', 'layouts', 'eva_hud_bmw.json');
+    const box = [282, 330, 362, 376];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= WINDOW[0] && w.y >= WINDOW[1] && w.x + w.w <= WINDOW[0] + WINDOW[2] && w.y + w.h <= WINDOW[1] + WINDOW[3], `${w.id} is outside the visible HUD window`);
+        if (w.type === 'text') {
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) {
+                for (const ch of w.text) {
+                    assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+                }
+            }
+            assert.ok(!(w.x < box[2] && w.x + w.w > box[0] && w.y < box[3] && w.y + w.h > box[1]), `${w.id} is over BMW's speed`);
+        }
+    });
+});
+
 test('eva app: the HUD settings name layouts that exist, and Sport has the EVA HUD by default', () => {
     const s = (k) => app.settings.find((x) => x.key === k);
     ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
@@ -124,7 +145,7 @@ test('eva app: the HUD settings name layouts that exist, and Sport has the EVA H
             assert.ok(o[0] === 'off' || fs.existsSync(path.join(APP, 'hud', 'layouts', `${o[0]}.json`)), `${k}: no layout ${o[0]}`);
         });
     });
-    assert.strictEqual(s('windInSport').default, 'eva_hud');
+    assert.strictEqual(s('windInSport').default, 'eva_hud_bmw');
     assert.strictEqual(s('windInComfort').default, 'off');
     assert.strictEqual(s('windInEco').default, 'off');
     assert.strictEqual(s('windHudLayout').default, 'off');
