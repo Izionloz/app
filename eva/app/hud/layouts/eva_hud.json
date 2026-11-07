@@ -45,8 +45,6 @@
     }
    ],
    "rpmMax": 8000,
-   "coolMax": 140,
-   "rail1Signal": "oil",
    "lights": {
     "x": 262,
     "y": 108,
@@ -63,15 +61,6 @@
      "h": 24,
      "segs": 38,
      "gap": 2
-    },
-    {
-     "x": 400,
-     "y": 357,
-     "w": 140,
-     "h": 18,
-     "segs": 14,
-     "gap": 2,
-     "ramp": true
     }
    ]
   },
@@ -389,60 +378,6 @@
    ],
    "align": "center",
    "byRpm": true
-  },
-  {
-   "id": "coolCap",
-   "type": "text",
-   "z": 9,
-   "x": 400,
-   "y": 341,
-   "w": 80,
-   "h": 18,
-   "text": "OIL {{u:temp}}",
-   "font": "w_small",
-   "color": [
-    249,
-    113,
-    88,
-    255
-   ],
-   "align": "left"
-  },
-  {
-   "id": "water",
-   "type": "text",
-   "z": 9,
-   "x": 470,
-   "y": 341,
-   "w": 70,
-   "h": 18,
-   "text": "WATER {{coolant}}",
-   "font": "w_small",
-   "color": [
-    249,
-    113,
-    88,
-    255
-   ],
-   "align": "right"
-  },
-  {
-   "id": "cool",
-   "type": "text",
-   "z": 9,
-   "x": 546,
-   "y": 354,
-   "w": 52,
-   "h": 21,
-   "text": "{{oil}}",
-   "font": "w_rpm",
-   "color": [
-    255,
-    170,
-    80,
-    255
-   ],
-   "align": "right"
   }
  ]
 }

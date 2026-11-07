@@ -171,6 +171,9 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   redline" (300 rpm), lowered by the **cold-engine guard** (setting, on) until the oil is warm (80 C: 4500 rpm at 30 C, rising in 50 rpm
   steps); the cluster says so (`COLD . LIMIT 5400`). **SHIFT** shows as the warning at the shift point (before HIGH RPM and REDLINE),
   and the cluster has a LAST SHIFT line: the gears, the rpm and the verdict (SPOT ON / EARLY / LATE / LIMITER / COLD REV), coloured by it.
+- **Battery and a clean HUD (0.10.1):** the cluster header shows the 12 V battery's charge (`{{battery}}` %, from CDS `statusBattery2`, an
+  interface the app already declares; the voltage itself is not on the signals the app can reach). The HUD no longer shows oil or water
+  (the oil stays on the cluster).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

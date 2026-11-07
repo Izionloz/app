@@ -39,6 +39,10 @@ W.append({'id': 'pilot', 'type': 'picture', 'class': 'content', 'z': 1, 'own': T
 
 text('title', 232, 98, 520, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
 text('sub', 233, 144, 420, 18, 'TACTICAL DRIVE DISPLAY', 'e_sub', SUB)
+# the 12 V battery's charge (CDS statusBattery2), in the header between the title and the clock
+text('batCap', 1010, 112, 150, 28, 'BATTERY', 'e_label', HEAD)
+text('bat', 1150, 108, 90, 39, '{{battery}}', 'e_val', VAL, 'right')
+text('batU', 1248, 111, 40, 37, '%', 'e_unit', TITLE)
 text('clock', 1430, 112, 270, 46, '{{time}}', 'e_clock', CLOCK, 'right', glow=True)
 
 text('rpmLabel', 132, 190, 300, 28, 'ENGINE RPM', 'e_label', VAL, byRpm=True, z=6)

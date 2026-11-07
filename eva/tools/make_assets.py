@@ -26,7 +26,7 @@ FONTS = [
     ('e_label', 'BarlowCondensed-Bold.ttf', 30, U + ' '),
     ('e_tick', 'BarlowCondensed-SemiBold.ttf', 24, U + D + ' '),
     ('e_rpm', 'BarlowCondensed-Bold.ttf', 92, D + '-'),
-    ('e_unit', 'BarlowCondensed-SemiBold.ttf', 30, L + U + '/° '),
+    ('e_unit', 'BarlowCondensed-SemiBold.ttf', 30, L + U + '/°% '),
     ('e_speed', 'BarlowCondensed-Bold.ttf', 230, D + '-'),
     ('e_unitbig', 'BarlowCondensed-Bold.ttf', 58, L + '/'),
     ('e_gear', 'BarlowCondensed-Bold.ttf', 150, 'PRNDSM' + D + '-'),

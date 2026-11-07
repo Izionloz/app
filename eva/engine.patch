@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..1bce1ba 100644
+index db817c2..7e136a1 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -38,7 +38,15 @@ index db817c2..1bce1ba 100644
          this.ctx = ctx;
          this.log = ctx.log;
          this.config = (ctx.spec && ctx.spec.config) || {};
-@@ -302,9 +306,24 @@ class HudApp {
+@@ -291,6 +295,7 @@ class HudApp {
+         this.driveVariant = null;        // 'plus' (Sport+ / Comfort+ / Eco Pro+), 'individual', or null
+         this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
+         this.program = null;             // 'S' / 'M' from the MDrive gearbox display, else null (D)
++        this.batteryPct = null;          // the 12 V battery's charge, % (CDS statusBattery2)
+         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
+         this.tyres = { p: {}, t: {} };                                  // TPMS pressure (bar) and temperature (C) per corner FL FR RL RR
+         this.activeName = null;          // the layout shown now ('off' = nothing)
+@@ -302,9 +307,24 @@ class HudApp {
          this.flash = false;
          this.problem = null;             // why nothing shows (a bad layout), for the status line
          this.statusListeners = [];
@@ -56,7 +64,7 @@ index db817c2..1bce1ba 100644
 +            this.car = this.parent.car;
 +            this.score = this.parent.score;
 +            ['driveMode', 'driveVariant', 'program', 'fuelL', 'rangeKm', 'ambient', 'boostFes', 'boostFesAt', 'boostDme', 'boostDmeAt',
-+                'tyres', 'carUnits', 'sportPower', 'sportTorque', 'sportAt'].forEach((k) => {
++                'tyres', 'carUnits', 'batteryPct', 'sportPower', 'sportTorque', 'sportAt'].forEach((k) => {
 +                Object.defineProperty(this, k, { get: () => this.parent[k], set: () => {}, configurable: true });
 +            });
 +            this.parent.modeListeners.push(() => { if (this._layoutName() !== this.activeName) this._modeChanged(); else this._status(); });
@@ -64,7 +72,21 @@ index db817c2..1bce1ba 100644
          this.layouts.onChange(() => this._rebuild());
          ctx.settings.onChange((key) => { if (key !== 'demo') this._rebuild(); else this._status(); });
      }
-@@ -378,7 +397,8 @@ class HudApp {
+@@ -332,6 +352,13 @@ class HudApp {
+             },
+             // tyre pressure and temperature per corner, in the car's own display units (_tyreBar / _tyreC).
+             // The car never notifies these (BMW's own x_call only ever reads them), so they are polled.
++            // the 12 V battery's charge in % (live_data's signals.js, MIT): conditionBatteryChargingCondition, above 100 = no value
++            'de.bmw.infotainment.vehicle.CDS': {
++                statusBattery2: (v) => {
++                    const x = v && v.conditionBatteryChargingCondition;
++                    this.batteryPct = isNum(x) && x >= 0 && x <= 100 ? x : null;
++                },
++            },
+             'de.bmw.infotainment.vehicle.TPMS': {
+                 $pollMs: 10000,
+                 statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => { this.tyres.p[k] = this._tyreBar(v && v['actualValuePressureTyre' + k + 'H']); }),
+@@ -378,7 +405,8 @@ class HudApp {
                      if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
                      this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
                      this.driveMode = m; this.driveVariant = variant;
@@ -74,7 +96,7 @@ index db817c2..1bce1ba 100644
                  },
              },
          };
-@@ -552,12 +572,24 @@ class HudApp {
+@@ -552,12 +580,24 @@ class HudApp {
      onStatus(fn) { this.statusListeners.push(fn); if (this.lastStatus) fn(this.lastStatus); }
  
      /** The layout name to show now: per drive mode when that's on and known, else the plain setting. */
@@ -101,7 +123,7 @@ index db817c2..1bce1ba 100644
      }
  
      _layoutLabel(name) {
-@@ -783,7 +815,14 @@ class HudApp {
+@@ -783,7 +823,14 @@ class HudApp {
          if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
          switch (tok) {
              case 'u:pressure': return us ? 'psi' : 'bar';
@@ -117,10 +139,11 @@ index db817c2..1bce1ba 100644
              case 'u:speed': return us ? 'MPH' : 'KM/H';
              case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
              case 'boost': { const v = this._raw('boost'); return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
-@@ -829,6 +868,20 @@ class HudApp {
+@@ -829,6 +876,21 @@ class HudApp {
                  const d = this.car.data();
                  return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
              }
++            case 'battery': return isNum(this.batteryPct) ? String(Math.round(this.batteryPct)) : '--';
 +            case 'evaAlert': {
 +                const l = this._evaLevel();
 +                if (l >= 3) return 'REDLINE';
@@ -138,7 +161,7 @@ index db817c2..1bce1ba 100644
              case 'mode': {
                  if (!this.driveMode) return '';
                  const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
-@@ -871,6 +924,15 @@ class HudApp {
+@@ -871,6 +933,15 @@ class HudApp {
      _rebuild() {
          this._guard('rebuild', () => this._rebuildInner());
          this._status();
@@ -154,7 +177,7 @@ index db817c2..1bce1ba 100644
      }
  
      _rebuildInner() {
-@@ -885,15 +947,20 @@ class HudApp {
+@@ -885,15 +956,20 @@ class HudApp {
          this.car.setRedline(this.setting('redline'));
          const name = this._layoutName();
          this.activeName = name;
@@ -178,7 +201,7 @@ index db817c2..1bce1ba 100644
              return;
          }
          this.problem = null;
-@@ -977,7 +1044,7 @@ class HudApp {
+@@ -977,7 +1053,7 @@ class HudApp {
      /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
      _createSheet(s) {
          const c = this._clientAt(s.conn);
@@ -187,7 +210,7 @@ index db817c2..1bce1ba 100644
          if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
          s.ref = ref; s.c = c; s.ci = s.conn;
          s.buf = Buffer.alloc(s.w * s.h * 4, 0);
-@@ -1035,7 +1102,7 @@ class HudApp {
+@@ -1035,7 +1111,7 @@ class HudApp {
          if (sheet) { ref = sheet.ref; c = sheet.c; }
          else {
              c = this._clientAt(this._connOf(w));
@@ -196,7 +219,7 @@ index db817c2..1bce1ba 100644
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1125,8 @@ class HudApp {
+@@ -1058,6 +1134,8 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
@@ -205,7 +228,7 @@ index db817c2..1bce1ba 100644
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1221,7 +1290,7 @@ class HudApp {
+@@ -1221,7 +1299,7 @@ class HudApp {
      _tick() {
          const now = Date.now();
          this._smoothRpm(now);
@@ -214,7 +237,7 @@ index db817c2..1bce1ba 100644
          // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
          const rpm = this._raw('rpm');
          const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
-@@ -1235,8 +1304,11 @@ class HudApp {
+@@ -1235,8 +1313,11 @@ class HudApp {
          const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
          this.lastTickT = now;
          if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -228,7 +251,7 @@ index db817c2..1bce1ba 100644
      }
  
      _update(x, now, force) {
-@@ -1258,6 +1330,7 @@ class HudApp {
+@@ -1258,6 +1339,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -236,7 +259,7 @@ index db817c2..1bce1ba 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1369,8 @@ class HudApp {
+@@ -1296,6 +1378,8 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
@@ -245,7 +268,7 @@ index db817c2..1bce1ba 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1471,127 @@ class HudApp {
+@@ -1396,6 +1480,127 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */

@@ -179,6 +179,60 @@
    "align": "left"
   },
   {
+   "id": "batCap",
+   "type": "text",
+   "z": 5,
+   "x": 1010,
+   "y": 112,
+   "w": 150,
+   "h": 28,
+   "text": "BATTERY",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "bat",
+   "type": "text",
+   "z": 5,
+   "x": 1150,
+   "y": 108,
+   "w": 90,
+   "h": 39,
+   "text": "{{battery}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "batU",
+   "type": "text",
+   "z": 5,
+   "x": 1248,
+   "y": 111,
+   "w": 40,
+   "h": 37,
+   "text": "%",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
    "id": "clock",
    "type": "text",
    "z": 5,
