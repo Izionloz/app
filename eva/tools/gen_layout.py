@@ -47,7 +47,8 @@ text('rpmUnit', 1684, 236, 100, 37, 'rpm', 'e_unit', TITLE, z=6)
 text('alert', 1500, 290, 232, 24, '{{evaAlert}}', 'e_mono', VAL, 'right', byRpm=True, z=6)
 
 text('gearCap', 162, 356, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], z=7)
-text('gear', 162, 390, 156, 111, '{{stage}}', 'e_gear', VAL, 'center', glow=True, z=7)
+# the gear as BMW's selector shows it: P R N, or D with the engaged gear (D1 .. D8), S / M by the shifter programme
+text('gear', 160, 408, 160, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=7)
 text('gearWord', 156, 516, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7)
 
 text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8, rate=1)

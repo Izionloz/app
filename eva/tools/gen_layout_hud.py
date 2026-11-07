@@ -60,7 +60,7 @@ def build(variant):
         text('rpm', 542, 158, 56, '{{rpm}}', 'w_rpm', VAL, 'right', z=6, byRpm=True, rate=1)
 
     text('gearCap', 140, 212, 76, 'GEAR', 'w_small', SUB, 'center', z=7)
-    text('gear', 138, 226, 80, '{{stage}}', 'w_gear', VAL, 'center', z=7, glow=True)
+    text('gear', 135, 226, 86, '{{gear}}', 'w_gear', VAL, 'center', z=7, glow=True)       # P R N, or D with the engaged gear (D1 .. D8)
     text('gearWord', 138, 291, 80, '{{gearWord}}', 'w_small', SUB, 'center', z=7)
 
     if own:
