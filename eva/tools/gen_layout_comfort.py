@@ -91,18 +91,18 @@ def build(wide):
     GC = (GX + 1597) // 2                                       # the gear panel's middle
     if wide:
         text('gearCap', GX + 14, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
-        text('gear', GC - 70, 410, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+        text('gear', GC - 88, 372, 176, 127, '{{gear}}', 'e_gearx', VAL, 'center', glow=True, z=11)
         step, bw = 34, 32
         word = (GC - 85, 170)
     else:
         text('gearCap', GX + 20, 352, 120, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'left', z=11)
-        text('gear', GC - 70, 410, 140, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+        text('gear', GC - 88, 372, 176, 127, '{{gear}}', 'e_gearx', VAL, 'center', glow=True, z=11)
         step, bw = 62, 52
         word = (GC - 165, 330)
     for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own
-        text('selDim' + L, GC + (k - 2) * step - bw // 2, 524, bw, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
-        text('sel' + L, GC + (k - 2) * step - bw // 2, 524, bw, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
-    text('gearWord', word[0], 560, word[1], 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
+        text('selDim' + L, GC + (k - 2) * step - bw // 2, 512, bw, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
+        text('sel' + L, GC + (k - 2) * step - bw // 2, 512, bw, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
+    text('gearWord', word[0], 552, word[1], 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
 
     text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
     for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1801, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1801, 514, 'right')):
