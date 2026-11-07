@@ -34,11 +34,9 @@ framesA = [                                                         # evadash2 h
     {'x': MAP[0], 'y': MAP[1], 'w': MAP[2], 'h': MAP[3], 'cut': [48, 48, 48, 48], 'glow': 2},   # the map window (frames[3]: the test finds it)
     {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
     {'x': 26, 'y': MY, 'w': 365, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
-    {'x': GEAR[0], 'y': GEAR[1], 'w': GEAR[2], 'h': GEAR[3], 'cut': [40, 22, 40, 22], 'glow': 1},
     {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
 ]
 framesB = [
-    {'x': 1225, 'y': 396, 'w': 170, 'h': 120, 'cut': [60, 60, 60, 60], 'glow': 2, 'border': 3},   # the gear box, a hexagon
     {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
     {'x': 26, 'y': FY, 'w': 1868, 'h': FH, 'chamfer': 16, 'glow': 1},                 # the bottom row
     {'x': 1517, 'y': 104, 'w': 14, 'h': 50, 'kind': 3, 'border': 2, 'color': 2},       # slanted rules: in the header and between the bottom sections
@@ -84,11 +82,11 @@ text('rpmUnit', 1768, 236, 76, 37, 'rpm', 'e_unit', TITLE, z=5)
 text('speed', 36, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=7, rate=1)
 text('speedUnit', 36, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
 
-text('gear', 1235, 411, 150, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=8)
-for k, L in enumerate('PRNDM'):                              # the selector: dim letters, the engaged one lit over its own
-    text('selDim' + L, 1226 + k * 32, 544, 30, 28, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
-    text('sel' + L, 1226 + k * 32, 544, 30, 28, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
-text('gearWord', 1217, 578, 190, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=8)
+# the gear panel is a picture (bars, hexagon, P R N D M row); the gear and the lit selector letter are text over it (one group, z 11)
+GX, GY = 1222, 350
+text('gear', GX + 66, 421, 117, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+for L, cx in zip('PRNDM', (90, 158, 232, 322, 412)):         # the engaged letter lit over the dim ones in the picture
+    text('sel' + L, GX + round(cx * 0.499) - 15, 543, 30, 28, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
 
 text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
 for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1808, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1808, 514, 'right')):
@@ -105,7 +103,7 @@ picture('dashHead', 'c_dash5', 575, 112, 139, 10, 5)
 picture('dashHead2', 'c_dash5', 1205, 112, 139, 10, 5)
 picture('stripes', 'c_stripes', 70, 588, 173, 28, 7)
 picture('dashTyre', 'c_dash3', 1790, 617, 83, 10, 9)
-picture('dashGear', 'c_dash5', 1250, 606, 139, 10, 8)
+picture('gearPanel', 'c_gear', GX, GY, 243, 260, 8)
 
 ICONS = {'COOLANT': ('c_coolant', 45), 'OIL': ('c_oil', 52), 'BATTERY': ('c_battery', 41), 'RANGE': ('c_fuel', 36)}
 for (cx, cw), cap, val, unit, uw in zip(SEC, ('COOLANT', 'OIL', 'BATTERY', 'RANGE'), ('{{coolant}}', '{{oil}}', '{{battery}}', '{{range}}'),
