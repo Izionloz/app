@@ -257,3 +257,31 @@ test('eva comfort wide layout: the hole is inside the map target and covered by 
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort_wide'), `${k} lacks the big map`);
     });
 });
+
+test('eva page: every setting of the app has a row on the center screen and a tap changes it', () => {
+    const page = require(path.join(APP, 'settingsui.js'));
+    const vals = {};
+    app.settings.forEach((s) => { vals[s.key] = s.default; });
+    const item = (k) => app.settings.find((x) => x.key === k);
+    const s = {
+        get: (k) => vals[k], set: (k, v) => { vals[k] = v; }, item,
+        cycle: (k) => { const o = item(k).options.map((p) => p[0]); vals[k] = o[(o.indexOf(vals[k]) + 1) % o.length]; },
+    };
+    const targets = [];
+    const cv = new Proxy({ own: true, target: (x, y, w, h, run, key) => targets.push({ x, y, w, h, run, key }), textWidth: () => 50 }, {
+        get: (o, k) => (k in o ? o[k] : () => cv),
+    });
+    page.draw(cv, s, { cluster: 'a', hud: 'b' });
+    app.settings.forEach((st) => {
+        assert.ok(targets.some((t) => t.key.includes(st.key) || (st.key === 'hudLayout' && t.key.startsWith('layout:'))), `${st.key} has no row`);
+    });
+    targets.forEach((t) => assert.ok(t.x >= 0 && t.y >= 44 && t.x + t.w <= 1600 && t.y + t.h <= 512, `${t.key} is off the page`));
+    targets.find((t) => t.key === 'layout:eva_comfort').run();
+    assert.strictEqual(vals.hudLayout, 'eva_comfort');
+    targets.find((t) => t.key === 'set:byMode').run();
+    assert.strictEqual(vals.byMode, false);
+    targets.find((t) => t.key === 'step:redline1').run();
+    assert.strictEqual(vals.redline, 7000);
+    targets.find((t) => t.key === 'cycle:units').run();
+    assert.strictEqual(vals.units, 'us');
+});
