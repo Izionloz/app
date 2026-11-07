@@ -51,8 +51,8 @@
             "version": "0.13.4",
             "artifact": {
                 "name": "eva_cluster@0.13.4.tgz",
-                "size": 1241143,
-                "sha256": "8d1ec4f8a5e7851d171fc07dae9735cfe28728c7bad545130fdc8a8411dc7ffd",
+                "size": 1241124,
+                "sha256": "608554ff73501e499bd0720222a493592293c20b3db27a1d15323f6c6bff1267",
                 "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.13.4/eva_cluster%400.13.4.tgz"
             },
             "mguHmi": [

@@ -40,10 +40,6 @@ def build(variant):
         {'x': 244, 'y': 214, 'w': 2, 'h': 96, 'kind': 2},                              # centre, left rule
         {'x': 588, 'y': 214, 'w': 2, 'h': 96, 'kind': 2},                              # centre, right rule
     ]
-    if not own:
-        # BMW's speed is the speed: a rule over it with two ticks, and "SPEED" to its left
-        frames += [{'x': 262, 'y': 326, 'w': 124, 'h': 2, 'kind': 2}, {'x': 262, 'y': 326, 'w': 2, 'h': 8, 'kind': 2},
-                   {'x': 384, 'y': 326, 'w': 2, 'h': 8, 'kind': 2}]
     W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3],
               'frames': frames, 'rpmMax': 8000,
               # the shift lights (Redline) in the header: they fill over the last 2000 rpm before the shift point, then strobe
@@ -74,7 +70,6 @@ def build(variant):
         # the big number is the rev count; the speed is BMW's own, under its rule
         text('rpm', 252, 222, 214, '{{rpm}}', 'w_speed', VAL, 'right', z=8, byRpm=True, glow=True, rate=1)
         text('rpmUnit', 474, 278, 100, 'rpm', 'w_unit', [255, 187, 121, 255], z=8)
-        text('speedCap', 236, 346, 42, 'SPEED', 'w_small', SUB, 'right', z=9)
         text('alert', 400, 314, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
 
     name = 'EVA HUD' if own else 'EVA HUD (BMW speed)'
