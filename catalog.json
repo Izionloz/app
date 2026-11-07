@@ -7,12 +7,12 @@
             "kind": "tool",
             "title": "HUD map (background service)",
             "description": "Installed with HUD map: keeps the HUD map's and the cluster map's size, place, brightness, soft edges, zoom and rotation, and puts the map where HUD map says",
-            "version": "2.15.0",
+            "version": "2.16.0",
             "artifact": {
-                "name": "mgux-hud-ctl@2.15.0.tgz",
-                "size": 18406,
-                "sha256": "a090a65a6a9a9656af56c58ea61adfdd30f9352d25c390761ab4dbbd8883eb35",
-                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.15.0/mgux-hud-ctl%402.15.0.tgz"
+                "name": "mgux-hud-ctl@2.16.0.tgz",
+                "size": 18709,
+                "sha256": "13a77780df021826afa96d4c5b51bf722fa40ecc04bbb5aaff11dc4c4444a81e",
+                "url": "https://github.com/Izionloz/app/releases/download/mgux-hud-ctl%402.16.0/mgux-hud-ctl%402.16.0.tgz"
             },
             "requires": {
                 "mgu-deploy": "0.4.0"
@@ -36,7 +36,7 @@
                 "url": "https://github.com/Izionloz/app/releases/download/hud_designer%401.6.1/hud_designer%401.6.1.tgz"
             },
             "requires": {
-                "mgux-hud-ctl": "2.15.0"
+                "mgux-hud-ctl": "2.16.0"
             },
             "mguHmi": [
                 "ID7"
@@ -51,8 +51,8 @@
             "version": "0.12.0",
             "artifact": {
                 "name": "eva_cluster@0.12.0.tgz",
-                "size": 1240308,
-                "sha256": "633599f15f491b5ac10b41fea9b4aba5205bd56403d86f79e98a3364565518d4",
+                "size": 1240429,
+                "sha256": "cfb1138218d0101cf09589c76ba847d146d897d435a3c6c491a9d162e22a6d4f",
                 "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.12.0/eva_cluster%400.12.0.tgz"
             },
             "mguHmi": [
@@ -60,7 +60,7 @@
             ],
             "uninstallable": true,
             "requires": {
-                "mgux-hud-ctl": "2.15.0"
+                "mgux-hud-ctl": "2.16.0"
             }
         }
     ]

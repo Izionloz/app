@@ -186,6 +186,13 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
     dash.forEach((d) => { assert.ok(d.frames.length <= 8); assert.ok(d.rails.length <= 2); });
     const a = dash[0], map = a.frames[3];
     assert.ok(a.hole[0] >= map.x && a.hole[1] >= map.y && a.hole[0] + a.hole[2] <= map.x + map.w && a.hole[1] + a.hole[3] <= map.y + map.h);
+    // the hole is where main.js puts the cluster's map (COMFORT_MAP, in the map target's pixels: the target sits at x 416, y 120), in the map's shape
+    const main = fs.readFileSync(path.join(APP, 'main.js'), 'utf8');
+    const m = /COMFORT_MAP = \{ x: (\d+) - 416, y: (\d+) - 120, w: (\d+), h: (\d+) \}/.exec(main);
+    assert.ok(m, 'COMFORT_MAP is not in main.js');
+    assert.deepStrictEqual(a.hole, [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]);
+    assert.ok(Math.abs(a.hole[2] / a.hole[3] - 1088 / 480) < 0.03, 'the map window is not the map\'s shape');
+    assert.ok(a.hole[0] >= 416 && a.hole[1] >= 120 && a.hole[0] + a.hole[2] <= 416 + 1088 && a.hole[1] + a.hole[3] <= 120 + 480, 'the map window is outside the map target');
     assert.strictEqual(dash[1].bg, false);
     ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort'), `${k} lacks EVA Comfort`);

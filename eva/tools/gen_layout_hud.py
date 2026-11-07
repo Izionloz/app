@@ -91,8 +91,7 @@ build('eva_hud_bmw')
 
 def build_comfort():
     """EVA HUD Comfort: the HUD map stays (nothing is drawn over its middle), the EVA look is a frame and the numbers round it: the mode,
-    the clock and the outside temperature on top, the shift lights and a thin rev rail under them, the gear box at the left, BMW's own
-    speed under its rule. One transparent evadash2 layer (bg false) draws the lines."""
+    the clock and the outside temperature on top, the shift lights and a thin rev rail under them, the gear box at the left; BMW's own speed stays as it is. One transparent evadash2 layer (bg false) draws the lines."""
     W = []
 
     def text(id, x, y, w, t, font, color, align='left', z=5, **k):
@@ -104,9 +103,6 @@ def build_comfort():
     frames = [
         {'x': 126, 'y': 150, 'w': 474, 'h': 2, 'kind': 2, 'color': 1},                         # under the header
         {'x': 130, 'y': 206, 'w': 96, 'h': 104, 'chamfer': 14, 'glow': 1},                    # gear box
-        {'x': 262, 'y': 326, 'w': 124, 'h': 2, 'kind': 2},                                     # a rule over BMW's speed, with two ticks
-        {'x': 262, 'y': 326, 'w': 2, 'h': 8, 'kind': 2},
-        {'x': 384, 'y': 326, 'w': 2, 'h': 8, 'kind': 2},
     ]
     W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3], 'bg': False,
               'frames': frames, 'rpmMax': 8000,
@@ -122,7 +118,6 @@ def build_comfort():
     text('gearCap', 140, 212, 76, 'GEAR', 'w_small', SUB, 'center', z=7)
     text('gear', 135, 226, 86, '{{gear}}', 'w_gear', VAL, 'center', z=7, glow=True)
     text('gearWord', 138, 291, 80, '{{gearWord}}', 'w_small', SUB, 'center', z=7)
-    text('speedCap', 236, 346, 42, 'SPEED', 'w_small', SUB, 'right', z=9)
     text('alert', 400, 314, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
     with open(os.path.join(APP, 'layouts', 'eva_hud_comfort.json'), 'w') as f:
         json.dump({'schemaVersion': 2, 'name': 'EVA HUD Comfort', 'theme': 'eva',

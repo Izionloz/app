@@ -20,7 +20,7 @@ def text(id, x, y, w, h, t, font, color, align='left', z=5, **k):
     W.append(d)
 
 MY, MH = 332, 296                                            # the middle row: below the hood line everywhere, so it can use the full width
-MAP = (404, MY, 800, MH)                                     # the map window's frame; the hole is inset by 3
+MAP = (404, MY, 800, 268)                                    # the map window's frame (it ends at y 600, where the map target does); the map itself is 594x262 inside it
 GEAR = (1217, MY, 380, MH)
 TYRE = (1610, MY, 284, MH)
 FY, FH = 636, 64                                             # the bottom row
@@ -31,7 +31,7 @@ framesA = [                                                         # evadash2 h
     {'x': 190, 'y': 92, 'w': 555, 'h': 84, 'cut': [26, 0, 56, 0], 'glow': 1},        # header: left part, the middle plate, right part
     {'x': 745, 'y': 92, 'w': 430, 'h': 70, 'cut': [0, 0, 40, 40], 'glow': 1},
     {'x': 1175, 'y': 92, 'w': 555, 'h': 84, 'cut': [0, 26, 0, 56], 'glow': 1},
-    {'x': MAP[0], 'y': MAP[1], 'w': MAP[2], 'h': MAP[3], 'cut': [48, 48, 48, 48], 'glow': 2},   # the map window (frames[3]: the test finds it)
+    {'x': MAP[0], 'y': MAP[1], 'w': MAP[2], 'h': MAP[3], 'cut': [40, 40, 40, 40], 'glow': 2},   # the map window (frames[3]: the test finds it)
     {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
     {'x': 26, 'y': MY, 'w': 365, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
     {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
@@ -48,7 +48,7 @@ framesB = [
 # the backdrop: opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
 W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
           'frames': framesA, 'rpmMax': 8000, 'coolMax': 120,
-          'hole': [MAP[0] + 3, MAP[1] + 3, MAP[2] - 6, MAP[3] - 6], 'holeRadius': 52,
+          'hole': [508, 336, 594, 262], 'holeRadius': 6,       # = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
           'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
           'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 64, 'gap': 3},
                     {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
