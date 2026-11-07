@@ -48,27 +48,6 @@ mgu.run({
             return;
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
-        // the slots the BMW cluster reports, on the page (which slot is which box: for hiding one of BMW's boxes, see the README)
-        // what changed in the slot table, newest first (to see which slot a box of BMW's uses: shift P / D / N, change the cluster's view, watch the rows)
-        let prevSlots = null;
-        const changes = [];
-        const clock = () => { const d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2); };
-        const short = (l) => l.replace(/ status /, ' s').replace(/: /, ' ').replace(/ class /g, ' c').replace(/ map /g, ' m').replace(/\s+/g, ' ');
-        hud.onSlots((lines) => {
-            // one short row each (a text row of the page is one line, cut at the screen's edge): "0x101 s2 0x1000312 c0 m1"
-            for (let i = 0; i < 10; i++) {
-                ctx.ui.text('SLOT' + i, lines[i] ? short(lines[i]) : (i === 0 ? 'Cluster slots: none yet' : ' '));
-            }
-            const now = {};
-            lines.forEach((l) => { now[l.split(' ')[0]] = short(l); });
-            if (prevSlots) {
-                Object.keys(now).forEach((k) => { if (prevSlots[k] !== now[k]) changes.unshift(clock() + ' ' + now[k] + (prevSlots[k] ? '  (was ' + prevSlots[k].split(' ').slice(1).join(' ') + ')' : '')); });
-                Object.keys(prevSlots).forEach((k) => { if (!now[k]) changes.unshift(clock() + ' ' + k + ' gone'); });
-                changes.length = Math.min(changes.length, 6);
-            }
-            prevSlots = now;
-            for (let i = 0; i < 6; i++) ctx.ui.text('SLOTCHG' + i, changes[i] || (i === 0 ? 'Slot changes: none yet' : ' '));
-        });
         hud.start();
 
         // The EVA HUD on the windshield: a second display of this app on cluster-render's "hud" target, with a connection of

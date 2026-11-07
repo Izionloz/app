@@ -231,21 +231,14 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   shows. EVA Comfort's backdrop is class `overlay` and its texts and pictures `alert`, so the map (class `content`) sits under the backdrop and
   shows through its hole, and what the map has outside the window is hidden by the backdrop (the big-map layout relies on that). Only the
   cluster's map moves (the HUD's stays); with the setting off, or the helper older than 2.17.0, it is as before. Not checked on the car.
-- **Hiding BMW's gear indicator (0.13.2, a lead, not done):** the white gear indicator ("D2") is drawn by the BMW cluster over everything the panel
-  has, and nothing in cluster-render's layer protocol can cover it. cluster-render can, however, *hold a slot* so that a box of BMW's is not shown: it
-  does so for the turn-guidance box (`guide_hold`, `guide_slots`: it maps its own scene into the box's slot and the KOMBI hides the box, verified on
-  a car for 0x105 and 0x103 in its README). If the gear indicator is a slot box of that kind, the same would hide it. Which slot it is has to be read
-  from the car, so the page of the EVA app (the center screen) now shows "Cluster slots" rows (0.13.3: one slot a row, as 0.13.2 had one line cut at the screen edge), the slot table cluster-render gets from the KOMBI
-  (asked every 15 s; also in the app's log): the owner's photo of that line, taken while the gear indicator shows, tells the slot (and whether it is
-  one at all).
-- **What the slot table of the owner's car says (Nov 7 2026, EVA Comfort, the page of 0.13.3):** `0x100 s2 0x1000300 c0 m1` (the central map area, shown by
-  the stock map 0x01000300 class 0: the CarPlay map is no longer in it, it is in EVA's panel scene), `0x101 s2 0x1000312 c1024 m1, 0x1000311 c0 m3` (a box,
-  class 1024, shown, with 0x1000311 parked), `0x102 s0 0x1000313`, `0x103 s1`, `0x104 s1`, `0x105 s0` (the guidance box's slot, free), `0x111 s1`,
-  `0x200 s0`, `0x201 s1 0x1000600 c0 m0`, `0x202 s1`. Status 0 is disabled, 1 free, 2 taken. Which of these, if any, is BMW's gear indicator is not
-  known: 0x101's box (0x1000311-0x1000313 sit next to the guidance panel 0x1000310 and the seat-belt panel 0x1000314) is only a candidate, and
-  the page (0.13.4) now also lists what changes in the table (a "Slot changes" list, the table asked every 4 s) so shifting P / D / N, or changing
-  the cluster's view, shows which row follows the gear indicator. Hiding a box would need cluster-render's hold on that slot, whose take-over
-  is limited to `guide_take_over` (0x01000310) and runs only while the `map` target shows; the seat-belt panel is refused there on purpose.
+- **BMW's gear indicator (0.13.2 - 0.13.4, the page rows removed again):** the white gear indicator ("D2") is drawn by the BMW cluster over everything the
+  panel has, and nothing in cluster-render's layer protocol can cover it. cluster-render can *hold a slot* so that a box of BMW's is not shown (the
+  turn-guidance box, `guide_hold`, `guide_slots`), but its take-over is limited to `guide_take_over` (0x01000310) and runs only while the `map`
+  target shows; the seat-belt panel 0x01000314 is refused there on purpose. Whether the gear indicator is a slot box at all is not known. The slot
+  table of the owner's car (Nov 7 2026, EVA Comfort, read from the page of 0.13.3): `0x100 s2 0x1000300 c0 m1` (the central map area, shown by the stock map
+  0x01000300), `0x101 s2 0x1000312 c1024 m1, 0x1000311 c0 m3`, `0x102 s0 0x1000313`, `0x103 s1`, `0x104 s1`, `0x105 s0`, `0x111 s1`, `0x200 s0`,
+  `0x201 s1 0x1000600`, `0x202 s1` (status 0 disabled, 1 free, 2 taken). 0x101's box is only a candidate. The page rows that showed the table (and what
+  changed in it) were taken out at the owner's request; the app log still has cluster-render's status, slot rows included.
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
