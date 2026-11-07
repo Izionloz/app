@@ -231,6 +231,13 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   shows. EVA Comfort's backdrop is class `overlay` and its texts and pictures `alert`, so the map (class `content`) sits under the backdrop and
   shows through its hole, and what the map has outside the window is hidden by the backdrop (the big-map layout relies on that). Only the
   cluster's map moves (the HUD's stays); with the setting off, or the helper older than 2.17.0, it is as before. Not checked on the car.
+- **Hiding BMW's gear indicator (0.13.2, a lead, not done):** the white gear indicator ("D2") is drawn by the BMW cluster over everything the panel
+  has, and nothing in cluster-render's layer protocol can cover it. cluster-render can, however, *hold a slot* so that a box of BMW's is not shown: it
+  does so for the turn-guidance box (`guide_hold`, `guide_slots`: it maps its own scene into the box's slot and the KOMBI hides the box, verified on
+  a car for 0x105 and 0x103 in its README). If the gear indicator is a slot box of that kind, the same would hide it. Which slot it is has to be read
+  from the car, so the page of the EVA app (the center screen) now shows a "Cluster slots" line, the slot table cluster-render gets from the KOMBI
+  (asked every 15 s; also in the app's log): the owner's photo of that line, taken while the gear indicator shows, tells the slot (and whether it is
+  one at all).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).

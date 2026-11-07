@@ -48,6 +48,8 @@ mgu.run({
             return;
         }
         hud.onStatus((s) => { ctx.ui.text('STATUS', s); });
+        // the slots the BMW cluster reports, on the page (which slot is which box: for hiding one of BMW's boxes, see the README)
+        hud.onSlots((lines) => { ctx.ui.text('SLOTS', 'Cluster slots: ' + lines.slice(0, 12).join(' | ')); });
         hud.start();
 
         // The EVA HUD on the windshield: a second display of this app on cluster-render's "hud" target, with a connection of
