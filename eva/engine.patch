@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..4e83d7c 100644
+index db817c2..8c24a85 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -240,7 +240,7 @@ index db817c2..4e83d7c 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1466,103 @@ class HudApp {
+@@ -1396,6 +1466,113 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -289,6 +289,7 @@ index db817c2..4e83d7c 100644
 +        c.uniform(ref, 'u_rail', rr, { type: 'vec4' });
 +        c.uniform(ref, 'u_railP', rp, { type: 'vec4' });
 +        c.uniform(ref, 'u_off', [0.2, 0.04, 0.07, 1]);
++        c.uniform(ref, 'u_fx', [0, 0, 0, Math.min(1, Math.max(0.3, this.setting('redline') / (w.rpmMax || 8000)))]);
 +        const s = Array.isArray(w.stripe) && w.stripe.length === 4 ? w.stripe : [0, 0, 0, 0];
 +        c.uniform(ref, 'u_stripe', [s[0] - w.x, s[1] - w.y, s[2], s[3]]);
 +    }
@@ -302,12 +303,21 @@ index db817c2..4e83d7c 100644
 +        const lit1 = isNum(cool) ? Math.max(0, Math.min(e.segs[1], Math.round(cool / (w.coolMax || 120) * e.segs[1]))) : 0;
 +        const lvl = this._evaLevel();
 +        const dim = lvl >= 3 && Math.floor(Date.now() / EVA_FLASH_MS) % 2 === 1 ? 0.55 : 1;
-+        const key = lit0 + '|' + lit1 + '|' + lvl + '|' + dim;
++        // effects of the rev rail: a band sweeping along the lit part (1.4 s, from 3500 rpm), a breathing glow from the second level,
++        // a strobe at the redline; in steps, so the link carries a few messages a second
++        const now = Date.now();
++        const phase = lit0 > 2 && lvl >= 1 ? Math.floor((now % 1400) / 1400 * 24) / 24 : 0;
++        let pulse = 0;
++        if (lvl >= 3) pulse = Math.floor(now / 110) % 2;
++        else if (lvl === 2) pulse = Math.round((0.5 + 0.5 * Math.sin(now / 240)) * 5) / 5;
++        const redFrac = Math.min(1, Math.max(0.3, this.setting('redline') / (w.rpmMax || 8000)));
++        const key = lit0 + '|' + lit1 + '|' + lvl + '|' + dim + '|' + phase + '|' + pulse + '|' + redFrac;
 +        if (!force && key === x.last) return;
 +        x.last = key;
 +        const rp = e.rp.slice();
 +        rp[1] = lit0; rp[5] = lit1;
 +        const lc = EVA_LEVELS[lvl];
++        x.c.uniform(x.ref, 'u_fx', [phase, pulse, lvl, redFrac]);
 +        x.c.uniform(x.ref, 'u_railP', rp, { type: 'vec4' });
 +        x.c.uniform(x.ref, 'u_railCol', [lc[0] / 255, lc[1] / 255, lc[2] / 255, dim, 0.4, 0.96, 0.72, 1], { type: 'vec4' });
 +    }
@@ -379,10 +389,10 @@ index af2ad98..f3afe59 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..37bacef 100644
+index c8679c1..8a4fd1a 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,101 @@ void main() {
+@@ -889,4 +889,131 @@ void main() {
  }
  `;
  
@@ -409,6 +419,7 @@ index c8679c1..37bacef 100644
 +uniform vec4 u_railCol[2];
 +uniform vec4 u_off;
 +uniform vec4 u_stripe;
++uniform vec4 u_fx;       // the rev rail's effects: sweep phase 0..1, pulse 0..1, level 0..3, the redline as a part of the rail
 +
 +float cham(vec2 p, vec4 r, float c) {
 +    vec2 h = r.zw * 0.5;
@@ -421,8 +432,13 @@ index c8679c1..37bacef 100644
 +vec4 rail(vec2 p, vec4 r, vec4 sp, vec4 cl) {
 +    vec2 q = p - r.xy;
 +    if (q.x < 0.0 || q.y < 0.0 || q.x > r.z || q.y > r.w) return vec4(0.0);
++    bool rev = sp.w < 0.5;
 +    float edge = min(min(q.x, r.z - q.x), min(q.y, r.w - q.y));
-+    if (edge < 1.0) return vec4(0.6, 0.2, 0.16, 1.0);
++    if (edge < 1.0) {
++        vec3 b = vec3(0.6, 0.2, 0.16);
++        if (rev) b = mix(b, cl.rgb, clamp(0.18 * u_fx.z + 0.6 * u_fx.y, 0.0, 1.0));
++        return vec4(b, 1.0);
++    }
 +    float pad = 5.0;
 +    vec2 s = vec2(q.x - pad, q.y - pad);
 +    float n = sp.x, gap = sp.z;
@@ -433,12 +449,27 @@ index c8679c1..37bacef 100644
 +    float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0) * inY;
 +    if (i < 0.0 || i >= n || a <= 0.0) return vec4(0.04, 0.0, 0.01, 1.0);
 +    float fy = s.y / (r.w - 2.0 * pad);
++    float k = i / n;
 +    vec3 col = u_off.rgb;
++    if (rev) {
++        // the zones are marked on the unlit segments: warm before the redline, red from it
++        if (k >= u_fx.w) col = vec3(0.46, 0.06, 0.09);
++        else if (k >= u_fx.w - 0.2) col = vec3(0.30, 0.10, 0.06);
++    }
 +    if (i < sp.y) {
 +        vec3 c = cl.rgb;
 +        if (sp.w > 0.5) {
-+            float k = i / n;
 +            c = k >= 0.9500 ? vec3(0.98, 0.32, 0.30) : (k >= 0.8700 ? vec3(0.98, 0.74, 0.41) : vec3(0.40, 0.96, 0.72));
++        }
++        if (rev) {
++            float d = (sp.y - 1.0) - i;                       // how far behind the head: 0 at the last lit segment
++            c *= clamp(1.0 - d * 0.035, 0.6, 1.0);            // brighter towards the head
++            c = mix(c, vec3(1.0, 0.96, 0.82), 0.6 * (1.0 - clamp(d, 0.0, 1.0)));      // the head is white-hot
++            float sw = fract(u_fx.x) * (sp.y + 6.0) - 3.0;    // a bright band runs along the lit part
++            c += vec3(0.38, 0.30, 0.18) * clamp(1.0 - abs(i - sw) * 0.4, 0.0, 1.0) * step(0.5, u_fx.z);
++            c = mix(c, vec3(1.0, 0.12, 0.2), u_fx.y * 0.6 * step(1.5, u_fx.z));       // the redline strobe
++            // the last lit segments strobe on their own from the second level on (shift lights)
++            c = mix(c, vec3(1.0, 0.95, 0.8), step(1.5, u_fx.z) * u_fx.y * step(sp.y - 6.0, i) * 0.45);
 +        }
 +        col = mix(c * 1.18, c * 0.92, fy) * cl.a;
 +    }
@@ -473,6 +504,15 @@ index c8679c1..37bacef 100644
 +    for (int k = 0; k < 2; k++) {
 +        vec4 rr = rail(p, u_rail[k], u_railP[k], u_railCol[k]);
 +        c = over(c, rr.rgb, rr.a);
++        if (k == 0 && u_railP[0].w < 0.5 && rr.a == 0.0) {
++            // a glow round the rev rail that grows with the level and breathes at the redline
++            vec4 r = u_rail[0];
++            vec2 h = r.zw * 0.5;
++            vec2 d2 = abs(p - (r.xy + h)) - h;
++            float d = length(max(d2, 0.0));
++            float g = exp(-d / 6.0) * (0.10 * u_fx.z + 0.6 * u_fx.y) * u_railCol[0].a;
++            c += u_railCol[0].rgb * g * step(0.5, u_fx.z);
++        }
 +    }
 +    if (u_stripe.z > 0.0) {
 +        vec2 q = p - u_stripe.xy;

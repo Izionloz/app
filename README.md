@@ -158,6 +158,11 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the US units) under DRIVE MODE, from `de.bmw.infotainment.vehicle.TPMS` (declared in `app.json` again; the 0.1.0 install failed on
   an interface the unit lacked, 0.1.1 dropped the optional ones, and which one it was is not known: if this install fails, the TPMS
   declaration is the first thing to remove).
+- **Rev bar effects and coolant on the HUD (0.9.0):** the rev bar (cluster and HUD) has more going on: the zones are marked on the unlit
+  segments (warm before the redline, red from it), the lit part brightens towards a white-hot head, a bright band sweeps along it (from
+  3500 rpm, 1.4 s), the frame and a glow round the bar grow with the level and breathe from 5000 rpm, and at the redline the whole bar and
+  its last six segments strobe (shift lights). The effects are uniform values (`u_fx`) sent a few times a second, no new layers. The HUD
+  layouts also show the coolant (a 14-segment ramp rail and the number, bottom right, clear of BMW's speed; the cluster already had it).
 - **The gear (0.8.1):** the gear box shows what BMW's selector shows, P R N or D with the engaged gear (D1 .. D8; S / M by the shifter
   programme when known), on the cluster and the HUD (`{{gear}}` instead of `{{stage}}`; fonts `e_gearn`, `w_gear`).
 - **EVA HUD on the windshield (0.6.0):** a second display of the same app on cluster-render's `hud` target, from the owner's

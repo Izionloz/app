@@ -54,6 +54,15 @@
      "h": 24,
      "segs": 38,
      "gap": 2
+    },
+    {
+     "x": 400,
+     "y": 357,
+     "w": 140,
+     "h": 18,
+     "segs": 14,
+     "gap": 2,
+     "ramp": true
     }
    ]
   },
@@ -83,7 +92,7 @@
    "x": 131,
    "y": 131,
    "w": 160,
-   "h": 15,
+   "h": 18,
    "text": "HEAD-UP DISPLAY",
    "font": "w_small",
    "color": [
@@ -101,7 +110,7 @@
    "x": 440,
    "y": 106,
    "w": 156,
-   "h": 15,
+   "h": 18,
    "text": "DRIVE MODE",
    "font": "w_small",
    "color": [
@@ -157,7 +166,7 @@
    "x": 153,
    "y": 183,
    "w": 40,
-   "h": 15,
+   "h": 18,
    "text": "0",
    "font": "w_small",
    "color": [
@@ -175,7 +184,7 @@
    "x": 243,
    "y": 183,
    "w": 40,
-   "h": 15,
+   "h": 18,
    "text": "2K",
    "font": "w_small",
    "color": [
@@ -193,7 +202,7 @@
    "x": 333,
    "y": 183,
    "w": 40,
-   "h": 15,
+   "h": 18,
    "text": "4K",
    "font": "w_small",
    "color": [
@@ -211,7 +220,7 @@
    "x": 423,
    "y": 183,
    "w": 40,
-   "h": 15,
+   "h": 18,
    "text": "6K",
    "font": "w_small",
    "color": [
@@ -229,7 +238,7 @@
    "x": 513,
    "y": 183,
    "w": 40,
-   "h": 15,
+   "h": 18,
    "text": "8K",
    "font": "w_small",
    "color": [
@@ -267,7 +276,7 @@
    "x": 140,
    "y": 212,
    "w": 76,
-   "h": 15,
+   "h": 18,
    "text": "GEAR",
    "font": "w_small",
    "color": [
@@ -304,7 +313,7 @@
    "x": 138,
    "y": 291,
    "w": 80,
-   "h": 15,
+   "h": 18,
    "text": "{{gearWord}}",
    "font": "w_small",
    "color": [
@@ -358,7 +367,7 @@
    "type": "text",
    "z": 9,
    "x": 380,
-   "y": 322,
+   "y": 314,
    "w": 200,
    "h": 23,
    "text": "{{evaAlert}}",
@@ -371,6 +380,42 @@
    ],
    "align": "center",
    "byRpm": true
+  },
+  {
+   "id": "coolCap",
+   "type": "text",
+   "z": 9,
+   "x": 400,
+   "y": 341,
+   "w": 150,
+   "h": 18,
+   "text": "COOLANT {{u:temp}}",
+   "font": "w_small",
+   "color": [
+    249,
+    113,
+    88,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "cool",
+   "type": "text",
+   "z": 9,
+   "x": 546,
+   "y": 354,
+   "w": 52,
+   "h": 21,
+   "text": "{{coolant}}",
+   "font": "w_rpm",
+   "color": [
+    255,
+    170,
+    80,
+    255
+   ],
+   "align": "right"
   }
  ]
 }

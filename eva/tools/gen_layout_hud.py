@@ -44,8 +44,10 @@ def build(variant):
         # BMW's speed is the speed: a rule over it with two ticks, and "SPEED" to its left
         frames += [{'x': 262, 'y': 326, 'w': 124, 'h': 2, 'kind': 2}, {'x': 262, 'y': 326, 'w': 2, 'h': 8, 'kind': 2},
                    {'x': 384, 'y': 326, 'w': 2, 'h': 8, 'kind': 2}]
+    # coolant, bottom right (clear of BMW's speed at the lower left): a small ramp rail (mint, amber from 105 C, red at the end)
+    cool = {'x': 400, 'y': 357, 'w': 140, 'h': 18, 'segs': 14, 'gap': 2, 'ramp': True}
     W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3],
-              'frames': frames, 'rpmMax': 8000, 'coolMax': 120, 'rails': [rail]})
+              'frames': frames, 'rpmMax': 8000, 'coolMax': 120, 'rails': [rail, cool]})
 
     text('nerv', 130, 104, 150, 'NERV', 'w_title', RED, glow=True)
     text('hud', 131, 131, 160, 'HEAD-UP DISPLAY', 'w_small', SUB)
@@ -67,13 +69,16 @@ def build(variant):
         text('speed', 252, 222, 214, '{{speed}}', 'w_speed', VAL, 'right', z=8, glow=True, rate=1)
         text('speedUnit', 474, 278, 100, '{{u:speedLc}}', 'w_unit', [255, 187, 121, 255], z=8)
         # the warning is centred well to the right of BMW's speed
-        text('alert', 380, 322, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
+        text('alert', 380, 314, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
     else:
         # the big number is the rev count; the speed is BMW's own, under its rule
         text('rpm', 252, 222, 214, '{{rpm}}', 'w_speed', VAL, 'right', z=8, byRpm=True, glow=True, rate=1)
         text('rpmUnit', 474, 278, 100, 'rpm', 'w_unit', [255, 187, 121, 255], z=8)
         text('speedCap', 236, 346, 42, 'SPEED', 'w_small', SUB, 'right', z=9)
-        text('alert', 400, 322, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
+        text('alert', 400, 314, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
+
+    text('coolCap', 400, 341, 150, 'COOLANT {{u:temp}}', 'w_small', SUB, z=9)
+    text('cool', 546, 354, 52, '{{coolant}}', 'w_rpm', VAL, 'right', z=9)
 
     name = 'EVA HUD' if own else 'EVA HUD (BMW speed)'
     with open(os.path.join(APP, 'layouts', variant + '.json'), 'w') as f:
