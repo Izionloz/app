@@ -12,7 +12,9 @@ import argparse, base64, json, os, sys
 ap = argparse.ArgumentParser()
 ap.add_argument('--kit', required=True)
 ap.add_argument('--pilot')
+ap.add_argument('--comfort', help='the unzipped EVA_Comfort_Full_Assets folder (icons, car) for the EVA Comfort layout')
 a = ap.parse_args()
+
 sys.path.insert(0, os.path.join(a.kit, 'tools'))
 import bake_fonts as bf          # noqa: E402
 from PIL import Image            # noqa: E402
@@ -68,3 +70,39 @@ if a.pilot:
     with open(os.path.join(po, 'pilot.json'), 'w') as f:
         json.dump({'w': W, 'h': H, 'rgba': base64.b64encode(bytes(px)).decode('ascii')}, f, separators=(',', ':'))
     print('pilot %dx%d' % (W, H))
+
+if a.comfort:
+    # EVA Comfort: the footer icons and the car with its tyre sensors from the owner's asset pack, and the red hazard dashes drawn here.
+    # Straight (non-premultiplied) RGBA, as cluster-render's image layers take it. Sizes are what eva_comfort.json asks for.
+    po = os.path.join(OUT, 'pictures')
+    os.makedirs(po, exist_ok=True)
+
+    def save(name, im):
+        im = im.convert('RGBA')
+        with open(os.path.join(po, name + '.json'), 'w') as f:
+            json.dump({'w': im.width, 'h': im.height, 'rgba': base64.b64encode(im.tobytes()).decode('ascii')}, f, separators=(',', ':'))
+        print('%s %dx%d' % (name, im.width, im.height))
+
+    comp = os.path.join(a.comfort, 'png', 'components')
+    load = lambda n: Image.open(os.path.join(comp, n + '.png')).convert('RGBA')
+    for name, src in (('c_coolant', '21_icon_coolant'), ('c_oil', '22_icon_oil'), ('c_battery', '23_icon_battery'), ('c_fuel', '24_icon_fuel')):
+        im = load(src)
+        save(name, im.resize((round(im.width * 36 / im.height), 36), Image.LANCZOS))
+    # the car (x 1650, y 295) and its four tyre sensors (x 1630, y 344) on one 122x238 canvas, then 0.9
+    car, tyres = load('17_car_top'), load('18_tyre_icons')
+    cv = Image.new('RGBA', (122, 238), (0, 0, 0, 0))
+    cv.alpha_composite(car, (1650 - 1630, 0))
+    cv.alpha_composite(tyres, (0, 344 - 295))
+    save('c_car', cv.resize((110, 214), Image.LANCZOS))
+
+    def dashes(n, w=20, h=10, skew=7, gap=8, color=(236, 70, 42, 255)):
+        W = n * (w + gap) - gap + skew
+        im = Image.new('RGBA', (W * 4, h * 4), (0, 0, 0, 0))
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(im)
+        for i in range(n):
+            x0 = i * (w + gap)
+            d.polygon([((x0 + skew) * 4, 0), ((x0 + skew + w) * 4, 0), ((x0 + w) * 4, h * 4 - 1), (x0 * 4, h * 4 - 1)], fill=color)
+        return im.resize((W, h), Image.LANCZOS)
+    save('c_dash5', dashes(5))
+    save('c_dash3', dashes(3))

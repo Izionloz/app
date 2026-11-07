@@ -37,11 +37,6 @@ framesA = [
     {'x': 710, 'y': 152, 'w': 500, 'h': 2, 'kind': 2, 'color': 2},         # the line under the drive mode
 ] + [{'x': x, 'y': FY, 'w': w, 'h': FH, 'chamfer': 14} for x, w in CARDS]
 framesB = [
-    {'x': 1712, 'y': 384, 'w': 80, 'h': 190, 'chamfer': 28},               # the car
-    {'x': 1698, 'y': 418, 'w': 14, 'h': 46, 'kind': 2, 'color': 2},        # its tyres
-    {'x': 1792, 'y': 418, 'w': 14, 'h': 46, 'kind': 2, 'color': 2},
-    {'x': 1698, 'y': 502, 'w': 14, 'h': 46, 'kind': 2, 'color': 2},
-    {'x': 1792, 'y': 502, 'w': 14, 'h': 46, 'kind': 2, 'color': 2},
     {'x': 1621, 'y': 370, 'w': 262, 'h': 2, 'kind': 2, 'color': 1},        # the rule under the tyre caption
     {'x': 1230, 'y': 370, 'w': 150, 'h': 2, 'kind': 2, 'color': 1},        # ... and under the gear caption
 ]
@@ -51,19 +46,19 @@ W.append({'id': 'eva', 'type': 'evadash', 'class': 'ambient', 'z': -10, 'x': 0, 
           'hole': [MAP[0] + 3, MAP[1] + 3, MAP[2] - 6, MAP[3] - 6], 'holeRadius': 42,
           'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
           'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 48, 'gap': 4},
-                    {'x': 46, 'y': 682, 'w': 480, 'h': 14, 'segs': 32, 'gap': 3, 'ramp': True}]})
-# a second layer over it with nothing but what is drawn: the car, the oil ramp
+                    {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
+# a second layer over it with nothing but what is drawn: two rules and the oil ramp
 W.append({'id': 'eva2', 'type': 'evadash', 'class': 'ambient', 'z': -9, 'x': 0, 'y': 0, 'w': 1920, 'h': 720, 'bg': False,
           'frames': framesB, 'coolMax': 140, 'rail1Signal': 'oil', 'rpmMax': 8000,
           'rails': [{'x': 0, 'y': 0, 'w': 0, 'h': 0, 'segs': 1, 'ramp': True},
                     {'x': 640, 'y': 682, 'w': 310, 'h': 14, 'segs': 22, 'gap': 3, 'ramp': True}]})
 
-text('title', 232, 98, 520, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
+text('title', 232, 98, 460, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
 text('sub', 233, 144, 340, 18, 'TACTICAL DRIVE DISPLAY', 'e_sub', SUB)
 text('comfort', 710, 102, 500, 41, '{{mode}}', 'e_title', WHITE, 'center', glow=True)
 text('amb', 1390, 110, 100, 39, '{{ambient}}', 'e_val', VAL, 'right')
 text('ambU', 1496, 113, 50, 37, '{{u:temp}}', 'e_unit', TITLE)
-text('clock', 1430, 112, 270, 46, '{{time}}', 'e_clock', VAL, 'right', glow=True)
+text('clock', 1560, 112, 140, 46, '{{time}}', 'e_clock', VAL, 'right', glow=True)
 
 text('rpmLabel', 112, 190, 160, 28, 'ENGINE RPM', 'e_label', VAL, byRpm=True, z=6)
 text('coldNote', 276, 191, 250, 24, '{{coldNote}}', 'e_mono', [255, 173, 84, 255], z=6)
@@ -82,7 +77,7 @@ text('rpmUnit', 1768, 236, 76, 37, 'rpm', 'e_unit', TITLE, z=6)
 
 text('speed', 36, 342, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=8, rate=1)
 text('speedUnit', 36, 514, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=8)
-text('speedCap', 26, 596, 365, 24, 'SPEED', 'e_mono', SUB, 'center', z=8)
+text('speedCap', 158, 596, 100, 24, 'SPEED', 'e_mono', SUB, 'center', z=8)
 
 text('gearCap', 1230, 339, 150, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'center', z=8)
 text('gear', 1235, 411, 150, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=8)
@@ -90,14 +85,26 @@ text('gearWord', 1217, 548, 190, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=
 
 text('tyreCap', 1621, 339, 70, 28, 'TYRE', 'e_label', HEAD, z=8)
 text('tyreU', 1692, 346, 60, 37, '{{u:pressure}}', 'e_unit', TITLE, z=8)
-for key, x, y, al in (('FL', 1620, 422, 'left'), ('FR', 1814, 422, 'right'), ('RL', 1620, 506, 'left'), ('RR', 1814, 506, 'right')):
+for key, x, y, al in (('FL', 1620, 431, 'left'), ('FR', 1814, 431, 'right'), ('RL', 1620, 543, 'left'), ('RR', 1814, 543, 'right')):
     text('tyre' + key, x, y, 70, 39, '{{tyreP:%s}}' % key, 'e_val', VAL, al, z=8)
 
+def picture(id, name, x, y, w, h, z=8):
+    W.append({'id': id, 'type': 'picture', 'class': 'content', 'z': z, 'x': x, 'y': y, 'w': w, 'h': h, 'name': name})
+
+# the owner's asset pack: the car with its tyre sensors, red hazard dashes, and an icon on each card of the bottom row
+picture('car', 'c_car', 1697, 385, 110, 214)
+picture('dashSpeed', 'c_dash3', 44, 600, 83, 10)
+picture('dashTyre', 'c_dash3', 1796, 346, 83, 10)
+picture('dashGear', 'c_dash5', 1250, 600, 139, 10)
+
+ICONS = {'COOLANT': ('c_coolant', 22), 'OIL': ('c_oil', 59), 'BATTERY': ('c_battery', 43), 'RANGE': ('c_fuel', 37)}
 for (cx, cw), cap, val, unit, uw in zip(CARDS, ('COOLANT', 'OIL', 'BATTERY', 'RANGE'), ('{{coolant}}', '{{oil}}', '{{battery}}', '{{range}}'),
                                          ('{{u:temp}}', '{{u:temp}}', '%', '{{u:distLc}}'), (50, 50, 40, 60)):
     right = cx + cw - 19
-    capx = cx + 75 if cap == 'OIL' else cx + 22              # BMW's seat-belt light covers x 587-626 here
-    text('cap_' + cap.lower(), capx, 646, 140, 28, cap, 'e_label', HEAD, z=9)
+    name, iw = ICONS[cap]
+    ix = cx + 75 if cap == 'OIL' else cx + 20                # BMW's seat-belt light covers x 587-626 on the oil card
+    picture('ic_' + cap.lower(), name, ix, 642, iw, 36, 9)
+    text('cap_' + cap.lower(), ix + iw + 14, 646, 72 if cap == 'OIL' else 110, 28, cap, 'e_label', HEAD, z=9)
     text('val_' + cap.lower(), right - uw - 8 - 110, 641, 110, 39, val, 'e_val', VAL, 'right', z=9)
     text('u_' + cap.lower(), right - uw, 644, uw, 37, unit, 'e_unit', TITLE, z=9)
 

@@ -174,6 +174,11 @@ test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fon
             if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
         }
     });
+    l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+        const pic = json('hud', 'pictures', `${w.name}.json`);
+        assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        assert.strictEqual(Buffer.from(pic.rgba, 'base64').length, pic.w * pic.h * 4);
+    });
     const dash = l.widgets.filter((w) => w.type === 'evadash');
     assert.strictEqual(dash.length, 2);
     dash.forEach((d) => { assert.ok(d.frames.length <= 12); assert.ok(d.rails.length <= 2); });

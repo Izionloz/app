@@ -187,6 +187,10 @@ simulated (fuel rate, trip distance, "system online", sync, drive link, preview 
   the middle row is a little shorter, the map window is 800 wide and BMW's black gear box (x 1406-1597, y 342-419) stays in the gear
   section, the battery shows its charge in % and there are no icons. Only seen on the bench: whether the car's map shows in the
   window (and above or below the panel) needs the car.
+  The owner's `EVA_Comfort_Complete_Assets` pack adds the art: the four icons of the bottom row (thermometer, oil can, battery, fuel
+  pump), the car with its four tyre sensors beside the tyre pressures, and red hazard dashes (drawn by `eva/tools/make_assets.py
+  --comfort <folder>`; the baked pictures are committed). They join the text sheets (the layout still has 7 layers, 4.9 MiB). Not
+  used: the pack's flat background, header frame and the map, route and turn-arrow art (the real map shows in the window).
 - **S and M (0.9.1, withdrawn in 0.9.2):** 0.9.1 declared `de.bmw.infotainment.misc.MDrive` (`dataDisplayGearbox`, the shifter programme)
   and the Store's install failed on the car (`UPDATE_FAILED; the previous version was kept`), so that interface is one the unit lacks;
   it is not declared in 0.9.2. The gear reads D1 .. D8 (S / M only if the gearbox signal itself carries the programme).
