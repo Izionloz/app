@@ -153,6 +153,15 @@
    "bg": false,
    "frames": [
     {
+     "x": 1402,
+     "y": 338,
+     "w": 197,
+     "h": 86,
+     "chamfer": 14,
+     "glow": 2,
+     "color": 2
+    },
+    {
      "x": 1622,
      "y": 376,
      "w": 260,
@@ -666,7 +675,7 @@
    "type": "text",
    "z": 11,
    "x": 1244,
-   "y": 420,
+   "y": 394,
    "w": 144,
    "h": 89,
    "text": "{{gear}}",
@@ -681,12 +690,197 @@
    "glow": true
   },
   {
+   "id": "selDimP",
+   "type": "text",
+   "z": 8,
+   "x": 1264,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "P",
+   "font": "e_label",
+   "color": [
+    150,
+    84,
+    62,
+    255
+   ],
+   "align": "center"
+  },
+  {
+   "id": "selP",
+   "type": "text",
+   "z": 11,
+   "x": 1264,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "{{sel:P}}",
+   "font": "e_label",
+   "color": [
+    255,
+    190,
+    110,
+    255
+   ],
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "selDimR",
+   "type": "text",
+   "z": 8,
+   "x": 1330,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "R",
+   "font": "e_label",
+   "color": [
+    150,
+    84,
+    62,
+    255
+   ],
+   "align": "center"
+  },
+  {
+   "id": "selR",
+   "type": "text",
+   "z": 11,
+   "x": 1330,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "{{sel:R}}",
+   "font": "e_label",
+   "color": [
+    255,
+    190,
+    110,
+    255
+   ],
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "selDimN",
+   "type": "text",
+   "z": 8,
+   "x": 1396,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "N",
+   "font": "e_label",
+   "color": [
+    150,
+    84,
+    62,
+    255
+   ],
+   "align": "center"
+  },
+  {
+   "id": "selN",
+   "type": "text",
+   "z": 11,
+   "x": 1396,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "{{sel:N}}",
+   "font": "e_label",
+   "color": [
+    255,
+    190,
+    110,
+    255
+   ],
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "selDimD",
+   "type": "text",
+   "z": 8,
+   "x": 1462,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "D",
+   "font": "e_label",
+   "color": [
+    150,
+    84,
+    62,
+    255
+   ],
+   "align": "center"
+  },
+  {
+   "id": "selD",
+   "type": "text",
+   "z": 11,
+   "x": 1462,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "{{sel:D}}",
+   "font": "e_label",
+   "color": [
+    255,
+    190,
+    110,
+    255
+   ],
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "selDimM",
+   "type": "text",
+   "z": 8,
+   "x": 1528,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "M",
+   "font": "e_label",
+   "color": [
+    150,
+    84,
+    62,
+    255
+   ],
+   "align": "center"
+  },
+  {
+   "id": "selM",
+   "type": "text",
+   "z": 11,
+   "x": 1528,
+   "y": 500,
+   "w": 52,
+   "h": 30,
+   "text": "{{sel:M}}",
+   "font": "e_label",
+   "color": [
+    255,
+    190,
+    110,
+    255
+   ],
+   "align": "center",
+   "glow": true
+  },
+  {
    "id": "gearWord",
    "type": "text",
    "z": 11,
    "x": 1244,
-   "y": 532,
-   "w": 144,
+   "y": 548,
+   "w": 330,
    "h": 24,
    "text": "{{gearWord}}",
    "font": "e_mono",

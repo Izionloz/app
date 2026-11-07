@@ -38,6 +38,7 @@ framesA = [                                                         # evadash2 h
     {'x': 1225, 'y': 340, 'w': 372, 'h': 252, 'chamfer': 24, 'glow': 1},               # the gear box, as in EVA Sport but wide: BMW's black box (x 1406-1597, y 342-419) sits inside its right part
 ]
 framesB = [
+    {'x': 1402, 'y': 338, 'w': 197, 'h': 86, 'chamfer': 14, 'glow': 2, 'color': 2},       # a bracket round BMW's black gear box (x 1406-1597, y 342-419), which can't be covered
     {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
     {'x': 26, 'y': FY, 'w': 1868, 'h': FH, 'chamfer': 16, 'glow': 1},                 # the bottom row
     {'x': 1517, 'y': 104, 'w': 14, 'h': 50, 'kind': 3, 'border': 2, 'color': 2},       # slanted rules: in the header and between the bottom sections
@@ -83,10 +84,13 @@ text('rpmUnit', 1768, 236, 76, 37, 'rpm', 'e_unit', TITLE, z=5)
 text('speed', 36, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=7, rate=1)
 text('speedUnit', 36, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
 
-# the gear box as in EVA Sport: a frame, GEAR, the gear big, its word (P R N, D1 .. D8, S3, M3) under it; x stays left of BMW's box (x 1406)
+# the gear section: BMW's black box (its own letter, never covered) top right in a bracket; ours under and left of it: GEAR, the gear number big, the selector row, its word
 text('gearCap', 1244, 352, 144, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'center', z=11)
-text('gear', 1244, 420, 144, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
-text('gearWord', 1244, 532, 144, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
+text('gear', 1244, 394, 144, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own (BMW's box shows its own letter)
+    text('selDim' + L, 1264 + k * 66, 500, 52, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
+    text('sel' + L, 1264 + k * 66, 500, 52, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
+text('gearWord', 1244, 548, 330, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
 
 text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
 for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1808, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1808, 514, 'right')):
