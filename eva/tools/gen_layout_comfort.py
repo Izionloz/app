@@ -35,7 +35,7 @@ framesA = [                                                         # evadash2 h
     {'x': 70, 'y': 184, 'w': 1780, 'h': 140, 'chamfer': 24, 'glow': 1},               # rev panel
     {'x': 26, 'y': MY, 'w': 365, 'h': MH, 'cut': [60, 22, 22, 60], 'glow': 1},        # speed
     {'x': TYRE[0], 'y': TYRE[1], 'w': TYRE[2], 'h': TYRE[3], 'chamfer': 22, 'glow': 1},
-    {'x': 1232, 'y': 352, 'w': 168, 'h': 240, 'chamfer': 24, 'glow': 1},               # the gear box, as in EVA Sport
+    {'x': 1225, 'y': 340, 'w': 372, 'h': 252, 'chamfer': 24, 'glow': 1},               # the gear box, as in EVA Sport but wide: BMW's black box (x 1406-1597, y 342-419) sits inside its right part
 ]
 framesB = [
     {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
@@ -84,9 +84,9 @@ text('speed', 36, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=Tru
 text('speedUnit', 36, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
 
 # the gear box as in EVA Sport: a frame, GEAR, the gear big, its word (P R N, D1 .. D8, S3, M3) under it; x stays left of BMW's box (x 1406)
-text('gearCap', 1244, 362, 144, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'center', z=11)
-text('gear', 1244, 410, 144, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
-text('gearWord', 1244, 530, 144, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
+text('gearCap', 1244, 352, 144, 28, 'GEAR', 'e_label', [255, 159, 112, 255], 'center', z=11)
+text('gear', 1244, 420, 144, 89, '{{gear}}', 'e_gearn', VAL, 'center', glow=True, z=11)
+text('gearWord', 1244, 532, 144, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
 
 text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
 for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1808, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1808, 514, 'right')):
