@@ -54,9 +54,9 @@
      "glow": 1
     },
     {
-     "x": 432,
+     "x": 708,
      "y": 332,
-     "w": 952,
+     "w": 676,
      "h": 268,
      "cut": [
       6,
@@ -112,9 +112,9 @@
    "rpmMax": 8000,
    "coolMax": 120,
    "hole": [
-    440,
+    716,
     336,
-    936,
+    660,
     264
    ],
    "holeRadius": 6,
@@ -165,6 +165,19 @@
      "chamfer": 8,
      "border": 1,
      "color": 1
+    },
+    {
+     "x": 432,
+     "y": 332,
+     "w": 270,
+     "h": 268,
+     "cut": [
+      8,
+      8,
+      24,
+      24
+     ],
+     "glow": 1
     },
     {
      "x": 26,
@@ -884,6 +897,310 @@
    ],
    "align": "center",
    "glow": true
+  },
+  {
+   "id": "engCap",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 340,
+   "w": 240,
+   "h": 28,
+   "text": "ENGINE",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "eng_0",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 384,
+   "w": 104,
+   "h": 28,
+   "text": "BOOST",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "engV_0",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 556,
+   "y": 378,
+   "w": 84,
+   "h": 39,
+   "text": "{{boost}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "engU_0",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 646,
+   "y": 381,
+   "w": 44,
+   "h": 37,
+   "text": "{{u:boost}}",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "eng_1",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 428,
+   "w": 104,
+   "h": 28,
+   "text": "TORQUE",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "engV_1",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 556,
+   "y": 422,
+   "w": 84,
+   "h": 39,
+   "text": "{{torque}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "engU_1",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 646,
+   "y": 425,
+   "w": 44,
+   "h": 37,
+   "text": "{{u:torque}}",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "eng_2",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 472,
+   "w": 104,
+   "h": 28,
+   "text": "POWER",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "engV_2",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 556,
+   "y": 466,
+   "w": 84,
+   "h": 39,
+   "text": "{{powerPct}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "engU_2",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 646,
+   "y": 469,
+   "w": 44,
+   "h": 37,
+   "text": "%",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "eng_3",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 516,
+   "w": 104,
+   "h": 28,
+   "text": "G LAT",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "engV_3",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 556,
+   "y": 510,
+   "w": 84,
+   "h": 39,
+   "text": "{{gLat}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "engU_3",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 646,
+   "y": 513,
+   "w": 44,
+   "h": 37,
+   "text": "g",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "eng_4",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 450,
+   "y": 560,
+   "w": 104,
+   "h": 28,
+   "text": "G LONG",
+   "font": "e_label",
+   "color": [
+    255,
+    172,
+    112,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "engV_4",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 556,
+   "y": 554,
+   "w": 84,
+   "h": 39,
+   "text": "{{gLong}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "right"
+  },
+  {
+   "id": "engU_4",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 646,
+   "y": 557,
+   "w": 44,
+   "h": 37,
+   "text": "g",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "left"
   },
   {
    "id": "tyreCap",

@@ -24,7 +24,7 @@ def build(wide):
     W[:] = []
     GX = 1394 if wide else 1119                                   # the gear panel's left edge; it ends at x 1603 and takes in BMW's gear box (x 1406-1597, y 342-419) with a margin
     MY, MH = 332, 296                                            # the middle row: below the hood line everywhere, so it can use the full width
-    MAP = (432, MY, 952, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
+    MAP = (708, MY, 676, 268) if wide else (502, MY, 604, 268)  # the map window's frame (it ends at y 600, where the map target does)
     SPW = 394 if wide else 463                                    # the speed panel's width
     TYRE = (1610, MY, 284, MH)
     FY, FH = 636, 64                                             # the bottom row
@@ -43,17 +43,19 @@ def build(wide):
     ]
     framesB = [
         {'x': 1622, 'y': 376, 'w': 260, 'h': 236, 'chamfer': 8, 'border': 1, 'color': 1},  # the box round the car
+        {'x': 432, 'y': MY, 'w': 270, 'h': 268, 'cut': [8, 8, 24, 24], 'glow': 1} if wide else None,   # the engine panel left of the big layout's map window
         {'x': 26, 'y': FY, 'w': 1868, 'h': FH, 'chamfer': 16, 'glow': 1},                 # the bottom row
         {'x': 1517, 'y': 104, 'w': 14, 'h': 50, 'kind': 3, 'border': 2, 'color': 2},       # slanted rules: in the header and between the bottom sections
         {'x': 541, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
         {'x': 968, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
         {'x': 1450, 'y': FY + 8, 'w': 14, 'h': 48, 'kind': 3, 'border': 2, 'color': 2},
     ]
+    framesB = [f for f in framesB if f]
     # the backdrop (class overlay: above the CarPlay map, which waze-on-cluster draws as a content layer when EVA Comfort puts it in the panel's scene,
     # and under the text and pictures, class alert): opaque, black, with the map window cut out of it; the rev rail, the shift lights and the coolant ramp
     W.append({'id': 'eva', 'type': 'evadash2', 'class': 'overlay', 'z': -10, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
               'frames': framesA, 'rpmMax': 8000, 'coolMax': 120,
-              'hole': [440, 336, 936, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
+              'hole': [716, 336, 660, 264] if wide else [506, 336, 594, 262], 'holeRadius': 6,       # inside COMFORT_WIDE_MAP / = COMFORT_MAP in main.js (the map target sits at x 416, y 120)
               'lights': {'x': 560, 'y': 192, 'w': 780, 'h': 20, 'count': 12, 'tail': 0},
               'rails': [{'x': 100, 'y': 228, 'w': 1420, 'h': 40, 'segs': 64, 'gap': 3},
                         {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})
@@ -103,6 +105,16 @@ def build(wide):
     for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own
         text('selDim' + L, GC + (k - 2) * step - bw // 2, ry, bw, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
         text('sel' + L, GC + (k - 2) * step - bw // 2, ry, bw, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
+
+    if wide:
+        # the engine panel (x 432-702, y 332-600): what the car sends besides the big readouts: boost, torque, power, the g forces
+        text('engCap', 450, 340, 240, 28, 'ENGINE', 'e_label', HEAD, z=9)
+        for i, (cap, val, unit) in enumerate((('BOOST', '{{boost}}', '{{u:boost}}'), ('TORQUE', '{{torque}}', '{{u:torque}}'), ('POWER', '{{powerPct}}', '%'),
+                                              ('G LAT', '{{gLat}}', 'g'), ('G LONG', '{{gLong}}', 'g'))):
+            y0 = 378 + i * 44
+            text('eng_' + str(i), 450, y0 + 6, 104, 28, cap, 'e_label', HEAD, z=9)
+            text('engV_' + str(i), 556, y0, 84, 39, val, 'e_val', VAL, 'right', z=9)
+            text('engU_' + str(i), 646, y0 + 3, 44, 37, unit, 'e_unit', TITLE, z=9)
 
     text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
     for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1801, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1801, 514, 'right')):
