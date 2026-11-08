@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..8ff8504 100644
+index db817c2..15eed04 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -283,7 +283,7 @@ index db817c2..8ff8504 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1491,223 @@ class HudApp {
+@@ -1396,6 +1491,224 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -413,6 +413,7 @@ index db817c2..8ff8504 100644
 +        const N = d.needle;
 +        c.uniform(ref, 'u_n', N ? [N.inner, N.outer, N.width || 3, 1] : [0, 0, 0, 0]);
 +        c.uniform(ref, 'u_w', [0, this.setting('warp') !== false && d.warp !== false ? 0 : -1, 0, 0]);
++        c.uniform(ref, 'u_flat', [d.flat === true ? 1 : (Number(d.flat) || 0)]);
 +        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
 +        c.uniform(ref, 'u_red', d.red || [0.93, 0.1, 0.06]);
 +        x.dial = {};
@@ -544,10 +545,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..0291b0f 100644
+index c8679c1..b24c072 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,539 @@ void main() {
+@@ -889,4 +889,557 @@ void main() {
  }
  `;
  
@@ -908,6 +909,7 @@ index c8679c1..0291b0f 100644
 +uniform vec4 u_w;     // the light effects: warp strength 0..1, time (s), the shift flash 0..1, the redline glow 0..1
 +uniform vec3 u_yel;
 +uniform vec3 u_red;
++uniform float u_flat;   // 1: a flat look: no dish, bezel, vignette, stars, tube shading, glow or shadows (the windshield HUD: black is no light there)
 +const float PI = 3.14159265359;
 +
 +float arcDist(vec2 p, float r, float a0, float s) {
@@ -939,10 +941,10 @@ index c8679c1..0291b0f 100644
 +    vec2 pos = v_uv * u_size;
 +    // the screen's edges fall away a little (a vignette), and glow red at the redline
 +    float vg = smoothstep(0.50, 1.10, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0));
-+    acc = ov(acc, vec3(0.0), 0.32 * vg);
-+    acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
++    if (u_flat < 0.5) acc = ov(acc, vec3(0.0), 0.32 * vg);
++    if (u_flat < 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
 +    // a field of faint stars far back, drifting slowly (they stretch into the warp streaks above a certain speed)
-+    if (u_w.y >= 0.0 && d > r + hw + 30.0) {
++    if (u_flat < 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
 +        vec2 sp = pos + vec2(0.0, u_w.y * 5.0);
 +        vec2 cell = floor(sp / 28.0);
 +        float hh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
@@ -954,7 +956,7 @@ index c8679c1..0291b0f 100644
 +        }
 +    }
 +    float cut = clamp((u_size.y - u_c.y - 84.0) - p.y, 0.0, 1.0);   // the dish and the bezel end 84 px over the layer's bottom: the bottom row is there
-+    if (d < Rf + 1.0) {
++    if (u_flat < 0.5 && d < Rf + 1.0) {
 +        float tt = d / Rf;
 +        vec3 face = mix(vec3(0.060, 0.062, 0.072), vec3(0.006, 0.006, 0.009), smoothstep(0.0, 1.0, tt));
 +        float sheen = 0.075 * smoothstep(-0.25, 0.95, -p.y / Rf) * (1.0 - 0.45 * tt);
@@ -985,7 +987,7 @@ index c8679c1..0291b0f 100644
 +            float perpPx = abs(fr - 0.5) * (2.0 * PI * d / N);
 +            float wpx = 1.2 + 2.2 * u_w.x * h2;
 +            float side = 1.0 - smoothstep(0.3 * wpx, wpx, perpPx);
-+            float vis = smoothstep(0.28, 0.9, rad) * (1.0 - smoothstep(3.4, 4.2, rad));
++            float vis = (u_flat > 0.5 ? smoothstep(1.0, 1.3, rad) : smoothstep(0.28, 0.9, rad)) * (1.0 - smoothstep(3.4, 4.2, rad));   // flat (the HUD): only outside the ring, the speed stays clear
 +            float outer = d > r + hw + 24.0 ? 0.65 : 1.0;                       // a little fainter out over the panels, so their words stay clear
 +            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * outer * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
 +        }
@@ -993,7 +995,7 @@ index c8679c1..0291b0f 100644
 +    // the chrome bezel round the face: bright and dark stretches follow the light
 +    float rb = r + hw + 18.0, bw = 8.0;
 +    float bd = abs(d - rb) - bw * 0.5;
-+    if (bd < 1.0) {
++    if (u_flat < 0.5 && bd < 1.0) {
 +        float m = 0.20 + 0.55 * pow(0.5 + 0.5 * cos(2.0 * (a - 0.9 + 0.5 * u_a.z)), 4.0) + 0.40 * pow(0.5 + 0.5 * cos(a + 2.3), 10.0);
 +        float across = clamp((d - (rb - bw * 0.5)) / bw, 0.0, 1.0);
 +        m *= 0.55 + 0.75 * sin(PI * across);
@@ -1011,13 +1013,16 @@ index c8679c1..0291b0f 100644
 +    vec3 litC = zone ? u_red : u_yel;
 +    float pulse = u_fx.w;
 +    float tcross = clamp((d - (r - hw)) / (2.0 * hw), 0.0, 1.0);
-+    float tube = 0.62 + 0.52 * sin(PI * tcross);                            // the ring reads as a tube: bright along its middle
-+    float spec = pow(max(0.0, 1.0 - abs(tcross - 0.32) * 5.0), 2.0) * 0.30;   // and has a highlight
-+    if (lit > 0.002) acc = ov(acc, litC, 0.32 * exp(-max(litD, 0.0) / 15.0) * (1.0 - clamp(0.5 - litD, 0.0, 1.0)) * (1.0 + pulse));
-+    acc = ov(acc, track * tube, clamp(0.5 - ringD, 0.0, 1.0));
-+    float headG = rel < lit ? clamp(1.0 - (lit - rel) / 0.55, 0.0, 1.0) : 0.0;     // the lit part burns brighter towards its head, like a comet
++    float tube = u_flat > 0.5 ? 1.0 : 0.62 + 0.52 * sin(PI * tcross);                            // the ring reads as a tube: bright along its middle
++    float spec = u_flat > 0.5 ? 0.0 : pow(max(0.0, 1.0 - abs(tcross - 0.32) * 5.0), 2.0) * 0.30;   // and has a highlight
++    if (u_flat < 0.5 && lit > 0.002) acc = ov(acc, litC, 0.32 * exp(-max(litD, 0.0) / 15.0) * (1.0 - clamp(0.5 - litD, 0.0, 1.0)) * (1.0 + pulse));
++    // flat 2, the technical look: the ring is a row of short segments
++    float sg = 1.0;
++    if (u_flat > 1.5) { float fq = fract(rel / 0.05); sg = smoothstep(0.0, 0.10, fq) * (1.0 - smoothstep(0.74, 0.84, fq)); }
++    acc = ov(acc, track * tube, clamp(0.5 - ringD, 0.0, 1.0) * sg);
++    float headG = u_flat < 0.5 && rel < lit ? clamp(1.0 - (lit - rel) / 0.55, 0.0, 1.0) : 0.0;     // the lit part burns brighter towards its head, like a comet
 +    vec3 litS = clamp(litC * tube + vec3(spec) + 0.45 * pulse + vec3(0.55) * pow(headG, 3.0), 0.0, 1.0);
-+    acc = ov(acc, litS, clamp(0.5 - litD, 0.0, 1.0));
++    acc = ov(acc, litS, clamp(0.5 - litD, 0.0, 1.0) * sg);
 +    // the ticks inside the ring, with a shadow under each
 +    float nt = u_t.x * u_t.y;
 +    if (rel <= u_a.y + 0.02 && d < r - hw - 2.0 && d > r - hw - u_t.z - 3.0) {
@@ -1030,8 +1035,20 @@ index c8679c1..0291b0f 100644
 +        bool inZone = k / nt >= redAt - 0.001;
 +        vec3 tc = inZone ? vec3(1.0, 0.32, 0.25) : (major ? vec3(0.95) : vec3(0.6));
 +        float inLen = (d > r - hw - 3.0 - len) ? 1.0 : 0.0;
-+        acc = ov(acc, vec3(0.0), inLen * 0.6 * clamp(th + 3.0 - off, 0.0, 1.0));
++        if (u_flat < 0.5) acc = ov(acc, vec3(0.0), inLen * 0.6 * clamp(th + 3.0 - off, 0.0, 1.0));
 +        acc = ov(acc, tc, inLen * clamp(th + 0.5 - off, 0.0, 1.0));
++    }
++    // flat 2: thin technical lines round the counter: an inner hairline ring, an outer one, and bracket corners
++    if (u_flat > 1.5) {
++        float hi = arcDist(p, r - hw - 19.0, u_a.x, u_a.y) - 0.6;
++        acc = ov(acc, vec3(0.75, 0.82, 0.9), 0.38 * clamp(0.5 - hi, 0.0, 1.0));
++        float ho = arcDist(p, r + hw + 15.0, u_a.x, u_a.y) - 0.7;
++        acc = ov(acc, vec3(0.85, 0.9, 1.0), 0.55 * clamp(0.5 - ho, 0.0, 1.0));
++        vec2 q = abs(p);
++        float bx = r + 36.0, by = r + 6.0;
++        float b1 = (abs(q.x - bx) < 0.9 && q.y > by - 14.0 && q.y < by + 0.9) ? 1.0 : 0.0;
++        float b2 = (abs(q.y - by) < 0.9 && q.x > bx - 14.0 && q.x < bx + 0.9) ? 1.0 : 0.0;
++        acc = ov(acc, u_yel, max(b1, b2) * 0.9);
 +    }
 +    // the needle through the ring: a shadow on the face under it, the needle, and a soft glow
 +    if (u_n.w > 0.5) {
@@ -1040,17 +1057,17 @@ index c8679c1..0291b0f 100644
 +        vec2 ps = p - vec2(4.0, 6.0);
 +        float alS = dot(ps, dn);
 +        float pS = abs(dot(ps, vec2(-dn.y, dn.x)));
-+        if (alS > u_n.x && alS < u_n.y) acc = ov(acc, vec3(0.0), 0.5 * clamp(1.0 - pS / (u_n.z + 3.0), 0.0, 1.0));
++        if (u_flat < 0.5 && alS > u_n.x && alS < u_n.y) acc = ov(acc, vec3(0.0), 0.5 * clamp(1.0 - pS / (u_n.z + 3.0), 0.0, 1.0));
 +        float along = dot(p, dn);
 +        float perp = abs(dot(p, vec2(-dn.y, dn.x)));
 +        if (along > u_n.x - 6.0 && along < u_n.y + 6.0) {
 +            float cap = clamp(min(along - u_n.x, u_n.y - along) + 0.5, 0.0, 1.0);
-+            acc = ov(acc, u_yel, 0.30 * exp(-perp / 7.0) * cap);
++            if (u_flat < 0.5) acc = ov(acc, u_yel, 0.30 * exp(-perp / 7.0) * cap);
 +            acc = ov(acc, vec3(1.0), cap * clamp(0.5 - (perp - u_n.z * 0.5), 0.0, 1.0));
 +        }
 +        // a flare at the needle's tip
 +        float tip = length(p - dn * u_n.y);
-+        acc = ov(acc, mix(vec3(1.0), u_yel, 0.4), (0.22 + 0.5 * u_w.x) * exp(-tip / 11.0));
++        if (u_flat < 0.5) acc = ov(acc, mix(vec3(1.0), u_yel, 0.4), (0.22 + 0.5 * u_w.x) * exp(-tip / 11.0));
 +    }
 +    // the shift dots round the top
 +    if (u_led.z > 0.5) {
@@ -1071,9 +1088,11 @@ index c8679c1..0291b0f 100644
 +            vec3 lc = frac < 0.4 ? vec3(0.2, 0.95, 0.35) : (frac < 0.75 ? vec3(1.0, 0.82, 0.05) : u_red);
 +            if (u_fx.x > 0.5) { on = true; lc = u_fx.x > 1.5 ? vec3(0.8, 0.9, 1.0) : u_red; }
 +            // a lit dot glows and has a bright core; an unlit one is a glass bead
-+            if (on) acc = ov(acc, lc, 0.35 * exp(-max(dd, 0.0) / 6.0));
++            if (on && u_flat < 0.5) acc = ov(acc, lc, 0.35 * exp(-max(dd, 0.0) / 6.0));
++            if (u_flat > 0.5) { acc = ov(acc, on ? lc : vec3(0.16, 0.16, 0.18), clamp(0.5 - dd, 0.0, 1.0)); } else {
 +            vec3 cc = on ? mix(lc, vec3(1.0), 0.35 * clamp(1.0 - length(p - dc) / u_led.y, 0.0, 1.0)) : vec3(0.10, 0.10, 0.12) + vec3(0.06) * clamp(1.0 - length(p - dc - vec2(-2.0, -2.0)) / u_led.y, 0.0, 1.0);
 +            acc = ov(acc, cc, clamp(0.5 - dd, 0.0, 1.0));
++            }
 +        }
 +    }
 +    // the map window's circle line

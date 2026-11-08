@@ -294,3 +294,27 @@ test('eva v12 sport and eco: the same layout in red and blue, with the needle, t
     });
     assert.notDeepStrictEqual(json('hud', 'layouts', 'eva_v12_sport.json').widgets.find((w) => w.id === 'dial').dial.yellow, base.widgets.find((w) => w.id === 'dial').dial.yellow);
 });
+
+test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed, fonts baked, a flat technical counter with the light streaks, offered in the HUD settings', () => {
+    ['eva_hud_v12', 'eva_hud_v12_sport', 'eva_hud_v12_eco'].forEach((id) => {
+        const l = json('hud', 'layouts', `${id}.json`);
+        const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
+        l.widgets.forEach((w) => {
+            assert.ok(w.x >= win[0] && w.y >= win[1] && w.x + w.w <= win[2] && w.y + w.h <= win[3], `${id}/${w.id} is outside the visible window`);
+            if (w.type === 'text') {
+                assert.ok(!(w.x < bmw[2] && w.x + w.w > bmw[0] && w.y < bmw[3] && w.y + w.h > bmw[1]), `${id}/${w.id} is over BMW's speed`);
+                const f = json('hud', 'fonts', `${w.font}.json`);
+                assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${id}/${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+                if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${id}/${w.id}: font ${w.font} has no "${ch}"`);
+            }
+        });
+        const d = l.widgets.find((w) => w.type === 'evadial').dial;
+        assert.ok(d.flat >= 1, `${id}: not a flat counter`);
+        assert.notStrictEqual(d.warp, false);
+        assert.ok(!l.widgets.some((w) => w.type === 'evadash2'), `${id} needs no frames`);
+        assert.ok(l.widgets.filter((w) => w.type === 'text').length <= 8, `${id} shows too much for a HUD`);
+        ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
+            assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
+        });
+    });
+});

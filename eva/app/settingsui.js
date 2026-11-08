@@ -19,7 +19,7 @@ const C = {
 // the longer names of the layouts and options, short enough for a card or a chip
 const SHORT = {
     off: 'OFF', eva: 'EVA', eva_comfort_wide: 'EVA COMFORT', eva_v12: 'V12 COMFORT', eva_v12_sport: 'V12 SPORT', eva_v12_eco: 'V12 ECO',
-    eva_hud: 'EVA HUD', eva_hud_bmw: 'EVA HUD BMW', eva_hud_comfort: 'HUD COMFORT',
+    eva_hud: 'EVA HUD', eva_hud_bmw: 'EVA HUD BMW', eva_hud_comfort: 'HUD COMFORT', eva_hud_v12: 'HUD V12', eva_hud_v12_sport: 'HUD V12 SPORT', eva_hud_v12_eco: 'HUD V12 ECO',
     metric: 'KM/H  °C  BAR', us: 'MPH  °F  PSI', '12h': '12-HOUR', '24h': '24-HOUR',
     auto: 'AUTO', on: 'ON',
 };
