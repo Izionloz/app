@@ -32,7 +32,7 @@ def build(id, name, acc, acc_f):
 
     W.append({'id': 'dial', 'type': 'evadial', 'class': 'ambient', 'z': -9, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3],
               'dial': {'cx': CX, 'cy': CY, 'r': R, 'width': RW, 'start': 225, 'sweep': 270, 'majors': 8, 'minors': 2, 'majorLen': 14, 'minorLen': 7,
-                       'rpmMax': 8000, 'flat': True, 'warp': False, 'sweepMs': 1200, 'yellow': acc_f,
+                       'rpmMax': 8000, 'flat': 2, 'sweepMs': 1600, 'yellow': acc_f,
                        'needle': {'inner': 60, 'outer': R + RW // 2 + 1, 'width': 2},
                        'leds': {'radius': 124, 'dot': 4, 'count': 11, 'from': 4000, 'wings': True}}})
     # little: the speed inside the counter, the gear beside it (the rev numbers and the rest are left out), and the redline alert

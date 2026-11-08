@@ -295,7 +295,7 @@ test('eva v12 sport and eco: the same layout in red and blue, with the needle, t
     assert.notDeepStrictEqual(json('hud', 'layouts', 'eva_v12_sport.json').widgets.find((w) => w.id === 'dial').dial.yellow, base.widgets.find((w) => w.id === 'dial').dial.yellow);
 });
 
-test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed, fonts baked, a flat counter without the warp, offered in the HUD settings', () => {
+test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed, fonts baked, a flat technical counter with the light streaks, offered in the HUD settings', () => {
     ['eva_hud_v12', 'eva_hud_v12_sport', 'eva_hud_v12_eco'].forEach((id) => {
         const l = json('hud', 'layouts', `${id}.json`);
         const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
@@ -309,8 +309,8 @@ test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed,
             }
         });
         const d = l.widgets.find((w) => w.type === 'evadial').dial;
-        assert.strictEqual(d.flat, true);
-        assert.strictEqual(d.warp, false);
+        assert.ok(d.flat >= 1, `${id}: not a flat counter`);
+        assert.notStrictEqual(d.warp, false);
         assert.ok(!l.widgets.some((w) => w.type === 'evadash2'), `${id} needs no frames`);
         assert.ok(l.widgets.filter((w) => w.type === 'text').length <= 8, `${id} shows too much for a HUD`);
         ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {

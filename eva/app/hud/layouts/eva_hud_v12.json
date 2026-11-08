@@ -25,9 +25,8 @@
     "majorLen": 14,
     "minorLen": 7,
     "rpmMax": 8000,
-    "flat": true,
-    "warp": false,
-    "sweepMs": 1200,
+    "flat": 2,
+    "sweepMs": 1600,
     "yellow": [
      1.0,
      0.82,
