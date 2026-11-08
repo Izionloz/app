@@ -233,6 +233,7 @@ test('eva page: every setting of the app has a row on the center screen and a ta
     });
     page.draw(cv, s, { cluster: 'a', hud: 'b' }, 0);
     page.draw(cv, s, { cluster: 'a', hud: 'b' }, 1);
+    page.draw(cv, s, { cluster: 'a', hud: 'b' }, 2);
     app.settings.forEach((st) => {
         assert.ok(targets.some((t) => t.key.includes(st.key) || (st.key === 'hudLayout' && t.key.startsWith('layout:'))), `${st.key} has no row`);
     });

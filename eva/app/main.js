@@ -40,14 +40,14 @@ const COMFORT_WIDE_MAP = { x: 440 - 416, y: 66, w: 936, h: 414 };
 
 // the center screen's page (settingsui.js): drawn on the kit's canvas about ten times a second while it shows
 function drawPage(ctx) {
-    let view = 0;                                          // the header's tab: 0 the layouts, 1 the options
+    let view = 0;                                          // the header's tab: 0 the cluster's layouts, 1 the HUD's, 2 the options
     if (ctx.onTab) ctx.onTab((i) => { view = i; });
     ctx.loop('MAIN', 10, () => {
         const cv = ctx.canvas(1600, 520);
         page.draw(cv, ctx.settings, status, view);
         // the header with the page's tab (and Settings next to it): the kit's controller ring starts there, so the knob turns onto the
         // page's rows from it; without it the first turn stopped on a Settings tab that was not drawn and nothing seemed to move
-        G.frame(cv, ctx.theme(), ['Layouts', 'Options'], view, []);
+        G.frame(cv, ctx.theme(), ['Cluster', 'HUD', 'Options'], view, []);
         return ctx.ui.image('MAIN_GFX', cv);
     });
 }
