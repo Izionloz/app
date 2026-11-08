@@ -54,8 +54,8 @@ def build(id, name, acc, acc_f, suf):
               'rpmMax': 8000, 'coolMax': 120,
               'rails': [{'x': 640, 'y': 682, 'w': 310, 'h': 14, 'segs': 22, 'gap': 3, 'ramp': True, 'signal': 'oil', 'max': 140},      # the oil
                         {'x': 100, 'y': 682, 'w': 426, 'h': 14, 'segs': 28, 'gap': 3, 'ramp': True}]})                                    # the coolant
-    # the rev counter (a 720 x 720 box, so the shift dots at the top and the ring fit)
-    W.append({'id': 'dial', 'type': 'evadial', 'class': 'overlay', 'z': -9, 'x': 600, 'y': 0, 'w': 720, 'h': 720,
+    # the rev counter: a layer over the whole cluster, so that the warp streaks can fly out to its edges
+    W.append({'id': 'dial', 'type': 'evadial', 'class': 'overlay', 'z': -9, 'x': 0, 'y': 0, 'w': 1920, 'h': 720,
               'dial': {'cx': CX, 'cy': CY, 'r': R, 'width': RW, 'start': 225, 'sweep': 270, 'majors': 8, 'minors': 4, 'majorLen': 26, 'minorLen': 12,
                        'rpmMax': 8000, 'needle': {'inner': 236, 'outer': R + RW // 2 + 2, 'width': 3}, 'sweepMs': 1500,
                        'yellow': ACC_F, 'leds': {'radius': 334, 'dot': 7, 'count': 15, 'from': 4000, 'wings': True}}})

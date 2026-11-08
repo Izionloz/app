@@ -531,10 +531,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..bc52e7e 100644
+index c8679c1..18867a0 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,511 @@ void main() {
+@@ -889,4 +889,516 @@ void main() {
  }
  `;
  
@@ -935,24 +935,29 @@ index c8679c1..bc52e7e 100644
 +        float sh = smoothstep(r - hw - 40.0, r - hw, d) * (1.0 - smoothstep(r - hw, r - hw + 3.0, d));
 +        acc = ov(acc, vec3(0.0), 0.6 * sh * cut);
 +    }
-+    // the warp: light streaks fly out of the middle towards the ring while the car accelerates, as in a jump to light speed
-+    if (u_w.x > 0.01 && d < r - hw - 2.0) {
-+        float N = 110.0;
++    // the warp: light streaks fly out of the middle, over the ring and on to the edges of the whole cluster, while the car accelerates,
++    // as in a jump to light speed. Thin lines of a few px, so they look alike near the middle and at the far edge
++    if (u_w.x > 0.01) {
++        float N = 200.0;
 +        float sl = a / (2.0 * PI) * N + N * 0.5;
 +        float i = floor(sl);
 +        float fr = fract(sl);
 +        float h1 = fract(sin(i * 12.9898) * 43758.5453);
 +        float h2 = fract(sin(i * 78.233 + 1.7) * 12345.6789);
 +        float h3 = fract(sin(i * 39.346 + 5.1) * 9876.5432);
-+        if (h1 < 0.22 + 0.7 * u_w.x) {
-+            float ph = fract(h3 + u_w.y * (0.55 + 1.7 * h2));
-+            float rad = d / (r - hw);
-+            float len = 0.16 + 0.6 * u_w.x * (0.5 + h2);
-+            float t = (ph * 1.3 - rad) / len;
++        if (h1 < 0.18 + 0.7 * u_w.x) {
++            float R0 = r - hw;
++            float ph = fract(h3 + u_w.y * (0.22 + 0.8 * h2));
++            float rad = d / R0;
++            float len = (0.22 + 0.9 * u_w.x) * (0.6 + h2);
++            float t = (ph * 4.6 - rad) / len;
 +            float body = (t > 0.0 && t < 1.0) ? (1.0 - t) : 0.0;
-+            float side = 1.0 - smoothstep(0.12, 0.55, abs(fr - 0.5) * 2.0);
-+            float vis = smoothstep(0.28, 0.9, rad) * (1.0 - smoothstep(0.96, 1.0, rad));
-+            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
++            float perpPx = abs(fr - 0.5) * (2.0 * PI * d / N);
++            float wpx = 1.2 + 2.2 * u_w.x * h2;
++            float side = 1.0 - smoothstep(0.3 * wpx, wpx, perpPx);
++            float vis = smoothstep(0.28, 0.9, rad) * (1.0 - smoothstep(3.4, 4.2, rad));
++            float outer = d > r + hw + 24.0 ? 0.65 : 1.0;                       // a little fainter out over the panels, so their words stay clear
++            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * outer * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
 +        }
 +    }
 +    // the chrome bezel round the face: bright and dark stretches follow the light
