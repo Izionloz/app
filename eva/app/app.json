@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -87,7 +87,15 @@
         ],
         [
           "eva_v12",
-          "EVA V12 (round rev counter)"
+          "EVA V12 Comfort (yellow)"
+        ],
+        [
+          "eva_v12_sport",
+          "EVA V12 Sport (red)"
+        ],
+        [
+          "eva_v12_eco",
+          "EVA V12 Eco (blue)"
         ]
       ]
     },
@@ -117,7 +125,15 @@
         ],
         [
           "eva_v12",
-          "EVA V12 (round rev counter)"
+          "EVA V12 Comfort (yellow)"
+        ],
+        [
+          "eva_v12_sport",
+          "EVA V12 Sport (red)"
+        ],
+        [
+          "eva_v12_eco",
+          "EVA V12 Eco (blue)"
         ]
       ]
     },
@@ -141,7 +157,15 @@
         ],
         [
           "eva_v12",
-          "EVA V12 (round rev counter)"
+          "EVA V12 Comfort (yellow)"
+        ],
+        [
+          "eva_v12_sport",
+          "EVA V12 Sport (red)"
+        ],
+        [
+          "eva_v12_eco",
+          "EVA V12 Eco (blue)"
         ]
       ]
     },
@@ -165,7 +189,15 @@
         ],
         [
           "eva_v12",
-          "EVA V12 (round rev counter)"
+          "EVA V12 Comfort (yellow)"
+        ],
+        [
+          "eva_v12_sport",
+          "EVA V12 Sport (red)"
+        ],
+        [
+          "eva_v12_eco",
+          "EVA V12 Eco (blue)"
         ]
       ]
     },

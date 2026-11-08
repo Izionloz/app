@@ -274,3 +274,23 @@ test('eva v12 layout: widgets inside the cluster, clear of BMW\'s boxes, fonts a
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_v12'), `${k} lacks EVA V12`);
     });
 });
+
+test('eva v12 sport and eco: the same layout in red and blue, with the needle, the start-up sweep and the shift dots from both ends, offered in the settings', () => {
+    const base = json('hud', 'layouts', 'eva_v12.json');
+    ['eva_v12', 'eva_v12_sport', 'eva_v12_eco'].forEach((id) => {
+        const l = json('hud', 'layouts', `${id}.json`);
+        assert.strictEqual(l.widgets.length, base.widgets.length, `${id} has other widgets than eva_v12`);
+        const d = l.widgets.find((w) => w.type === 'evadial').dial;
+        assert.ok(d.needle && d.needle.outer > d.needle.inner, `${id}: no needle`);
+        assert.ok(d.sweepMs > 0, `${id}: no start-up sweep`);
+        assert.strictEqual(d.leds.wings, true);
+        l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${id}/${w.id}: the baked picture is not its widget's size`);
+        });
+        ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+            assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
+        });
+    });
+    assert.notDeepStrictEqual(json('hud', 'layouts', 'eva_v12_sport.json').widgets.find((w) => w.id === 'dial').dial.yellow, base.widgets.find((w) => w.id === 'dial').dial.yellow);
+});
