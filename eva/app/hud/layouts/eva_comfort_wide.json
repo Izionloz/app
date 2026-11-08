@@ -54,9 +54,9 @@
      "glow": 1
     },
     {
-     "x": 708,
+     "x": 600,
      "y": 332,
-     "w": 676,
+     "w": 616,
      "h": 268,
      "cut": [
       6,
@@ -112,9 +112,9 @@
    "rpmMax": 8000,
    "coolMax": 120,
    "hole": [
-    716,
+    608,
     336,
-    660,
+    600,
     264
    ],
    "holeRadius": 6,
@@ -169,7 +169,20 @@
     {
      "x": 432,
      "y": 332,
-     "w": 270,
+     "w": 160,
+     "h": 268,
+     "cut": [
+      8,
+      8,
+      24,
+      24
+     ],
+     "glow": 1
+    },
+    {
+     "x": 1224,
+     "y": 332,
+     "w": 160,
      "h": 268,
      "cut": [
       8,
@@ -899,13 +912,13 @@
    "glow": true
   },
   {
-   "id": "engCap",
+   "id": "colCap0",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
+   "x": 446,
    "y": 340,
-   "w": 240,
+   "w": 140,
    "h": 28,
    "text": "ENGINE",
    "font": "e_label",
@@ -918,32 +931,32 @@
    "align": "left"
   },
   {
-   "id": "eng_0",
+   "id": "colN0_0",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
-   "y": 384,
-   "w": 104,
+   "x": 446,
+   "y": 378,
+   "w": 92,
    "h": 28,
    "text": "BOOST",
    "font": "e_label",
    "color": [
-    255,
-    172,
-    112,
+    247,
+    152,
+    98,
     255
    ],
    "align": "left"
   },
   {
-   "id": "engV_0",
+   "id": "colV0_0",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 556,
-   "y": 378,
-   "w": 84,
+   "x": 446,
+   "y": 404,
+   "w": 140,
    "h": 39,
    "text": "{{boost}}",
    "font": "e_val",
@@ -953,16 +966,16 @@
     97,
     255
    ],
-   "align": "right"
+   "align": "left"
   },
   {
-   "id": "engU_0",
+   "id": "colU0_0",
    "type": "text",
    "class": "alert",
-   "z": 9,
-   "x": 646,
-   "y": 381,
-   "w": 44,
+   "z": 10,
+   "x": 528,
+   "y": 372,
+   "w": 50,
    "h": 37,
    "text": "{{u:boost}}",
    "font": "e_unit",
@@ -972,35 +985,35 @@
     74,
     255
    ],
-   "align": "left"
+   "align": "right"
   },
   {
-   "id": "eng_1",
+   "id": "colN0_1",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
-   "y": 428,
-   "w": 104,
+   "x": 446,
+   "y": 452,
+   "w": 92,
    "h": 28,
    "text": "TORQUE",
    "font": "e_label",
    "color": [
-    255,
-    172,
-    112,
+    247,
+    152,
+    98,
     255
    ],
    "align": "left"
   },
   {
-   "id": "engV_1",
+   "id": "colV0_1",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 556,
-   "y": 422,
-   "w": 84,
+   "x": 446,
+   "y": 478,
+   "w": 140,
    "h": 39,
    "text": "{{torque}}",
    "font": "e_val",
@@ -1010,16 +1023,16 @@
     97,
     255
    ],
-   "align": "right"
+   "align": "left"
   },
   {
-   "id": "engU_1",
+   "id": "colU0_1",
    "type": "text",
    "class": "alert",
-   "z": 9,
-   "x": 646,
-   "y": 425,
-   "w": 44,
+   "z": 10,
+   "x": 528,
+   "y": 446,
+   "w": 50,
    "h": 37,
    "text": "{{u:torque}}",
    "font": "e_unit",
@@ -1029,35 +1042,35 @@
     74,
     255
    ],
-   "align": "left"
+   "align": "right"
   },
   {
-   "id": "eng_2",
+   "id": "colN0_2",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
-   "y": 472,
-   "w": 104,
+   "x": 446,
+   "y": 526,
+   "w": 92,
    "h": 28,
    "text": "POWER",
    "font": "e_label",
    "color": [
-    255,
-    172,
-    112,
+    247,
+    152,
+    98,
     255
    ],
    "align": "left"
   },
   {
-   "id": "engV_2",
+   "id": "colV0_2",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 556,
-   "y": 466,
-   "w": 84,
+   "x": 446,
+   "y": 552,
+   "w": 140,
    "h": 39,
    "text": "{{powerPct}}",
    "font": "e_val",
@@ -1067,16 +1080,16 @@
     97,
     255
    ],
-   "align": "right"
+   "align": "left"
   },
   {
-   "id": "engU_2",
+   "id": "colU0_2",
    "type": "text",
    "class": "alert",
-   "z": 9,
-   "x": 646,
-   "y": 469,
-   "w": 44,
+   "z": 10,
+   "x": 528,
+   "y": 520,
+   "w": 50,
    "h": 37,
    "text": "%",
    "font": "e_unit",
@@ -1086,18 +1099,18 @@
     74,
     255
    ],
-   "align": "left"
+   "align": "right"
   },
   {
-   "id": "eng_3",
+   "id": "colCap1",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
-   "y": 516,
-   "w": 104,
+   "x": 1238,
+   "y": 340,
+   "w": 140,
    "h": 28,
-   "text": "G LAT",
+   "text": "DYNAMICS",
    "font": "e_label",
    "color": [
     255,
@@ -1108,13 +1121,32 @@
    "align": "left"
   },
   {
-   "id": "engV_3",
+   "id": "colN1_0",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 556,
-   "y": 510,
-   "w": 84,
+   "x": 1238,
+   "y": 378,
+   "w": 92,
+   "h": 28,
+   "text": "G LAT",
+   "font": "e_label",
+   "color": [
+    247,
+    152,
+    98,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "colV1_0",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 1238,
+   "y": 404,
+   "w": 140,
    "h": 39,
    "text": "{{gLat}}",
    "font": "e_val",
@@ -1124,16 +1156,16 @@
     97,
     255
    ],
-   "align": "right"
+   "align": "left"
   },
   {
-   "id": "engU_3",
+   "id": "colU1_0",
    "type": "text",
    "class": "alert",
-   "z": 9,
-   "x": 646,
-   "y": 513,
-   "w": 44,
+   "z": 10,
+   "x": 1320,
+   "y": 372,
+   "w": 50,
    "h": 37,
    "text": "g",
    "font": "e_unit",
@@ -1143,35 +1175,35 @@
     74,
     255
    ],
-   "align": "left"
+   "align": "right"
   },
   {
-   "id": "eng_4",
+   "id": "colN1_1",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 450,
-   "y": 560,
-   "w": 104,
+   "x": 1238,
+   "y": 452,
+   "w": 92,
    "h": 28,
    "text": "G LONG",
    "font": "e_label",
    "color": [
-    255,
-    172,
-    112,
+    247,
+    152,
+    98,
     255
    ],
    "align": "left"
   },
   {
-   "id": "engV_4",
+   "id": "colV1_1",
    "type": "text",
    "class": "alert",
    "z": 9,
-   "x": 556,
-   "y": 554,
-   "w": 84,
+   "x": 1238,
+   "y": 478,
+   "w": 140,
    "h": 39,
    "text": "{{gLong}}",
    "font": "e_val",
@@ -1181,16 +1213,16 @@
     97,
     255
    ],
-   "align": "right"
+   "align": "left"
   },
   {
-   "id": "engU_4",
+   "id": "colU1_1",
    "type": "text",
    "class": "alert",
-   "z": 9,
-   "x": 646,
-   "y": 557,
-   "w": 44,
+   "z": 10,
+   "x": 1320,
+   "y": 446,
+   "w": 50,
    "h": 37,
    "text": "g",
    "font": "e_unit",
@@ -1200,7 +1232,64 @@
     74,
     255
    ],
+   "align": "right"
+  },
+  {
+   "id": "colN1_2",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 1238,
+   "y": 526,
+   "w": 92,
+   "h": 28,
+   "text": "SHIFT",
+   "font": "e_label",
+   "color": [
+    247,
+    152,
+    98,
+    255
+   ],
    "align": "left"
+  },
+  {
+   "id": "colV1_2",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 1238,
+   "y": 552,
+   "w": 140,
+   "h": 39,
+   "text": "{{shiftAt}}",
+   "font": "e_val",
+   "color": [
+    255,
+    173,
+    97,
+    255
+   ],
+   "align": "left"
+  },
+  {
+   "id": "colU1_2",
+   "type": "text",
+   "class": "alert",
+   "z": 10,
+   "x": 1320,
+   "y": 520,
+   "w": 50,
+   "h": 37,
+   "text": "rpm",
+   "font": "e_unit",
+   "color": [
+    255,
+    98,
+    74,
+    255
+   ],
+   "align": "right"
   },
   {
    "id": "tyreCap",
