@@ -318,3 +318,35 @@ test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed,
         });
     });
 });
+
+test('eva neo layout: inside the cluster, clear of BMW\'s small gear letter and belt light, fonts and pictures baked, two dials and the black under everything, offered in the settings', () => {
+    const l = json('hud', 'layouts', 'eva_neo.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+        if (w.type === 'picture') {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        }
+    });
+    const dials = l.widgets.filter((w) => w.type === 'evadial');
+    assert.strictEqual(dials.length, 2);
+    assert.strictEqual(l.widgets.filter((w) => w.type === 'evadash2').length, 0, 'the layers are the two dials and the sheets: 8 in all');
+    const first = dials[0];
+    assert.ok(first.w === 1920 && first.h === 720 && first.dial.bg === true, 'the first dial must paint the black under BMW\'s gauges');
+    assert.strictEqual(dials[1].dial.signal, 'speed');
+    const seg = json('hud', 'fonts', 'e_seg.json');
+    '0123456789-'.split('').forEach((ch) => assert.ok(seg.glyphs[ch], `e_seg lacks ${ch}`));
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_neo'), `${k} lacks EVA Neo`);
+    });
+});
