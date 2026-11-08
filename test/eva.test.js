@@ -246,7 +246,7 @@ test('eva page: every setting of the app has a row on the center screen and a ta
     assert.strictEqual(vals.units, 'us');
 });
 
-test('eva v12 layout: widgets inside the cluster, clear of BMW\'s boxes, fonts and pictures baked, the round map window inside main.js\'s rectangle, offered in the settings', () => {
+test('eva v12 layout: widgets inside the cluster, clear of BMW\'s boxes, fonts and pictures baked, no map window, offered in the settings', () => {
     const l = json('hud', 'layouts', 'eva_v12.json');
     const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
     const ids = new Set();
@@ -269,14 +269,7 @@ test('eva v12 layout: widgets inside the cluster, clear of BMW\'s boxes, fonts a
     assert.strictEqual(l.widgets.filter((w) => w.type === 'evadash2' || w.type === 'evadial').length, 2);
     const back = l.widgets.find((w) => w.id === 'eva');
     assert.ok(back.frames.length <= 8);
-    const d = l.widgets.find((w) => w.type === 'evadial').dial;
-    assert.deepStrictEqual(back.hole, [d.cx - 165, d.cy - 165, 330, 330]);
-    const m = /V12_MAP = \{ x: (\d+) - 416, y: (\d+) - 120, w: (\d+), h: (\d+) \}/.exec(fs.readFileSync(path.join(APP, 'main.js'), 'utf8'));
-    assert.ok(m, 'V12_MAP is not in main.js');
-    const r = { x: Number(m[1]), y: Number(m[2]), w: Number(m[3]), h: Number(m[4]) };
-    assert.ok(Math.abs(r.w / r.h - 1088 / 480) < 0.03, 'the map rectangle is not the map\'s shape');
-    assert.ok(r.x >= 416 && r.y >= 120 && r.x + r.w <= 416 + 1088 && r.y + r.h <= 120 + 480, 'the map rectangle is outside the map target');
-    assert.ok(back.hole[0] >= r.x && back.hole[1] >= r.y && back.hole[0] + back.hole[2] <= r.x + r.w && back.hole[1] + back.hole[3] <= r.y + r.h, 'the map does not cover the window');
+    assert.ok(!back.hole, 'EVA V12 has no map window');
     ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_v12'), `${k} lacks EVA V12`);
     });

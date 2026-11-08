@@ -36,8 +36,6 @@ const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD' };
 // right edge and under the rev rail; eva_hud_comfort.json keeps that rectangle clear. It is the same target as the EVA HUD's own layers
 // (hud), so the map stays under their text.
 const HUD_COMFORT_MAP = { x: 242, y: 200, w: 350, h: 154 };
-// EVA V12: the map's round window (radius 165 round (960, 392)) in the middle of the rev counter; the map is drawn at its own shape, 800x354, centred there
-const V12_MAP = { x: 560 - 416, y: 216 - 120, w: 800, h: 354 };
 const COMFORT_WIDE_MAP = { x: 440 - 416, y: 66, w: 936, h: 414 };
 
 // the center screen's page (settingsui.js): drawn on the kit's canvas about ten times a second while it shows
@@ -98,7 +96,7 @@ mgu.run({
             clearInterval(h.keep);
             h.keep = null;
             // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
-            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, layout: h.layout, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort_wide' || h.layout === 'eva_v12' ? 'none' : 'map') : 'hud') }, who === 'panel' && (h.layout === 'eva_comfort_wide' || h.layout === 'eva_v12') && separate() ? { mapRect: h.layout === 'eva_v12' ? V12_MAP : COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
+            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, layout: h.layout, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort_wide' ? 'none' : 'map') : 'hud') }, who === 'panel' && h.layout === 'eva_comfort_wide' && separate() ? { mapRect: COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };
