@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..62372c3 100644
+index db817c2..46a7a8f 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -227,16 +227,17 @@ index db817c2..62372c3 100644
              if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
              else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
              if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-@@ -1058,6 +1138,8 @@ class HudApp {
+@@ -1058,6 +1138,9 @@ class HudApp {
              }
          } else if (w.type === 'gridlabels') this._paintGridLabels(x);
          else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
 +        else if (w.type === 'picture') this._paintPicture(x);
 +        else if (w.type === 'evadash' || w.type === 'evadash2') this._createEva(x);
++        else if (w.type === 'evadial') this._createDial(x);
          else if (w.type === 'sdash') {
              c.uniform(ref, 'u_size', [w.w, w.h]);
              c.uniform(ref, 'u_geo', w.geo);
-@@ -1221,7 +1303,7 @@ class HudApp {
+@@ -1221,7 +1304,7 @@ class HudApp {
      _tick() {
          const now = Date.now();
          this._smoothRpm(now);
@@ -245,7 +246,7 @@ index db817c2..62372c3 100644
          // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
          const rpm = this._raw('rpm');
          const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
-@@ -1235,8 +1317,11 @@ class HudApp {
+@@ -1235,8 +1318,11 @@ class HudApp {
          const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
          this.lastTickT = now;
          if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -259,7 +260,7 @@ index db817c2..62372c3 100644
      }
  
      _update(x, now, force) {
-@@ -1258,6 +1343,7 @@ class HudApp {
+@@ -1258,6 +1344,7 @@ class HudApp {
                  if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                  if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
              }
@@ -267,16 +268,18 @@ index db817c2..62372c3 100644
              const key = s + '|' + role;
              if (!force && key === x.last) return;
              x.last = key; x.lastPaint = now;
-@@ -1296,6 +1382,8 @@ class HudApp {
+@@ -1296,6 +1383,10 @@ class HudApp {
              if (!force && q === x.last) return;
              x.last = q;
              x.c.uniform(x.ref, 'u_value', [q]);
 +        } else if (w.type === 'evadash' || w.type === 'evadash2') {
 +            this._updateEva(x, force);
++        } else if (w.type === 'evadial') {
++            this._updateDial(x, force);
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1484,145 @@ class HudApp {
+@@ -1396,6 +1487,188 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -328,7 +331,9 @@ index db817c2..62372c3 100644
 +        c.uniform(ref, 'u_frame', rects, { type: 'vec4' });
 +        c.uniform(ref, 'u_fstyle', styles, { type: 'vec4' });
 +        if (v2) c.uniform(ref, 'u_fcut', cuts, { type: 'vec4' });
-+        c.uniform(ref, 'u_pal', [200 / 255, 57 / 255, 50 / 255, 1, 136 / 255, 53 / 255, 43 / 255, 1, 1, 173 / 255, 84 / 255, 1], { type: 'vec4' });
++        // the three line colours (main, dim, bright); w.pal: three [r, g, b] 0..1 replace the EVA reds
++        const pal = Array.isArray(w.pal) && w.pal.length === 3 && w.pal.every((q) => Array.isArray(q) && q.length === 3) ? w.pal : [[200 / 255, 57 / 255, 50 / 255], [136 / 255, 53 / 255, 43 / 255], [1, 173 / 255, 84 / 255]];
++        c.uniform(ref, 'u_pal', [pal[0][0], pal[0][1], pal[0][2], 1, pal[1][0], pal[1][1], pal[1][2], 1, pal[2][0], pal[2][1], pal[2][2], 1], { type: 'vec4' });
 +        c.uniform(ref, 'u_rail', rr, { type: 'vec4' });
 +        c.uniform(ref, 'u_railP', rp, { type: 'vec4' });
 +        c.uniform(ref, 'u_off', [0.2, 0.04, 0.07, 1]);
@@ -390,6 +395,47 @@ index db817c2..62372c3 100644
 +        x.c.uniform(x.ref, 'u_railCol', [c0[0], c0[1], c0[2], (R[0] && R[0].color) ? 1 : dim, c1[0], c1[1], c1[2], 1], { type: 'vec4' });
 +    }
 +
++    /** The Ferrari-style rev counter's constant uniforms: w.dial { cx, cy (cluster px), r, width, start, sweep (degrees), majors, minors, majorLen, minorLen, rpmMax, leds { radius, dot, count, from }, circle (the map window's radius), yellow }. */
++    _createDial(x) {
++        const w = x.w, c = x.c, ref = x.ref, d = w.dial || {};
++        const rad = (v, dflt) => (isNum(v) ? v : dflt) * Math.PI / 180;
++        const L = d.leds;
++        c.uniform(ref, 'u_size', [w.w, w.h]);
++        c.uniform(ref, 'u_c', [d.cx - w.x, d.cy - w.y, d.r, d.width || 28]);
++        c.uniform(ref, 'u_a', [rad(d.start, 225), rad(d.sweep, 270), 0, Math.min(1, Math.max(0.3, this.setting('redline') / (d.rpmMax || 8000)))]);
++        c.uniform(ref, 'u_t', [d.majors || 8, d.minors || 4, d.majorLen || 26, d.minorLen || 13]);
++        c.uniform(ref, 'u_led', L ? [L.radius, L.dot || 7, L.count || 15, 0] : [0, 0, 0, 0]);
++        c.uniform(ref, 'u_fx', [0, 0, d.circle || 0, 0]);
++        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
++        c.uniform(ref, 'u_red', d.red || [0.93, 0.1, 0.06]);
++        x.dial = {};
++    }
++
++    /** The rev counter's lit part follows the rpm (in 1/400 steps); the shift dots fill up to the shift point and strobe there; a pulse at the redline. */
++    _updateDial(x, force) {
++        const w = x.w, d = w.dial || {}, c = x.c, ref = x.ref;
++        const rpm = this._raw('rpm');
++        const max = d.rpmMax || 8000;
++        const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / max)) : 0;
++        const q = Math.round(v * 400) / 400;
++        const red = Math.min(1, Math.max(0.3, this.setting('redline') / max));
++        const L = d.leds, now = Date.now();
++        let lit = 0, strobe = 0;
++        if (L) {
++            const sp = this._shift(), n = L.count || 15;
++            const from = Math.min(isNum(L.from) ? L.from : sp.rpm - 2000, sp.rpm - 500);
++            lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
++            strobe = sp.now ? (Math.floor(now / 90) % 2 ? 2 : 1) : 0;
++        }
++        const pulse = this._evaLevel() >= 3 ? Math.floor(now / 110) % 2 : 0;
++        const key = q + '|' + red + '|' + lit + '|' + strobe + '|' + pulse;
++        if (!force && key === x.dial.last) return;
++        x.dial.last = key;
++        c.uniform(ref, 'u_a', [(isNum(d.start) ? d.start : 225) * Math.PI / 180, (isNum(d.sweep) ? d.sweep : 270) * Math.PI / 180, q, red]);
++        if (L) c.uniform(ref, 'u_led', [L.radius, L.dot || 7, L.count || 15, lit]);
++        c.uniform(ref, 'u_fx', [strobe, 0, d.circle || 0, pulse]);
++    }
++
 +    /** The layout to keep built, hidden, while the active one is "off" (config.standby): the Sport layout, else the plain one. */
 +    _standbyName() {
 +        if (this.config.standby !== true || this._lacks()) return null;
@@ -444,24 +490,25 @@ index 01149cd..5ae4140 100644
  // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
  Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
 diff --git a/shared/layouts.js b/shared/layouts.js
-index af2ad98..1449a9d 100644
+index af2ad98..5a0bff7 100644
 --- a/shared/layouts.js
 +++ b/shared/layouts.js
-@@ -34,6 +34,9 @@ const TYPES = {
+@@ -34,6 +34,10 @@ const TYPES = {
      swatchimg: [],
      boxes: ['boxes'],
      atext: ['text', 'font'],
 +    evadash: [],
 +    evadash2: [],
++    evadial: [],
 +    picture: ['name'],
  };
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..619a608 100644
+index c8679c1..16ba65f 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,340 @@ void main() {
+@@ -889,4 +889,441 @@ void main() {
  }
  `;
  
@@ -802,4 +849,105 @@ index c8679c1..619a608 100644
 +}
 +`;
 +
-+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, evadash: EVADASH, evadash2: EVADASH2 };
++
++const EVADIAL = `// The Ferrari-style cluster's round rev counter in one cluster-render "effect" layer (GLSL ES 1.00): an open ring with a track, a lit part
++// (yellow, red from the red zone on), a red band outside the zone, tick marks inside the ring, a row of shift dots round the top and a thin
++// circle line for the map window in the middle. Straight alpha, transparent elsewhere. v_uv (0,0) is the top-left.
++#ifdef GL_FRAGMENT_PRECISION_HIGH
++precision highp float;
++#else
++precision mediump float;
++#endif
++varying vec2 v_uv;
++uniform vec2 u_size;
++uniform vec4 u_c;     // centre x, y (layer px), ring radius, ring width
++uniform vec4 u_a;     // start angle (rad, clockwise from 12 o'clock), sweep, value 0..1, red zone start 0..1
++uniform vec4 u_t;     // tick intervals, minor ticks per interval, major length, minor length (px)
++uniform vec4 u_led;   // shift dots: radius from the centre, dot radius, count, lit (0 none)
++uniform vec4 u_fx;    // strobe 0 / 1, level 0..3, the map circle's radius (0 none), pulse 0..1
++uniform vec3 u_yel;
++uniform vec3 u_red;
++const float PI = 3.14159265359;
++
++float arcDist(vec2 p, float r, float a0, float s) {
++    float a = atan(p.x, -p.y);
++    float rel = mod(a - a0 + 4.0 * PI, 2.0 * PI);
++    if (rel <= s) return abs(length(p) - r);
++    vec2 e0 = r * vec2(sin(a0), -cos(a0));
++    vec2 e1 = r * vec2(sin(a0 + s), -cos(a0 + s));
++    return min(length(p - e0), length(p - e1));
++}
++
++vec4 ov(vec4 acc, vec3 c, float a) {
++    a = clamp(a, 0.0, 1.0);
++    float oa = a + acc.a * (1.0 - a);
++    vec3 rgb = (c * a + acc.rgb * acc.a * (1.0 - a)) / max(oa, 0.0001);
++    return vec4(rgb, oa);
++}
++
++void main() {
++    vec2 p = v_uv * u_size - u_c.xy;
++    float d = length(p);
++    float r = u_c.z, hw = u_c.w * 0.5;
++    float a = atan(p.x, -p.y);
++    float rel = mod(a - u_a.x + 4.0 * PI, 2.0 * PI);
++    float f = rel / u_a.y;
++    vec4 acc = vec4(0.0);
++    float redAt = u_a.w;
++    // the red band outside the ring, over the red zone
++    float bandD = arcDist(p, r + hw + 7.0, u_a.x + u_a.y * redAt, u_a.y * (1.0 - redAt)) - 2.5;
++    acc = ov(acc, u_red, 0.9 * clamp(0.5 - bandD, 0.0, 1.0));
++    // the ring: the track, then the lit part
++    float ringD = arcDist(p, r, u_a.x, u_a.y) - hw;
++    float lit = u_a.z * u_a.y;
++    float litD = lit > 0.002 ? arcDist(p, r, u_a.x, lit) - hw : 1e5;
++    bool zone = f >= redAt && f <= 1.0;
++    vec3 track = zone ? vec3(0.30, 0.04, 0.04) : vec3(0.15, 0.15, 0.17);
++    float pulse = u_fx.w;
++    vec3 litC = zone ? u_red : u_yel;
++    // a lighter edge on the inner side gives the ring some depth
++    float inner = clamp((r - d) / hw * 0.5 + 0.5, 0.0, 1.0);
++    litC = mix(litC, vec3(1.0), 0.18 * inner + 0.45 * pulse);
++    acc = ov(acc, track, clamp(0.5 - ringD, 0.0, 1.0));
++    acc = ov(acc, litC, clamp(0.5 - litD, 0.0, 1.0));
++    // the ticks inside the ring
++    float nt = u_t.x * u_t.y;
++    if (rel <= u_a.y + 0.02 && d < r - hw - 2.0 && d > r - hw - u_t.z - 3.0) {
++        float ph = clamp(f, 0.0, 1.0) * nt;
++        float k = floor(ph + 0.5);
++        float off = abs(ph - k) / nt * u_a.y * d;
++        bool major = mod(k, u_t.y) < 0.5;
++        float len = major ? u_t.z : u_t.w;
++        float th = major ? 1.8 : 0.9;
++        bool inZone = k / nt >= redAt - 0.001;
++        vec3 tc = inZone ? vec3(1.0, 0.32, 0.25) : (major ? vec3(0.95) : vec3(0.6));
++        float inLen = (d > r - hw - 3.0 - len) ? 1.0 : 0.0;
++        acc = ov(acc, tc, inLen * clamp(th + 0.5 - off, 0.0, 1.0));
++    }
++    // the shift dots round the top
++    if (u_led.z > 0.5) {
++        float step = 0.1;
++        float t = a / step + (u_led.z - 1.0) * 0.5;
++        float k = floor(t + 0.5);
++        if (k >= 0.0 && k <= u_led.z - 1.0) {
++            float ang = (k - (u_led.z - 1.0) * 0.5) * step;
++            vec2 dc = u_led.x * vec2(sin(ang), -cos(ang));
++            float dd = length(p - dc) - u_led.y;
++            float frac = k / max(u_led.z - 1.0, 1.0);
++            bool on = k < u_led.w - 0.5;
++            vec3 lc = frac < 0.4 ? vec3(0.2, 0.95, 0.35) : (frac < 0.75 ? vec3(1.0, 0.82, 0.05) : u_red);
++            if (u_fx.x > 0.5) { on = true; lc = u_fx.x > 1.5 ? vec3(0.8, 0.9, 1.0) : u_red; }
++            vec3 cc = on ? lc : vec3(0.16, 0.16, 0.18);
++            acc = ov(acc, cc, clamp(0.5 - dd, 0.0, 1.0));
++        }
++    }
++    // the map window's circle line
++    if (u_fx.z > 0.5) {
++        float cd = abs(d - u_fx.z) - 1.5;
++        acc = ov(acc, u_yel, clamp(0.5 - cd, 0.0, 1.0));
++    }
++    gl_FragColor = acc;
++}
++`;
++
++module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, evadash: EVADASH, evadash2: EVADASH2, evadial: EVADIAL };
