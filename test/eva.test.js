@@ -159,46 +159,6 @@ test('eva app: a speed correction setting (BMW\'s speedometer reads above the tr
     assert.ok(o.steps.includes(0) && o.steps.includes(o.default));
 });
 
-test('eva comfort layout: widgets inside the cluster, clear of BMW\'s boxes, fonts baked, the map window is a hole inside its frame', () => {
-    const l = json('hud', 'layouts', 'eva_comfort.json');
-    const ids = new Set();
-    // in Comfort Plus BMW draws its gear indicator at the bottom (photo, Nov 7 2026: x ~1380-1445, y ~670-710), not at the Sport spot
-    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
-    l.widgets.forEach((w) => {
-        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
-        ids.add(w.id);
-        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
-        if (w.type === 'text') {
-            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
-            const f = json('hud', 'fonts', `${w.font}.json`);
-            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
-            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
-        }
-    });
-    l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
-        const pic = json('hud', 'pictures', `${w.name}.json`);
-        assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
-        assert.strictEqual(Buffer.from(pic.rgba, 'base64').length, pic.w * pic.h * 4);
-    });
-    const dash = l.widgets.filter((w) => w.type === 'evadash2');
-    assert.strictEqual(dash.length, 2);
-    assert.ok(!l.widgets.some((w) => w.type === 'evadash'), 'EVA Comfort uses the evadash2 shader only; evadash is the one that ran on the car');
-    dash.forEach((d) => { assert.ok(d.frames.length <= 8); assert.ok(d.rails.length <= 2); });
-    const a = dash[0], map = a.frames[3];
-    assert.ok(a.hole[0] >= map.x && a.hole[1] >= map.y && a.hole[0] + a.hole[2] <= map.x + map.w && a.hole[1] + a.hole[3] <= map.y + map.h);
-    // the hole is where main.js puts the cluster's map (COMFORT_MAP, in the map target's pixels: the target sits at x 416, y 120), in the map's shape
-    const main = fs.readFileSync(path.join(APP, 'main.js'), 'utf8');
-    const m = /COMFORT_MAP = \{ x: (\d+) - 416, y: (\d+) - 120, w: (\d+), h: (\d+) \}/.exec(main);
-    assert.ok(m, 'COMFORT_MAP is not in main.js');
-    assert.deepStrictEqual(a.hole, [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]);
-    assert.ok(Math.abs(a.hole[2] / a.hole[3] - 1088 / 480) < 0.03, 'the map window is not the map\'s shape');
-    assert.ok(a.hole[0] >= 416 && a.hole[1] >= 120 && a.hole[0] + a.hole[2] <= 416 + 1088 && a.hole[1] + a.hole[3] <= 120 + 480, 'the map window is outside the map target');
-    assert.strictEqual(dash[1].bg, false);
-    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
-        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_comfort'), `${k} lacks EVA Comfort`);
-    });
-});
-
 test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s speed, the HUD map rectangle clear, transparent frame layer, fonts baked, offered in the HUD settings', () => {
     const l = json('hud', 'layouts', 'eva_hud_comfort.json');
     const win = [120, 100, 120 + 485, 100 + 278], bmw = [282, 330, 362, 376];
@@ -227,7 +187,7 @@ test('eva hud comfort layout: inside the visible HUD window, clear of BMW\'s spe
     });
 });
 
-test('eva comfort wide layout: the hole is inside the map target and covered by main.js\'s rectangle (the map\'s shape), the rest is as in eva_comfort', () => {
+test('eva comfort wide layout: the hole is inside the map target and covered by main.js\'s rectangle (the map\'s shape), the widgets stay clear of BMW\'s boxes', () => {
     const l = json('hud', 'layouts', 'eva_comfort_wide.json');
     const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
     const ids = new Set();
@@ -276,12 +236,61 @@ test('eva page: every setting of the app has a row on the center screen and a ta
         assert.ok(targets.some((t) => t.key.includes(st.key) || (st.key === 'hudLayout' && t.key.startsWith('layout:'))), `${st.key} has no row`);
     });
     targets.forEach((t) => assert.ok(t.x >= 0 && t.y >= 44 && t.x + t.w <= 1600 && t.y + t.h <= 512, `${t.key} is off the page`));
-    targets.find((t) => t.key === 'layout:eva_comfort').run();
-    assert.strictEqual(vals.hudLayout, 'eva_comfort');
+    targets.find((t) => t.key === 'layout:eva_comfort_wide').run();
+    assert.strictEqual(vals.hudLayout, 'eva_comfort_wide');
     targets.find((t) => t.key === 'set:byMode').run();
     assert.strictEqual(vals.byMode, false);
     targets.find((t) => t.key === 'step:redline1').run();
     assert.strictEqual(vals.redline, 7000);
     targets.find((t) => t.key === 'cycle:units').run();
     assert.strictEqual(vals.units, 'us');
+});
+
+test('eva v12 layout: widgets inside the cluster, clear of BMW\'s boxes, fonts and pictures baked, no map window, offered in the settings', () => {
+    const l = json('hud', 'layouts', 'eva_v12.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+        if (w.type === 'picture') {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        }
+    });
+    // at most 2 effect layers here: with the image sheets the layout stays within the 8 layers of a connection
+    assert.strictEqual(l.widgets.filter((w) => w.type === 'evadash2' || w.type === 'evadial').length, 2);
+    const back = l.widgets.find((w) => w.id === 'eva');
+    assert.ok(back.frames.length <= 8);
+    assert.ok(!back.hole, 'EVA V12 has no map window');
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_v12'), `${k} lacks EVA V12`);
+    });
+});
+
+test('eva v12 sport and eco: the same layout in red and blue, with the needle, the start-up sweep and the shift dots from both ends, offered in the settings', () => {
+    const base = json('hud', 'layouts', 'eva_v12.json');
+    ['eva_v12', 'eva_v12_sport', 'eva_v12_eco'].forEach((id) => {
+        const l = json('hud', 'layouts', `${id}.json`);
+        assert.strictEqual(l.widgets.length, base.widgets.length, `${id} has other widgets than eva_v12`);
+        const d = l.widgets.find((w) => w.type === 'evadial').dial;
+        assert.ok(d.needle && d.needle.outer > d.needle.inner, `${id}: no needle`);
+        assert.ok(d.sweepMs > 0, `${id}: no start-up sweep`);
+        assert.strictEqual(d.leds.wings, true);
+        l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${id}/${w.id}: the baked picture is not its widget's size`);
+        });
+        ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+            assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
+        });
+    });
+    assert.notDeepStrictEqual(json('hud', 'layouts', 'eva_v12_sport.json').widgets.find((w) => w.id === 'dial').dial.yellow, base.widgets.find((w) => w.id === 'dial').dial.yellow);
 });

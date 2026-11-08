@@ -18,7 +18,7 @@ const C = {
 
 // the longer names of the layouts and options, short enough for a card or a chip
 const SHORT = {
-    off: 'OFF', eva: 'EVA', eva_comfort: 'EVA COMFORT', eva_comfort_wide: 'COMFORT BIG MAP',
+    off: 'OFF', eva: 'EVA', eva_comfort_wide: 'EVA COMFORT', eva_v12: 'V12 COMFORT', eva_v12_sport: 'V12 SPORT', eva_v12_eco: 'V12 ECO',
     eva_hud: 'EVA HUD', eva_hud_bmw: 'EVA HUD BMW', eva_hud_comfort: 'HUD COMFORT',
     metric: 'KM/H  °C  BAR', us: 'MPH  °F  PSI', '12h': '12-HOUR', '24h': '24-HOUR',
     auto: 'AUTO', on: 'ON',
@@ -103,7 +103,7 @@ function stepper(cv, s, col, y, key, label, unit) {
 function cards(cv, s, col, y, key) {
     const it = s.item(key);
     const opts = it && it.options ? it.options : [];
-    const w = (col.w - GAP) / 2, h = 58;
+    const w = (col.w - GAP) / 2, h = 46;
     opts.forEach((o, i) => {
         const x = col.x + (i % 2) * (w + GAP), yy = y + Math.floor(i / 2) * (h + GAP), on = s.get(key) === o[0];
         cv.roundRect(x, yy, w, h, 10, on ? C.redFill : C.row);
@@ -162,7 +162,8 @@ function draw(cv, s, status) {
     stepper(cv, s, COLS[2], y, 'shiftBefore', 'Shift before redline', 'rpm'); y += ROW_H + GAP;
     stepper(cv, s, COLS[2], y, 'speedOffset', 'Speed correction', ''); y += ROW_H + GAP;
     toggle(cv, s, COLS[2], y, 'coldGuard', 'Cold-engine guard', false); y += ROW_H + GAP;
-    chip(cv, s, COLS[2], y, 'demo', 'Demo data', false);
+    chip(cv, s, COLS[2], y, 'demo', 'Demo data', false); y += ROW_H + GAP;
+    toggle(cv, s, COLS[2], y, 'warp', 'Light effects (V12)', false);
 
     if (!own) {
         cv.text('Change these in Settings (the button below).', 24, 506, 16, C.dim, {});
