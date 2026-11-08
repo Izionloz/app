@@ -350,3 +350,33 @@ test('eva neo layout: inside the cluster, clear of BMW\'s small gear letter and 
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_neo'), `${k} lacks EVA Neo`);
     });
 });
+
+test('eva vector layout: inside the cluster, clear of BMW\'s small gear letter and belt light, fonts and pictures baked, three effect layers and at most five sheets, offered in the settings', () => {
+    const l = json('hud', 'layouts', 'eva_vector.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+        if (w.type === 'picture') {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        }
+    });
+    const eff = l.widgets.filter((w) => w.type === 'evadash2' || w.type === 'evadial');
+    assert.strictEqual(eff.length, 3);
+    assert.ok(l.widgets.find((w) => w.type === 'evadash2').frames.length <= 8);
+    const dials = l.widgets.filter((w) => w.type === 'evadial');
+    assert.ok(dials.every((d) => d.dial.flat === 3), 'the dials keep the glow: flat 3');
+    assert.strictEqual(dials[1].dial.signal, 'speed');
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_vector'), `${k} lacks EVA Vector`);
+    });
+});

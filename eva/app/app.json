@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -100,6 +100,10 @@
         [
           "eva_neo",
           "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (sporty sci-fi)"
         ]
       ]
     },
@@ -142,6 +146,10 @@
         [
           "eva_neo",
           "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (sporty sci-fi)"
         ]
       ]
     },
@@ -178,6 +186,10 @@
         [
           "eva_neo",
           "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (sporty sci-fi)"
         ]
       ]
     },
@@ -214,6 +226,10 @@
         [
           "eva_neo",
           "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (sporty sci-fi)"
         ]
       ]
     },
