@@ -5,7 +5,7 @@ brightness painted white-yellow instead of orange. Run after make_assets.py --co
 import base64, json, os
 
 PIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'hud', 'pictures')
-ACC = {'': (255, 209, 26), '_s': (255, 72, 52), '_e': (92, 200, 255)}      # Comfort yellow, Sport red, Eco Pro blue
+ACC = {'': (255, 209, 26), '_s': (255, 72, 52), '_e': (92, 200, 255), '_n': (86, 200, 255)}      # Comfort yellow, Sport red, Eco Pro blue, Neo cyan
 for suf, acc in ACC.items():
     for src, dst in (('c_coolant', 'v_coolant'), ('c_oil', 'v_oil'), ('c_battery', 'v_battery'), ('c_fuel', 'v_fuel'), ('c_car', 'v_car')):
         d = json.load(open(os.path.join(PIC, src + '.json')))

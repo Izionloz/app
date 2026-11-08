@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.19.0",
+  "version": "0.22.1",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -96,6 +96,34 @@
         [
           "eva_v12_eco",
           "EVA V12 Eco (blue)"
+        ],
+        [
+          "eva_neo",
+          "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -134,6 +162,34 @@
         [
           "eva_v12_eco",
           "EVA V12 Eco (blue)"
+        ],
+        [
+          "eva_neo",
+          "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -166,6 +222,34 @@
         [
           "eva_v12_eco",
           "EVA V12 Eco (blue)"
+        ],
+        [
+          "eva_neo",
+          "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -198,6 +282,34 @@
         [
           "eva_v12_eco",
           "EVA V12 Eco (blue)"
+        ],
+        [
+          "eva_neo",
+          "EVA Neo (two glass dials)"
+        ],
+        [
+          "eva_vector",
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },

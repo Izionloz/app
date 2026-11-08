@@ -231,7 +231,9 @@ test('eva page: every setting of the app has a row on the center screen and a ta
     const cv = new Proxy({ own: true, target: (x, y, w, h, run, key) => targets.push({ x, y, w, h, run, key }), textWidth: () => 50 }, {
         get: (o, k) => (k in o ? o[k] : () => cv),
     });
-    page.draw(cv, s, { cluster: 'a', hud: 'b' });
+    page.draw(cv, s, { cluster: 'a', hud: 'b' }, 0);
+    page.draw(cv, s, { cluster: 'a', hud: 'b' }, 1);
+    page.draw(cv, s, { cluster: 'a', hud: 'b' }, 2);
     app.settings.forEach((st) => {
         assert.ok(targets.some((t) => t.key.includes(st.key) || (st.key === 'hudLayout' && t.key.startsWith('layout:'))), `${st.key} has no row`);
     });
@@ -314,6 +316,85 @@ test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed,
         assert.ok(!l.widgets.some((w) => w.type === 'evadash2'), `${id} needs no frames`);
         assert.ok(l.widgets.filter((w) => w.type === 'text').length <= 8, `${id} shows too much for a HUD`);
         ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
+            assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
+        });
+    });
+});
+
+test('eva neo layout: inside the cluster, clear of BMW\'s small gear letter and belt light, fonts and pictures baked, two dials and the black under everything, offered in the settings', () => {
+    const l = json('hud', 'layouts', 'eva_neo.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+        if (w.type === 'picture') {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        }
+    });
+    const dials = l.widgets.filter((w) => w.type === 'evadial');
+    assert.strictEqual(dials.length, 2);
+    assert.strictEqual(l.widgets.filter((w) => w.type === 'evadash2').length, 0, 'the layers are the two dials and the sheets: 8 in all');
+    const first = dials[0];
+    assert.ok(first.w === 1920 && first.h === 720 && first.dial.bg === true, 'the first dial must paint the black under BMW\'s gauges');
+    assert.strictEqual(dials[1].dial.signal, 'speed');
+    const seg = json('hud', 'fonts', 'e_seg.json');
+    '0123456789-'.split('').forEach((ch) => assert.ok(seg.glyphs[ch], `e_seg lacks ${ch}`));
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_neo'), `${k} lacks EVA Neo`);
+    });
+});
+
+test('eva vector layout: inside the cluster, clear of BMW\'s small gear letter and belt light, fonts and pictures baked, three effect layers and at most five sheets, offered in the settings', () => {
+    const l = json('hud', 'layouts', 'eva_vector.json');
+    const boxes = [[1360, 664, 1450, 712], [587, 663, 626, 700]];
+    const ids = new Set();
+    l.widgets.forEach((w) => {
+        assert.ok(!ids.has(w.id), `two widgets are called ${w.id}`);
+        ids.add(w.id);
+        assert.ok(w.x >= 0 && w.y >= 0 && w.x + w.w <= 1920 && w.y + w.h <= 720, `${w.id} runs off the cluster`);
+        if (w.type === 'text') {
+            boxes.forEach((b) => assert.ok(!(w.x < b[2] && w.x + w.w > b[0] && w.y < b[3] && w.y + w.h > b[1]), `${w.id} overlaps BMW's box ${b}`));
+            const f = json('hud', 'fonts', `${w.font}.json`);
+            assert.ok(w.h >= f.cellHeight - 2 && w.h <= f.cellHeight + 2, `${w.id}: h ${w.h}, the font's cell is ${f.cellHeight}`);
+            if (!/\{\{/.test(w.text)) for (const ch of w.text) assert.ok(f.glyphs[ch], `${w.id}: font ${w.font} has no "${ch}"`);
+        }
+        if (w.type === 'picture') {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${w.id}: the baked picture is not its widget's size`);
+        }
+    });
+    const eff = l.widgets.filter((w) => w.type === 'evadash2' || w.type === 'evadial');
+    assert.strictEqual(eff.length, 3);
+    assert.ok(l.widgets.find((w) => w.type === 'evadash2').frames.length <= 8);
+    const dials = l.widgets.filter((w) => w.type === 'evadial');
+    assert.ok(dials.every((d) => d.dial.flat === 3), 'the dials keep the glow: flat 3');
+    assert.strictEqual(dials[1].dial.signal, 'speed');
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_vector'), `${k} lacks EVA Vector`);
+    });
+});
+
+test('eva vector colourings: the same layout in five more colours, with their own icons, offered in the settings', () => {
+    const base = json('hud', 'layouts', 'eva_vector.json');
+    ['red', 'violet', 'lime', 'mono', 'gold'].forEach((c) => {
+        const id = `eva_vector_${c}`;
+        const l = json('hud', 'layouts', `${id}.json`);
+        assert.strictEqual(l.widgets.length, base.widgets.length, `${id} has other widgets`);
+        l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${id}/${w.id}: the baked picture is not its widget's size`);
+        });
+        assert.notDeepStrictEqual(l.widgets.find((w) => w.type === 'evadial').dial.yellow, base.widgets.find((w) => w.type === 'evadial').dial.yellow, `${id} keeps the base colour`);
+        ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
             assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
         });
     });

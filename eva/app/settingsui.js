@@ -5,11 +5,42 @@
  * rest), each setting a row with its name and a touch control, the chosen layout lit red. Pure drawing on the kit's
  * canvas (cv) and the kit's settings object, so a test can run it with a fake of both.
  *
- * Page 1600 x 520 (the kit's page: y 44 to 512 is free under the header). A tap, or the iDrive controller turned onto a
+ * Three views (the header's tabs): 0 the cluster's layouts and 1 the HUD's as galleries of pictures, 2 the options. Page 1600 x 520 (the kit's page: y 44 to 512 is free under the header). A tap, or the iDrive controller turned onto a
  * row and pressed, runs the row's cv.target: a toggle flips, a chip goes to the next value, a stepper's - and + step
  * through the numbers, a layout card chooses that layout. Elsewhere than where the kit runs the screen (no touch renderer)
  * the page only shows the values; the HMI's own Settings list changes them (the Settings button).
  */
+
+const fs = require('fs');
+const path = require('path');
+
+// previews of the layouts (hud/previews/<layout>.json: 240x90 RGBA, made by tools/make_previews.py from bench pictures), registered once as the kit's pixel
+// images; a layout with none (or no kit, as in a test) gets a plain card
+let rec = null;
+try { rec = require('./kit/record'); } catch (e) { rec = null; }
+const previews = {};
+let nextImage = 0x45560000;
+function preview(id) {
+    if (Object.prototype.hasOwnProperty.call(previews, id)) return previews[id];
+    previews[id] = null;
+    try {
+        const j = JSON.parse(fs.readFileSync(path.join(__dirname, 'hud', 'previews', id + '.json'), 'utf8'));
+        if (rec && rec.setImage && j.w > 0 && j.h > 0) {
+            const n = nextImage++;
+            rec.setImage(n, j.w, j.h, Buffer.from(j.rgba, 'base64'));
+            previews[id] = { id: n, w: j.w, h: j.h };
+        }
+    } catch (e) { /* no preview */ }
+    return previews[id];
+}
+
+// which setting a tap on a layout card writes: the default layout or the one of a drive mode
+const state = { target: 'hudLayout', htarget: 'windHudLayout' };
+// the two galleries: the cluster's layouts and the HUD's (each picture is a window onto what its display shows)
+const GALLERIES = [
+    { item: 'hudLayout', stateKey: 'target', box: [240, 90], cols: 5, targets: [['hudLayout', 'DEFAULT', 'D'], ['inComfort', 'COMFORT', 'C'], ['inSport', 'SPORT', 'S'], ['inEco', 'ECO PRO', 'E']] },
+    { item: 'windHudLayout', stateKey: 'htarget', box: [240, 138], cols: 5, targets: [['windHudLayout', 'DEFAULT', 'D'], ['windInComfort', 'COMFORT', 'C'], ['windInSport', 'SPORT', 'S'], ['windInEco', 'ECO PRO', 'E']] },
+];
 
 const C = {
     bg: '#0b0c0f', row: '#121318', line: '#2a2c33', text: '#f2f2f2', dim: '#9a9ca3', warn: '#ffb020',
@@ -18,7 +49,7 @@ const C = {
 
 // the longer names of the layouts and options, short enough for a card or a chip
 const SHORT = {
-    off: 'OFF', eva: 'EVA', eva_comfort_wide: 'EVA COMFORT', eva_v12: 'V12 COMFORT', eva_v12_sport: 'V12 SPORT', eva_v12_eco: 'V12 ECO',
+    off: 'OFF', eva: 'EVA', eva_comfort_wide: 'EVA COMFORT', eva_v12: 'V12 COMFORT', eva_neo: 'NEO', eva_vector: 'VECTOR', eva_vector_red: 'VEC RED', eva_vector_violet: 'VEC VIOLET', eva_vector_lime: 'VEC LIME', eva_vector_mono: 'VEC MONO', eva_vector_gold: 'VEC GOLD', eva_v12_sport: 'V12 SPORT', eva_v12_eco: 'V12 ECO',
     eva_hud: 'EVA HUD', eva_hud_bmw: 'EVA HUD BMW', eva_hud_comfort: 'HUD COMFORT', eva_hud_v12: 'HUD V12', eva_hud_v12_sport: 'HUD V12 SPORT', eva_hud_v12_eco: 'HUD V12 ECO',
     metric: 'KM/H  °C  BAR', us: 'MPH  °F  PSI', '12h': '12-HOUR', '24h': '24-HOUR',
     auto: 'AUTO', on: 'ON',
@@ -99,34 +130,66 @@ function stepper(cv, s, col, y, key, label, unit) {
     cv.text(String(s.get(key)) + (unit ? ' ' + unit : ''), valX + valW / 2, yy + h / 2 + 7, 20, C.text, { align: 'center', font: 'bold' });
 }
 
-/** The four layout cards of the cluster, the chosen one lit. */
-function cards(cv, s, col, y, key) {
-    const it = s.item(key);
-    const opts = it && it.options ? it.options : [];
-    const w = (col.w - GAP) / 2, h = 46;
-    opts.forEach((o, i) => {
-        const x = col.x + (i % 2) * (w + GAP), yy = y + Math.floor(i / 2) * (h + GAP), on = s.get(key) === o[0];
-        cv.roundRect(x, yy, w, h, 10, on ? C.redFill : C.row);
-        cv.strokeRoundRect(x, yy, w, h, 10, on ? 2.5 : 1, on ? C.redLit : C.line);
-        const name = SHORT[o[0]] || String(o[1]).toUpperCase();
-        const size = fit(cv, name, 20, w - 20, { font: 'bold', spacing: 1 });
-        cv.text(name, x + w / 2, yy + h / 2 + 7, size, on ? C.text : C.dim, { align: 'center', font: 'bold', spacing: 1 });
-        target(cv, x, yy, w, h, () => { s.set(key, o[0]); }, 'layout:' + o[0]);
+/** The layouts of the cluster (kind 0) or the HUD (kind 1) as a gallery: a card with a picture for each, the chosen one lit; the chips above say whose layout a tap sets. */
+function gallery(cv, s, kind) {
+    const G = GALLERIES[kind], TG = G.targets, cur = () => state[G.stateKey];
+    let x = 24;
+    TG.forEach(([key, label]) => {
+        const on = cur() === key, w = 138, h = 32, y = 50;
+        cv.roundRect(x, y, w, h, h / 2, on ? C.redFill : C.row);
+        cv.strokeRoundRect(x, y, w, h, h / 2, on ? 2 : 1, on ? C.redLit : C.line);
+        cv.text(label, x + w / 2, y + h / 2 + 6, 17, on ? C.text : C.dim, { align: 'center', font: 'bold', spacing: 1 });
+        target(cv, x, y, w, h, () => { state[G.stateKey] = key; }, 'target:' + key);
+        x += w + 8;
     });
-    return y + Math.ceil(opts.length / 2) * (h + GAP);
+    cv.text('Tap a layout: it is the ' + (TG.find((t) => t[0] === cur()) || TG[0])[1].toLowerCase() + ' one.', x + 12, 72, 16, C.dim, {});
+    const bw = 340, bx = 1600 - 24 - bw;
+    toggle(cv, s, { x: bx, w: bw }, 46, 'byMode', 'By drive mode', false);
+    const it = s.item(G.item);
+    const opts = it && it.options ? it.options : [];
+    const [tw, th] = G.box;
+    const cols = G.cols, gap = 8, cw = (1552 - (cols - 1) * gap) / cols, ch = th + 42, y0 = 94;
+    opts.forEach((o, i) => {
+        const cx = 24 + (i % cols) * (cw + gap), cy = y0 + Math.floor(i / cols) * (ch + 6), on = s.get(cur()) === o[0];
+        cv.roundRect(cx, cy, cw, ch, 10, on ? C.redFill : C.row);
+        cv.strokeRoundRect(cx, cy, cw, ch, 10, on ? 3 : 1, on ? C.redLit : C.line);
+        const px = cx + (cw - tw) / 2, py = cy + 8, pv = preview(o[0]);
+        if (pv && cv.image) cv.image(pv.id, px, py, tw, th);
+        else {
+            cv.fillRect(px, py, tw, th, '#050608');
+            cv.strokeRoundRect(px, py, tw, th, 4, 1, C.line);
+            cv.text(o[0] === 'off' ? 'BMW own display' : 'no picture', px + tw / 2, py + th / 2 + 6, 16, C.dim, { align: 'center' });
+        }
+        // the letters of the settings that use this layout
+        let bxl = px + 6;
+        TG.forEach(([key, , letter]) => {
+            if (s.get(key) !== o[0]) return;
+            cv.roundRect(bxl, py + 6, 20, 20, 5, key === cur() ? C.redLit : '#000000');
+            cv.text(letter, bxl + 10, py + 21, 14, '#ffffff', { align: 'center', font: 'bold' });
+            bxl += 24;
+        });
+        const name = (SHORT[o[0]] || String(o[1]).toUpperCase());
+        cv.text(name, cx + cw / 2, cy + ch - 12, fit(cv, name, 18, cw - 16, { font: 'bold', spacing: 0.5 }), on ? C.text : C.dim, { align: 'center', font: 'bold', spacing: 1 });
+        target(cv, cx, cy, cw, ch, () => { s.set(cur(), o[0]); }, 'layout:' + o[0]);
+    });
 }
 
 /**
  * Draws the page. s: the kit's settings (get, set, cycle, item), status: { cluster, hud } texts, t: the theme (unused for now).
  */
-function draw(cv, s, status) {
+function draw(cv, s, status, view) {
     cv.clear(C.bg);
     const own = !!cv.own;
+    if (view === 0 || view === 1) {
+        gallery(cv, s, view);
+        if (!own) cv.text('Change these in Settings (the button below).', 24, 506, 16, C.dim, {});
+        return;
+    }
 
     // column 1: the cluster
     let y = TOP;
     heading(cv, COLS[0], y, 'CLUSTER');
-    y = cards(cv, s, COLS[0], y + 34, 'hudLayout') + 4;
+    y += 34;
     const by = !!s.get('byMode');
     toggle(cv, s, COLS[0], y, 'byMode', 'By drive mode', false); y += ROW_H + GAP;
     chip(cv, s, COLS[0], y, 'inComfort', 'In Comfort', !by); y += ROW_H + GAP;
@@ -170,4 +233,4 @@ function draw(cv, s, status) {
     }
 }
 
-module.exports = { draw, C, SHORT };
+module.exports = { draw, C, SHORT, state };

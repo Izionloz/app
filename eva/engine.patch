@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..15eed04 100644
+index db817c2..cf7fbdb 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -283,7 +283,7 @@ index db817c2..15eed04 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1491,224 @@ class HudApp {
+@@ -1396,6 +1491,233 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -399,7 +399,7 @@ index db817c2..15eed04 100644
 +        x.c.uniform(x.ref, 'u_railCol', [c0[0], c0[1], c0[2], (R[0] && R[0].color) ? 1 : dim, c1[0], c1[1], c1[2], 1], { type: 'vec4' });
 +    }
 +
-+    /** The Ferrari-style rev counter's constant uniforms: w.dial { cx, cy (cluster px), r, width, start, sweep (degrees), majors, minors, majorLen, minorLen, rpmMax, leds { radius, dot, count, from }, circle (the map window's radius), yellow }. */
++    /** The V12-style rev counter's constant uniforms: w.dial { cx, cy (cluster px), r, width, start, sweep (degrees), majors, minors, majorLen, minorLen, rpmMax, leds { radius, dot, count, from }, clip (px under the centre where the dish and bezel end), origin [x, y] (cluster px: where the warp streaks start), bg (true: the layer paints the whole cluster black), signal ('speed': along the speed scale), redFrom (0..1), fx (false: no streaks, stars or flash), yellow }. */
 +    _createDial(x) {
 +        const w = x.w, c = x.c, ref = x.ref, d = w.dial || {};
 +        const rad = (v, dflt) => (isNum(v) ? v : dflt) * Math.PI / 180;
@@ -409,11 +409,14 @@ index db817c2..15eed04 100644
 +        c.uniform(ref, 'u_a', [rad(d.start, 225), rad(d.sweep, 270), 0, Math.min(1, Math.max(0.3, this.setting('redline') / (d.rpmMax || 8000)))]);
 +        c.uniform(ref, 'u_t', [d.majors || 8, d.minors || 4, d.majorLen || 26, d.minorLen || 13]);
 +        c.uniform(ref, 'u_led', L ? [L.radius, L.dot || 7, L.count || 15, 0] : [0, 0, 0, 0]);
-+        c.uniform(ref, 'u_fx', [0, L && L.wings ? 1 : 0, d.circle || 0, 0]);
++        c.uniform(ref, 'u_fx', [0, L && L.wings ? 1 : 0, d.clip || 0, 0]);
 +        const N = d.needle;
 +        c.uniform(ref, 'u_n', N ? [N.inner, N.outer, N.width || 3, 1] : [0, 0, 0, 0]);
-+        c.uniform(ref, 'u_w', [0, this.setting('warp') !== false && d.warp !== false ? 0 : -1, 0, 0]);
++        c.uniform(ref, 'u_w', [0, this.setting('warp') !== false && d.warp !== false && d.fx !== false ? 0 : -1, 0, 0]);
 +        c.uniform(ref, 'u_flat', [d.flat === true ? 1 : (Number(d.flat) || 0)]);
++        c.uniform(ref, 'u_v', [w.w >= 1900 && w.h >= 700 ? 1 : 0]);
++        c.uniform(ref, 'u_o', Array.isArray(d.origin) ? [d.origin[0] - w.x, d.origin[1] - w.y] : [0, 0]);
++        c.uniform(ref, 'u_bg', [d.bg ? 1 : 0]);
 +        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
 +        c.uniform(ref, 'u_red', d.red || [0.93, 0.1, 0.06]);
 +        x.dial = {};
@@ -425,14 +428,20 @@ index db817c2..15eed04 100644
 +        const max = d.rpmMax || 8000, now = Date.now();
 +        const rpm = this._raw('rpm');
 +        let eff = isNum(rpm) ? rpm : 0;
++        // d.signal 'speed': the counter shows the speed along the speed scale (SPEED_SCALE, the labels {{spd:0..8}}), not the rpm
 +        // the start-up sweep (d.sweepMs, 1500): the counter runs up to the end of the scale and back, as a sports car's does when it wakes
 +        if (x.dial.t0 === undefined || x.dial.t0 === null) x.dial.t0 = now;
 +        const ms = isNum(d.sweepMs) ? d.sweepMs : 1500, s = ms > 0 ? (now - x.dial.t0) / ms : 1;
 +        const sweeping = s < 1;
 +        if (sweeping) eff = Math.max(eff, Math.sin(Math.PI * s) * max);
-+        const v = Math.min(1, Math.max(0, eff / max));
++        let v = Math.min(1, Math.max(0, eff / max));
++        if (d.signal === 'speed') {
++            const spd = this._raw('speed'), us = this.setting('units') === 'us';
++            v = isNum(spd) ? scaleFrac(us ? spd * 0.621371 : spd, SPEED_SCALE[us ? 'us' : 'metric']) : 0;
++            if (sweeping) v = Math.max(v, Math.sin(Math.PI * s));
++        }
 +        const q = Math.round(v * 400) / 400;
-+        const red = Math.min(1, Math.max(0.3, this.setting('redline') / max));
++        const red = isNum(d.redFrom) ? d.redFrom : Math.min(1, Math.max(0.3, this.setting('redline') / max));
 +        const L = d.leds;
 +        let lit = 0, strobe = 0;
 +        if (L) {
@@ -444,7 +453,7 @@ index db817c2..15eed04 100644
 +        const pulse = this._evaLevel() >= 3 && !sweeping ? Math.floor(now / 110) % 2 : 0;
 +        // the warp streaks follow the acceleration (the speed's change a second, smoothed: quick to rise, slow to fall) and run with the start-up sweep
 +        let warp = 0;
-+        if (d.warp !== false && this.setting('warp') !== false) {
++        if (d.warp !== false && d.fx !== false && this.setting('warp') !== false) {
 +            const sp = this._raw('speed'), W = x.dial;
 +            if (isNum(sp) && isNum(W.sp) && now > W.spT) {
 +                const g = ((sp - W.sp) / 3.6) / ((now - W.spT) / 1000) / 9.81;
@@ -457,7 +466,7 @@ index db817c2..15eed04 100644
 +        }
 +        const wq = Math.round(warp * 20) / 20;
 +        // the shift flash (a short glow when the shift point is reached) and the redline glow
-+        const fx = d.warp !== false && this.setting('warp') !== false;
++        const fx = d.warp !== false && d.fx !== false && this.setting('warp') !== false;
 +        const sNow = strobe > 0;
 +        if (sNow && !x.dial.sNow) x.dial.flashAt = now;
 +        x.dial.sNow = sNow;
@@ -471,7 +480,7 @@ index db817c2..15eed04 100644
 +        x.dial.last = key;
 +        c.uniform(ref, 'u_a', [(isNum(d.start) ? d.start : 225) * Math.PI / 180, (isNum(d.sweep) ? d.sweep : 270) * Math.PI / 180, q, red]);
 +        if (L) c.uniform(ref, 'u_led', [L.radius, L.dot || 7, L.count || 15, lit]);
-+        c.uniform(ref, 'u_fx', [strobe, L && L.wings ? 1 : 0, d.circle || 0, pulse]);
++        c.uniform(ref, 'u_fx', [strobe, L && L.wings ? 1 : 0, d.clip || 0, pulse]);
 +        c.uniform(ref, 'u_w', [wq, fx ? (now / 1000) % 1000 : -1, fq, rq]);
 +    }
 +
@@ -545,10 +554,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..b24c072 100644
+index c8679c1..9e49f56 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,557 @@ void main() {
+@@ -889,4 +889,561 @@ void main() {
  }
  `;
  
@@ -890,7 +899,7 @@ index c8679c1..b24c072 100644
 +`;
 +
 +
-+const EVADIAL = `// The Ferrari-style cluster's round rev counter in one cluster-render "effect" layer (GLSL ES 1.00): an open ring with a track, a lit part
++const EVADIAL = `// The V12-style cluster's round rev counter in one cluster-render "effect" layer (GLSL ES 1.00): an open ring with a track, a lit part
 +// (yellow, red from the red zone on), a red band outside the zone, tick marks inside the ring, a row of shift dots round the top and a thin
 +// circle line for the map window in the middle. Straight alpha, transparent elsewhere. v_uv (0,0) is the top-left.
 +#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -904,11 +913,14 @@ index c8679c1..b24c072 100644
 +uniform vec4 u_a;     // start angle (rad, clockwise from 12 o'clock), sweep, value 0..1, red zone start 0..1
 +uniform vec4 u_t;     // tick intervals, minor ticks per interval, major length, minor length (px)
 +uniform vec4 u_led;   // shift dots: radius from the centre, dot radius, count, lit (0 none)
-+uniform vec4 u_fx;    // strobe 0 / 1 / 2, wings 0 / 1 (the shift dots fill from both ends), the map circle's radius (0 none), pulse 0..1
++uniform vec4 u_fx;    // strobe 0 / 1 / 2, wings 0 / 1 (the shift dots fill from both ends), the dish's lower clip (px under the centre, 0 = by the layer), pulse 0..1
 +uniform vec4 u_n;     // the needle: inner radius, outer radius, width px, on (1)
 +uniform vec4 u_w;     // the light effects: warp strength 0..1, time (s), the shift flash 0..1, the redline glow 0..1
 +uniform vec3 u_yel;
 +uniform vec3 u_red;
++uniform vec2 u_o;       // the warp streaks' origin in layer px (0: the dial's centre)
++uniform float u_bg;     // 1: the layer paints the whole cluster black under everything it draws
++uniform float u_v;      // 1: the layer is the whole cluster: the vignette and the stars are drawn
 +uniform float u_flat;   // 1: a flat look: no dish, bezel, vignette, stars, tube shading, glow or shadows (the windshield HUD: black is no light there)
 +const float PI = 3.14159265359;
 +
@@ -937,14 +949,15 @@ index c8679c1..b24c072 100644
 +    float f = rel / u_a.y;
 +    float redAt = u_a.w;
 +    float Rf = r + hw + 24.0;                       // the face: a dark dish with a sheen of glass over it
-+    vec4 acc = vec4(0.0);
++    float flatHud = (u_flat > 0.5 && u_flat < 2.5) ? 1.0 : 0.0;     // flat 1 and 2: the HUD looks; 3 keeps the glow, the stars and the vignette
++    vec4 acc = vec4(0.0, 0.0, 0.0, u_bg);
 +    vec2 pos = v_uv * u_size;
 +    // the screen's edges fall away a little (a vignette), and glow red at the redline
 +    float vg = smoothstep(0.50, 1.10, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0));
-+    if (u_flat < 0.5) acc = ov(acc, vec3(0.0), 0.32 * vg);
-+    if (u_flat < 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
++    if (flatHud < 0.5 && u_v > 0.5 && u_w.y >= 0.0) acc = ov(acc, vec3(0.0), 0.32 * vg);
++    if (flatHud < 0.5 && u_v > 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
 +    // a field of faint stars far back, drifting slowly (they stretch into the warp streaks above a certain speed)
-+    if (u_flat < 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
++    if (flatHud < 0.5 && u_v > 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
 +        vec2 sp = pos + vec2(0.0, u_w.y * 5.0);
 +        vec2 cell = floor(sp / 28.0);
 +        float hh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
@@ -955,7 +968,8 @@ index c8679c1..b24c072 100644
 +            acc = ov(acc, vec3(0.8, 0.88, 1.0), 0.55 * st * (0.35 + 0.65 * tw));
 +        }
 +    }
-+    float cut = clamp((u_size.y - u_c.y - 84.0) - p.y, 0.0, 1.0);   // the dish and the bezel end 84 px over the layer's bottom: the bottom row is there
++    float cutLim = u_fx.z > 0.0 ? u_fx.z : (u_size.y - u_c.y - 84.0);
++    float cut = clamp(cutLim - p.y, 0.0, 1.0);   // the dish and the bezel end 84 px over the layer's bottom: the bottom row is there
 +    if (u_flat < 0.5 && d < Rf + 1.0) {
 +        float tt = d / Rf;
 +        vec3 face = mix(vec3(0.060, 0.062, 0.072), vec3(0.006, 0.006, 0.009), smoothstep(0.0, 1.0, tt));
@@ -970,8 +984,11 @@ index c8679c1..b24c072 100644
 +    // the warp: light streaks fly out of the middle, over the ring and on to the edges of the whole cluster, while the car accelerates,
 +    // as in a jump to light speed. Thin lines of a few px, so they look alike near the middle and at the far edge
 +    if (u_w.x > 0.01) {
++        vec2 qo = u_o.x > 0.0 ? pos - u_o : p;
++        float d0 = length(qo);
++        float ao = atan(qo.x, -qo.y);
 +        float N = 200.0;
-+        float sl = a / (2.0 * PI) * N + N * 0.5;
++        float sl = ao / (2.0 * PI) * N + N * 0.5;
 +        float i = floor(sl);
 +        float fr = fract(sl);
 +        float h1 = fract(sin(i * 12.9898) * 43758.5453);
@@ -980,15 +997,16 @@ index c8679c1..b24c072 100644
 +        if (h1 < 0.18 + 0.7 * u_w.x) {
 +            float R0 = r - hw;
 +            float ph = fract(h3 + u_w.y * (0.22 + 0.8 * h2));
-+            float rad = d / R0;
++            float rad = d0 / R0;
 +            float len = (0.22 + 0.9 * u_w.x) * (0.6 + h2);
 +            float t = (ph * 4.6 - rad) / len;
 +            float body = (t > 0.0 && t < 1.0) ? (1.0 - t) : 0.0;
-+            float perpPx = abs(fr - 0.5) * (2.0 * PI * d / N);
++            float perpPx = abs(fr - 0.5) * (2.0 * PI * d0 / N);
 +            float wpx = 1.2 + 2.2 * u_w.x * h2;
 +            float side = 1.0 - smoothstep(0.3 * wpx, wpx, perpPx);
-+            float vis = (u_flat > 0.5 ? smoothstep(1.0, 1.3, rad) : smoothstep(0.28, 0.9, rad)) * (1.0 - smoothstep(3.4, 4.2, rad));   // flat (the HUD): only outside the ring, the speed stays clear
-+            float outer = d > r + hw + 24.0 ? 0.65 : 1.0;                       // a little fainter out over the panels, so their words stay clear
++            float vis = (flatHud > 0.5 ? smoothstep(1.0, 1.3, rad) : smoothstep(0.28, 0.9, rad)) * (1.0 - smoothstep(3.4, 4.2, rad));   // flat (the HUD): only outside the ring, the speed stays clear
++            float edge = min(min(pos.x, u_size.x - pos.x), min(pos.y, u_size.y - pos.y));
++            float outer = (d0 > r + hw + 24.0 ? 0.65 : 1.0) * (u_o.x > 0.0 ? 0.8 : 1.0) * (u_v > 0.5 ? 1.0 : smoothstep(0.0, 60.0, edge));                       // a little fainter out over the panels, so their words stay clear
 +            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * outer * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
 +        }
 +    }
@@ -1015,12 +1033,12 @@ index c8679c1..b24c072 100644
 +    float tcross = clamp((d - (r - hw)) / (2.0 * hw), 0.0, 1.0);
 +    float tube = u_flat > 0.5 ? 1.0 : 0.62 + 0.52 * sin(PI * tcross);                            // the ring reads as a tube: bright along its middle
 +    float spec = u_flat > 0.5 ? 0.0 : pow(max(0.0, 1.0 - abs(tcross - 0.32) * 5.0), 2.0) * 0.30;   // and has a highlight
-+    if (u_flat < 0.5 && lit > 0.002) acc = ov(acc, litC, 0.32 * exp(-max(litD, 0.0) / 15.0) * (1.0 - clamp(0.5 - litD, 0.0, 1.0)) * (1.0 + pulse));
++    if (flatHud < 0.5 && lit > 0.002) acc = ov(acc, litC, 0.32 * exp(-max(litD, 0.0) / 15.0) * (1.0 - clamp(0.5 - litD, 0.0, 1.0)) * (1.0 + pulse));
 +    // flat 2, the technical look: the ring is a row of short segments
 +    float sg = 1.0;
 +    if (u_flat > 1.5) { float fq = fract(rel / 0.05); sg = smoothstep(0.0, 0.10, fq) * (1.0 - smoothstep(0.74, 0.84, fq)); }
 +    acc = ov(acc, track * tube, clamp(0.5 - ringD, 0.0, 1.0) * sg);
-+    float headG = u_flat < 0.5 && rel < lit ? clamp(1.0 - (lit - rel) / 0.55, 0.0, 1.0) : 0.0;     // the lit part burns brighter towards its head, like a comet
++    float headG = flatHud < 0.5 && rel < lit ? clamp(1.0 - (lit - rel) / 0.55, 0.0, 1.0) : 0.0;     // the lit part burns brighter towards its head, like a comet
 +    vec3 litS = clamp(litC * tube + vec3(spec) + 0.45 * pulse + vec3(0.55) * pow(headG, 3.0), 0.0, 1.0);
 +    acc = ov(acc, litS, clamp(0.5 - litD, 0.0, 1.0) * sg);
 +    // the ticks inside the ring, with a shadow under each
@@ -1062,12 +1080,12 @@ index c8679c1..b24c072 100644
 +        float perp = abs(dot(p, vec2(-dn.y, dn.x)));
 +        if (along > u_n.x - 6.0 && along < u_n.y + 6.0) {
 +            float cap = clamp(min(along - u_n.x, u_n.y - along) + 0.5, 0.0, 1.0);
-+            if (u_flat < 0.5) acc = ov(acc, u_yel, 0.30 * exp(-perp / 7.0) * cap);
++            if (flatHud < 0.5) acc = ov(acc, u_yel, 0.30 * exp(-perp / 7.0) * cap);
 +            acc = ov(acc, vec3(1.0), cap * clamp(0.5 - (perp - u_n.z * 0.5), 0.0, 1.0));
 +        }
 +        // a flare at the needle's tip
 +        float tip = length(p - dn * u_n.y);
-+        if (u_flat < 0.5) acc = ov(acc, mix(vec3(1.0), u_yel, 0.4), (0.22 + 0.5 * u_w.x) * exp(-tip / 11.0));
++        if (flatHud < 0.5) acc = ov(acc, mix(vec3(1.0), u_yel, 0.4), (0.22 + 0.5 * u_w.x) * exp(-tip / 11.0));
 +    }
 +    // the shift dots round the top
 +    if (u_led.z > 0.5) {
@@ -1088,17 +1106,12 @@ index c8679c1..b24c072 100644
 +            vec3 lc = frac < 0.4 ? vec3(0.2, 0.95, 0.35) : (frac < 0.75 ? vec3(1.0, 0.82, 0.05) : u_red);
 +            if (u_fx.x > 0.5) { on = true; lc = u_fx.x > 1.5 ? vec3(0.8, 0.9, 1.0) : u_red; }
 +            // a lit dot glows and has a bright core; an unlit one is a glass bead
-+            if (on && u_flat < 0.5) acc = ov(acc, lc, 0.35 * exp(-max(dd, 0.0) / 6.0));
++            if (on && flatHud < 0.5) acc = ov(acc, lc, 0.35 * exp(-max(dd, 0.0) / 6.0));
 +            if (u_flat > 0.5) { acc = ov(acc, on ? lc : vec3(0.16, 0.16, 0.18), clamp(0.5 - dd, 0.0, 1.0)); } else {
 +            vec3 cc = on ? mix(lc, vec3(1.0), 0.35 * clamp(1.0 - length(p - dc) / u_led.y, 0.0, 1.0)) : vec3(0.10, 0.10, 0.12) + vec3(0.06) * clamp(1.0 - length(p - dc - vec2(-2.0, -2.0)) / u_led.y, 0.0, 1.0);
 +            acc = ov(acc, cc, clamp(0.5 - dd, 0.0, 1.0));
 +            }
 +        }
-+    }
-+    // the map window's circle line
-+    if (u_fx.z > 0.5) {
-+        float cd = abs(d - u_fx.z) - 1.5;
-+        acc = ov(acc, u_yel, clamp(0.5 - cd, 0.0, 1.0));
 +    }
 +    // the shift flash: a brief glow over the whole cluster
 +    if (u_w.z > 0.01) acc = ov(acc, mix(vec3(1.0), u_yel, 0.3), u_w.z * 0.30 * (1.0 - clamp(d / 1100.0, 0.0, 1.0)));
