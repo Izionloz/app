@@ -311,7 +311,8 @@ test('eva hud v12 layouts: inside the visible HUD window, clear of BMW\'s speed,
         const d = l.widgets.find((w) => w.type === 'evadial').dial;
         assert.strictEqual(d.flat, true);
         assert.strictEqual(d.warp, false);
-        assert.ok(l.widgets.find((w) => w.type === 'evadash2').bg === false);
+        assert.ok(!l.widgets.some((w) => w.type === 'evadash2'), `${id} needs no frames`);
+        assert.ok(l.widgets.filter((w) => w.type === 'text').length <= 8, `${id} shows too much for a HUD`);
         ['windHudLayout', 'windInSport', 'windInComfort', 'windInEco'].forEach((k) => {
             assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
         });

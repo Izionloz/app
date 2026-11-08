@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Writes eva/app/hud/layouts/eva_hud_v12.json (+ _sport, _eco): the V12 look for the windshield HUD: a round rev counter (ring, ticks, needle, shift
-dots from both ends) with the speed inside it, the gear and the selector row P R N D S M on the right, a header with the mode, the temperature and
-the clock. 800x480 HUD target; the part seen through the windshield is 485x278 at x 120, y 100, and BMW's own white speed sits at its lower left
+"""Writes eva/app/hud/layouts/eva_hud_v12.json (+ _sport, _eco): the V12 look for the windshield HUD, kept small: a round rev counter (ring, ticks, needle, shift
+dots from both ends) with the speed inside it and the gear beside it; nothing else but the redline alert. 800x480 HUD target; the part seen through the windshield is 485x278 at x 120, y 100, and BMW's own white speed sits at its lower left
 (x 282-362, y 330-376), under the ring's open bottom. On the glass black is no light: the counter is `flat` (no dish, bezel, vignette or stars),
 the warp streaks are off, only lines and numbers are drawn. Run it again after changing the numbers."""
 import json, math, os
@@ -31,33 +30,20 @@ def build(id, name, acc, acc_f):
         d.update(k)
         W.append(d)
 
-    frames = [
-        {'x': 126, 'y': 130, 'w': 474, 'h': 2, 'kind': 2, 'color': 1},                         # under the header
-        {'x': 470, 'y': 196, 'w': 130, 'h': 132, 'chamfer': 12, 'glow': 1},                    # the gear box
-    ]
-    W.append({'id': 'eva', 'type': 'evadash2', 'class': 'ambient', 'z': -10, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3], 'bg': False,
-              'frames': frames, 'pal': [[0.82, 0.83, 0.86], [0.30, 0.30, 0.33], acc_f], 'rpmMax': 8000, 'rails': []})
     W.append({'id': 'dial', 'type': 'evadial', 'class': 'ambient', 'z': -9, 'x': WIN[0], 'y': WIN[1], 'w': WIN[2], 'h': WIN[3],
               'dial': {'cx': CX, 'cy': CY, 'r': R, 'width': RW, 'start': 225, 'sweep': 270, 'majors': 8, 'minors': 2, 'majorLen': 14, 'minorLen': 7,
                        'rpmMax': 8000, 'flat': True, 'warp': False, 'sweepMs': 1200, 'yellow': acc_f,
                        'needle': {'inner': 60, 'outer': R + RW // 2 + 1, 'width': 2},
                        'leds': {'radius': 124, 'dot': 4, 'count': 11, 'from': 4000, 'wings': True}}})
-    text('mode', 130, 104, 190, '{{mode}}', 'w_mode', YEL, glow=True)
-    text('amb', 400, 108, 100, '{{ambient}} {{u:temp}}', 'w_small', GREY, 'right')
-    text('clock', 520, 108, 82, '{{time}}', 'w_small', WHITE, 'right')
-    for i in range(9):
-        a = math.radians(225 + 270 * i / 8)
-        x, y = CX + 64 * math.sin(a), CY - 64 * math.cos(a)
-        text('tick%d' % i, round(x) - 12, round(y) - 9, 24, str(i), 'w_small', RED if i >= 7 else WHITE, 'center', z=6)
-    text('speed', CX - 52, 196, 104, '{{speed}}', 'w_gear', WHITE, 'center', z=7, glow=True)
-    text('speedUnit', CX - 50, 264, 100, '{{u:speedLc}}', 'w_unit', YEL, 'center', z=7)
-    text('rpm', CX - 28, 296, 56, '{{rpm}}', 'w_rpm', GREY, 'center', z=7)
-    text('gearCap', 480, 202, 110, 'GEAR', 'w_small', YEL, 'center', z=8)
-    text('gear', 485, 222, 100, '{{gear}}', 'w_gear', WHITE, 'center', z=8, glow=True)
-    for k, L in enumerate('PRNDSM'):
-        x = 480 + round(k * 17.5)
-        text('selDim' + L, x, 298, 16, L, 'w_small', [100, 100, 106, 255], 'center', z=8)
-        text('sel' + L, x, 298, 16, '{{selx:%s}}' % L, 'w_small', YEL, 'center', z=9, glow=True)
+    # little: the speed inside the counter, the gear beside it (the rev numbers and the rest are left out), and the redline alert
+    for i in range(9):                                       # the 0-8 numbers: only the red zone's, to show where it begins
+        if i >= 7:
+            a = math.radians(225 + 270 * i / 8)
+            x, y = CX + 64 * math.sin(a), CY - 64 * math.cos(a)
+            text('tick%d' % i, round(x) - 12, round(y) - 9, 24, str(i), 'w_small', RED, 'center', z=6)
+    text('speed', CX - 52, 204, 104, '{{speed}}', 'w_gear', WHITE, 'center', z=7, glow=True)
+    text('speedUnit', CX - 50, 272, 100, '{{u:speedLc}}', 'w_unit', YEL, 'center', z=7)
+    text('gear', 488, 222, 100, '{{gear}}', 'w_gear', YEL, 'center', z=8, glow=True)
     text('alert', 400, 355, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
     with open(os.path.join(APP, 'layouts', id + '.json'), 'w') as f:
         json.dump({'schemaVersion': 2, 'name': name, 'theme': 'eva',
