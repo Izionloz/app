@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..52716e0 100644
+index db817c2..6b98bfe 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -279,7 +279,7 @@ index db817c2..52716e0 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1487,197 @@ class HudApp {
+@@ -1396,6 +1487,214 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -408,6 +408,7 @@ index db817c2..52716e0 100644
 +        c.uniform(ref, 'u_fx', [0, L && L.wings ? 1 : 0, d.circle || 0, 0]);
 +        const N = d.needle;
 +        c.uniform(ref, 'u_n', N ? [N.inner, N.outer, N.width || 3, 1] : [0, 0, 0, 0]);
++        c.uniform(ref, 'u_w', [0, 0, 0, 0]);
 +        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
 +        c.uniform(ref, 'u_red', d.red || [0.93, 0.1, 0.06]);
 +        x.dial = {};
@@ -436,12 +437,28 @@ index db817c2..52716e0 100644
 +            strobe = sp.now && !sweeping ? (Math.floor(now / 90) % 2 ? 2 : 1) : 0;
 +        }
 +        const pulse = this._evaLevel() >= 3 && !sweeping ? Math.floor(now / 110) % 2 : 0;
-+        const key = q + '|' + red + '|' + lit + '|' + strobe + '|' + pulse;
++        // the warp streaks follow the acceleration (the speed's change a second, smoothed: quick to rise, slow to fall) and run with the start-up sweep
++        let warp = 0;
++        if (d.warp !== false && this.setting('warp') !== false) {
++            const sp = this._raw('speed'), W = x.dial;
++            if (isNum(sp) && isNum(W.sp) && now > W.spT) {
++                const g = ((sp - W.sp) / 3.6) / ((now - W.spT) / 1000) / 9.81;
++                const target = Math.min(1, Math.max(0, (g - 0.06) / 0.26));
++                W.warp = target > (W.warp || 0) ? (W.warp || 0) + (target - (W.warp || 0)) * 0.12 : (W.warp || 0) * 0.965;
++            }
++            if (isNum(sp) && (!isNum(W.sp) || now - W.spT >= 120)) { W.sp = sp; W.spT = now; }
++            warp = Math.max(W.warp || 0, sweeping ? Math.sin(Math.PI * s) * 0.9 : 0);
++            if (warp < 0.02) warp = 0;
++        }
++        const wq = Math.round(warp * 20) / 20;
++        const tick = wq > 0 ? Math.floor(now / 40) : 0;                // the streaks' clock, 25 messages a second while they show
++        const key = q + '|' + red + '|' + lit + '|' + strobe + '|' + pulse + '|' + wq + '|' + tick;
 +        if (!force && key === x.dial.last) return;
 +        x.dial.last = key;
 +        c.uniform(ref, 'u_a', [(isNum(d.start) ? d.start : 225) * Math.PI / 180, (isNum(d.sweep) ? d.sweep : 270) * Math.PI / 180, q, red]);
 +        if (L) c.uniform(ref, 'u_led', [L.radius, L.dot || 7, L.count || 15, lit]);
 +        c.uniform(ref, 'u_fx', [strobe, L && L.wings ? 1 : 0, d.circle || 0, pulse]);
++        c.uniform(ref, 'u_w', [wq, (now / 1000) % 1000, 0, 0]);
 +    }
 +
 +    /** The layout to keep built, hidden, while the active one is "off" (config.standby): the Sport layout, else the plain one. */
@@ -514,10 +531,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..f4b3ed2 100644
+index c8679c1..bc52e7e 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,490 @@ void main() {
+@@ -889,4 +889,511 @@ void main() {
  }
  `;
  
@@ -875,6 +892,7 @@ index c8679c1..f4b3ed2 100644
 +uniform vec4 u_led;   // shift dots: radius from the centre, dot radius, count, lit (0 none)
 +uniform vec4 u_fx;    // strobe 0 / 1 / 2, wings 0 / 1 (the shift dots fill from both ends), the map circle's radius (0 none), pulse 0..1
 +uniform vec4 u_n;     // the needle: inner radius, outer radius, width px, on (1)
++uniform vec4 u_w;     // the warp streaks: strength 0..1, time (s), reserved, reserved
 +uniform vec3 u_yel;
 +uniform vec3 u_red;
 +const float PI = 3.14159265359;
@@ -916,6 +934,26 @@ index c8679c1..f4b3ed2 100644
 +        // the dish is deeper by the ring: a shadow on its inner side
 +        float sh = smoothstep(r - hw - 40.0, r - hw, d) * (1.0 - smoothstep(r - hw, r - hw + 3.0, d));
 +        acc = ov(acc, vec3(0.0), 0.6 * sh * cut);
++    }
++    // the warp: light streaks fly out of the middle towards the ring while the car accelerates, as in a jump to light speed
++    if (u_w.x > 0.01 && d < r - hw - 2.0) {
++        float N = 110.0;
++        float sl = a / (2.0 * PI) * N + N * 0.5;
++        float i = floor(sl);
++        float fr = fract(sl);
++        float h1 = fract(sin(i * 12.9898) * 43758.5453);
++        float h2 = fract(sin(i * 78.233 + 1.7) * 12345.6789);
++        float h3 = fract(sin(i * 39.346 + 5.1) * 9876.5432);
++        if (h1 < 0.22 + 0.7 * u_w.x) {
++            float ph = fract(h3 + u_w.y * (0.55 + 1.7 * h2));
++            float rad = d / (r - hw);
++            float len = 0.16 + 0.6 * u_w.x * (0.5 + h2);
++            float t = (ph * 1.3 - rad) / len;
++            float body = (t > 0.0 && t < 1.0) ? (1.0 - t) : 0.0;
++            float side = 1.0 - smoothstep(0.12, 0.55, abs(fr - 0.5) * 2.0);
++            float vis = smoothstep(0.28, 0.9, rad) * (1.0 - smoothstep(0.96, 1.0, rad));
++            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
++        }
 +    }
 +    // the chrome bezel round the face: bright and dark stretches follow the light
 +    float rb = r + hw + 18.0, bw = 8.0;
