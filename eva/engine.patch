@@ -514,10 +514,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..6db4817 100644
+index c8679c1..f4b3ed2 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,459 @@ void main() {
+@@ -889,4 +889,490 @@ void main() {
  }
  `;
  
@@ -902,25 +902,49 @@ index c8679c1..6db4817 100644
 +    float a = atan(p.x, -p.y);
 +    float rel = mod(a - u_a.x + 4.0 * PI, 2.0 * PI);
 +    float f = rel / u_a.y;
-+    vec4 acc = vec4(0.0);
 +    float redAt = u_a.w;
++    float Rf = r + hw + 24.0;                       // the face: a dark dish with a sheen of glass over it
++    vec4 acc = vec4(0.0);
++    float cut = clamp((u_size.y - u_c.y - 84.0) - p.y, 0.0, 1.0);   // the dish and the bezel end 84 px over the layer's bottom: the bottom row is there
++    if (d < Rf + 1.0) {
++        float tt = d / Rf;
++        vec3 face = mix(vec3(0.060, 0.062, 0.072), vec3(0.006, 0.006, 0.009), smoothstep(0.0, 1.0, tt));
++        float sheen = 0.075 * smoothstep(-0.25, 0.95, -p.y / Rf) * (1.0 - 0.45 * tt);
++        float streak = 0.035 * smoothstep(0.55, 0.0, abs((p.x + p.y * 0.6) / Rf + 0.28));   // a soft diagonal reflection
++        face += vec3(sheen + streak);
++        acc = ov(acc, face, clamp(Rf + 0.5 - d, 0.0, 1.0) * cut);
++        // the dish is deeper by the ring: a shadow on its inner side
++        float sh = smoothstep(r - hw - 40.0, r - hw, d) * (1.0 - smoothstep(r - hw, r - hw + 3.0, d));
++        acc = ov(acc, vec3(0.0), 0.6 * sh * cut);
++    }
++    // the chrome bezel round the face: bright and dark stretches follow the light
++    float rb = r + hw + 18.0, bw = 8.0;
++    float bd = abs(d - rb) - bw * 0.5;
++    if (bd < 1.0) {
++        float m = 0.20 + 0.55 * pow(0.5 + 0.5 * cos(2.0 * (a - 0.9)), 4.0) + 0.40 * pow(0.5 + 0.5 * cos(a + 2.3), 10.0);
++        float across = clamp((d - (rb - bw * 0.5)) / bw, 0.0, 1.0);
++        m *= 0.55 + 0.75 * sin(PI * across);
++        acc = ov(acc, vec3(m * 0.94, m * 0.96, m), clamp(0.5 - bd, 0.0, 1.0) * cut);
++    }
 +    // the red band outside the ring, over the red zone
-+    float bandD = arcDist(p, r + hw + 7.0, u_a.x + u_a.y * redAt, u_a.y * (1.0 - redAt)) - 2.5;
-+    acc = ov(acc, u_red, 0.9 * clamp(0.5 - bandD, 0.0, 1.0));
-+    // the ring: the track, then the lit part
++    float bandD = arcDist(p, r + hw + 8.0, u_a.x + u_a.y * redAt, u_a.y * (1.0 - redAt)) - 2.0;
++    acc = ov(acc, u_red, 0.85 * clamp(0.5 - bandD, 0.0, 1.0));
++    // the ring: the track, then the lit part, with a glow round it
 +    float ringD = arcDist(p, r, u_a.x, u_a.y) - hw;
 +    float lit = u_a.z * u_a.y;
 +    float litD = lit > 0.002 ? arcDist(p, r, u_a.x, lit) - hw : 1e5;
 +    bool zone = f >= redAt && f <= 1.0;
 +    vec3 track = zone ? vec3(0.30, 0.04, 0.04) : vec3(0.15, 0.15, 0.17);
-+    float pulse = u_fx.w;
 +    vec3 litC = zone ? u_red : u_yel;
-+    // a lighter edge on the inner side gives the ring some depth
-+    float inner = clamp((r - d) / hw * 0.5 + 0.5, 0.0, 1.0);
-+    litC = mix(litC, vec3(1.0), 0.18 * inner + 0.45 * pulse);
-+    acc = ov(acc, track, clamp(0.5 - ringD, 0.0, 1.0));
-+    acc = ov(acc, litC, clamp(0.5 - litD, 0.0, 1.0));
-+    // the ticks inside the ring
++    float pulse = u_fx.w;
++    float tcross = clamp((d - (r - hw)) / (2.0 * hw), 0.0, 1.0);
++    float tube = 0.62 + 0.52 * sin(PI * tcross);                            // the ring reads as a tube: bright along its middle
++    float spec = pow(max(0.0, 1.0 - abs(tcross - 0.32) * 5.0), 2.0) * 0.30;   // and has a highlight
++    if (lit > 0.002) acc = ov(acc, litC, 0.32 * exp(-max(litD, 0.0) / 15.0) * (1.0 - clamp(0.5 - litD, 0.0, 1.0)) * (1.0 + pulse));
++    acc = ov(acc, track * tube, clamp(0.5 - ringD, 0.0, 1.0));
++    vec3 litS = clamp(litC * tube + vec3(spec) + 0.45 * pulse, 0.0, 1.0);
++    acc = ov(acc, litS, clamp(0.5 - litD, 0.0, 1.0));
++    // the ticks inside the ring, with a shadow under each
 +    float nt = u_t.x * u_t.y;
 +    if (rel <= u_a.y + 0.02 && d < r - hw - 2.0 && d > r - hw - u_t.z - 3.0) {
 +        float ph = clamp(f, 0.0, 1.0) * nt;
@@ -932,12 +956,17 @@ index c8679c1..6db4817 100644
 +        bool inZone = k / nt >= redAt - 0.001;
 +        vec3 tc = inZone ? vec3(1.0, 0.32, 0.25) : (major ? vec3(0.95) : vec3(0.6));
 +        float inLen = (d > r - hw - 3.0 - len) ? 1.0 : 0.0;
++        acc = ov(acc, vec3(0.0), inLen * 0.6 * clamp(th + 3.0 - off, 0.0, 1.0));
 +        acc = ov(acc, tc, inLen * clamp(th + 0.5 - off, 0.0, 1.0));
 +    }
-+    // the needle through the ring, with a soft glow
++    // the needle through the ring: a shadow on the face under it, the needle, and a soft glow
 +    if (u_n.w > 0.5) {
 +        float na = u_a.x + u_a.y * u_a.z;
 +        vec2 dn = vec2(sin(na), -cos(na));
++        vec2 ps = p - vec2(4.0, 6.0);
++        float alS = dot(ps, dn);
++        float pS = abs(dot(ps, vec2(-dn.y, dn.x)));
++        if (alS > u_n.x && alS < u_n.y) acc = ov(acc, vec3(0.0), 0.5 * clamp(1.0 - pS / (u_n.z + 3.0), 0.0, 1.0));
 +        float along = dot(p, dn);
 +        float perp = abs(dot(p, vec2(-dn.y, dn.x)));
 +        if (along > u_n.x - 6.0 && along < u_n.y + 6.0) {
@@ -964,7 +993,9 @@ index c8679c1..6db4817 100644
 +            }
 +            vec3 lc = frac < 0.4 ? vec3(0.2, 0.95, 0.35) : (frac < 0.75 ? vec3(1.0, 0.82, 0.05) : u_red);
 +            if (u_fx.x > 0.5) { on = true; lc = u_fx.x > 1.5 ? vec3(0.8, 0.9, 1.0) : u_red; }
-+            vec3 cc = on ? lc : vec3(0.16, 0.16, 0.18);
++            // a lit dot glows and has a bright core; an unlit one is a glass bead
++            if (on) acc = ov(acc, lc, 0.35 * exp(-max(dd, 0.0) / 6.0));
++            vec3 cc = on ? mix(lc, vec3(1.0), 0.35 * clamp(1.0 - length(p - dc) / u_led.y, 0.0, 1.0)) : vec3(0.10, 0.10, 0.12) + vec3(0.06) * clamp(1.0 - length(p - dc - vec2(-2.0, -2.0)) / u_led.y, 0.0, 1.0);
 +            acc = ov(acc, cc, clamp(0.5 - dd, 0.0, 1.0));
 +        }
 +    }
