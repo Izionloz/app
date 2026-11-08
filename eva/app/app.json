@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.16.3",
+  "version": "0.17.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -413,7 +413,7 @@
     },
     {
       "key": "warp",
-      "label": "Warp streaks when accelerating (V12)",
+      "label": "Light effects (V12): stars, warp streaks, shift flash",
       "type": "bool",
       "default": true
     }

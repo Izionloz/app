@@ -163,7 +163,7 @@ function draw(cv, s, status) {
     stepper(cv, s, COLS[2], y, 'speedOffset', 'Speed correction', ''); y += ROW_H + GAP;
     toggle(cv, s, COLS[2], y, 'coldGuard', 'Cold-engine guard', false); y += ROW_H + GAP;
     chip(cv, s, COLS[2], y, 'demo', 'Demo data', false); y += ROW_H + GAP;
-    toggle(cv, s, COLS[2], y, 'warp', 'Warp streaks (V12)', false);
+    toggle(cv, s, COLS[2], y, 'warp', 'Light effects (V12)', false);
 
     if (!own) {
         cv.text('Change these in Settings (the button below).', 24, 506, 16, C.dim, {});
