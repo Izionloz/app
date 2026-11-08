@@ -29,9 +29,6 @@ const G = require('./kit/gauges');
 // what the page shows under STATUS (the engine's own lines for the cluster and the HUD)
 const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD' };
 
-// EVA Comfort's map window (the hole in eva_comfort.json, cluster px): the cluster map is put there while that layout shows. The map target
-// (1088x480) sits at x 416, y 120 on the cluster, so the rectangle is in its own pixels; its shape is the map's (1088:480).
-const COMFORT_MAP = { x: 506 - 416, y: 336 - 120, w: 594, h: 262 };
 // EVA Comfort (big map): the window is 936x264 at cluster x 440, y 336, wider than the map's shape allows, so the map is drawn at its own
 // shape, 936x414, with its top 150 px above the window and cropped by it: the rest of the cluster's backdrop (the panel is above the map)
 // hides that, and so the guidance bar at the top of CarPlay's picture
@@ -99,7 +96,7 @@ mgu.run({
             clearInterval(h.keep);
             h.keep = null;
             // EVA Comfort leaves a window for the cluster's map, so with the panel on a scene of its own nothing is hidden
-            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, layout: h.layout, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide' ? 'none' : 'map') : 'hud') }, who === 'panel' && (h.layout === 'eva_comfort' || h.layout === 'eva_comfort_wide') && separate() ? { mapRect: h.layout === 'eva_comfort' ? COMFORT_MAP : COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
+            const msg = () => Object.assign({ cmd: 'evaOn', who, on: h.on, layout: h.layout, hide: who === 'hud' ? (h.layout === 'eva_hud_comfort' ? 'none' : 'hud') : (separate() ? (h.layout === 'eva_comfort_wide' ? 'none' : 'map') : 'hud') }, who === 'panel' && h.layout === 'eva_comfort_wide' && separate() ? { mapRect: COMFORT_WIDE_MAP, panelMap: ctx.settings.get('mapOnPanel') !== false } : who === 'hud' && h.layout === 'eva_hud_comfort' ? { mapRect: HUD_COMFORT_MAP } : {});
             visit(ctx, msg(), 3);
             if (h.on) h.keep = setInterval(() => visit(ctx, msg(), 1), 10000);
         };

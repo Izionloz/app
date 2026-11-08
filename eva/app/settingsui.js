@@ -18,7 +18,7 @@ const C = {
 
 // the longer names of the layouts and options, short enough for a card or a chip
 const SHORT = {
-    off: 'OFF', eva: 'EVA', eva_comfort: 'EVA COMFORT', eva_comfort_wide: 'COMFORT BIG MAP',
+    off: 'OFF', eva: 'EVA', eva_comfort_wide: 'EVA COMFORT',
     eva_hud: 'EVA HUD', eva_hud_bmw: 'EVA HUD BMW', eva_hud_comfort: 'HUD COMFORT',
     metric: 'KM/H  °C  BAR', us: 'MPH  °F  PSI', '12h': '12-HOUR', '24h': '24-HOUR',
     auto: 'AUTO', on: 'ON',

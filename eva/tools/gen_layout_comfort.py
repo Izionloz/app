@@ -146,5 +146,4 @@ def build(wide):
     print(out.split(os.sep)[-1], len(W), 'widgets')
 
 
-build(False)
 build(True)
