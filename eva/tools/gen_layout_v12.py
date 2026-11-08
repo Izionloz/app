@@ -95,9 +95,9 @@ def build(id, name, acc, acc_f, suf):
     # the gear: BMW's black box is above, the number below it, the selector row under
     GC = (1394 + 1603) // 2
     text('gear', GC - 88, 422, 176, 127, '{{gear}}', 'e_gearx', WHITE, 'center', glow=True, z=10)
-    for k, L in enumerate('PRNDM'):
-        text('selDim' + L, GC + (k - 2) * 34 - 16, 556, 32, 30, L, 'e_label', [100, 100, 106, 255], 'center', z=10)
-        text('sel' + L, GC + (k - 2) * 34 - 16, 556, 32, 30, '{{sel:%s}}' % L, 'e_label', YEL, 'center', glow=True, z=11)
+    for k, L in enumerate('PRNDSM'):                       # the selector row with every programme: D, S (sport) and M (manual) each lit on its own
+        text('selDim' + L, GC + round((k - 2.5) * 31) - 14, 556, 28, 30, L, 'e_label', [100, 100, 106, 255], 'center', z=10)
+        text('sel' + L, GC + round((k - 2.5) * 31) - 14, 556, 28, 30, '{{selx:%s}}' % L, 'e_label', YEL, 'center', glow=True, z=11)
 
     # the tyres
     text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', YEL, z=10)
