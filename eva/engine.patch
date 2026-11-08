@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..8ff8504 100644
+index db817c2..eb3a4ce 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -283,7 +283,7 @@ index db817c2..8ff8504 100644
          } else if (w.type === 'sdash') {
              const us = this.setting('units') === 'us';
              const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-@@ -1396,6 +1491,223 @@ class HudApp {
+@@ -1396,6 +1491,224 @@ class HudApp {
      }
  
      /** "x/y" at every step, uploaded as small rects (not the whole, mostly empty, image). */
@@ -413,6 +413,7 @@ index db817c2..8ff8504 100644
 +        const N = d.needle;
 +        c.uniform(ref, 'u_n', N ? [N.inner, N.outer, N.width || 3, 1] : [0, 0, 0, 0]);
 +        c.uniform(ref, 'u_w', [0, this.setting('warp') !== false && d.warp !== false ? 0 : -1, 0, 0]);
++        c.uniform(ref, 'u_flat', [d.flat ? 1 : 0]);
 +        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
 +        c.uniform(ref, 'u_red', d.red || [0.93, 0.1, 0.06]);
 +        x.dial = {};
@@ -544,10 +545,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..0291b0f 100644
+index c8679c1..669673f 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,539 @@ void main() {
+@@ -889,4 +889,540 @@ void main() {
  }
  `;
  
@@ -908,6 +909,7 @@ index c8679c1..0291b0f 100644
 +uniform vec4 u_w;     // the light effects: warp strength 0..1, time (s), the shift flash 0..1, the redline glow 0..1
 +uniform vec3 u_yel;
 +uniform vec3 u_red;
++uniform float u_flat;   // 1: no dish, bezel, vignette or stars (the windshield HUD: black is no light there)
 +const float PI = 3.14159265359;
 +
 +float arcDist(vec2 p, float r, float a0, float s) {
@@ -939,10 +941,10 @@ index c8679c1..0291b0f 100644
 +    vec2 pos = v_uv * u_size;
 +    // the screen's edges fall away a little (a vignette), and glow red at the redline
 +    float vg = smoothstep(0.50, 1.10, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0));
-+    acc = ov(acc, vec3(0.0), 0.32 * vg);
-+    acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
++    if (u_flat < 0.5) acc = ov(acc, vec3(0.0), 0.32 * vg);
++    if (u_flat < 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
 +    // a field of faint stars far back, drifting slowly (they stretch into the warp streaks above a certain speed)
-+    if (u_w.y >= 0.0 && d > r + hw + 30.0) {
++    if (u_flat < 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
 +        vec2 sp = pos + vec2(0.0, u_w.y * 5.0);
 +        vec2 cell = floor(sp / 28.0);
 +        float hh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
@@ -954,7 +956,7 @@ index c8679c1..0291b0f 100644
 +        }
 +    }
 +    float cut = clamp((u_size.y - u_c.y - 84.0) - p.y, 0.0, 1.0);   // the dish and the bezel end 84 px over the layer's bottom: the bottom row is there
-+    if (d < Rf + 1.0) {
++    if (u_flat < 0.5 && d < Rf + 1.0) {
 +        float tt = d / Rf;
 +        vec3 face = mix(vec3(0.060, 0.062, 0.072), vec3(0.006, 0.006, 0.009), smoothstep(0.0, 1.0, tt));
 +        float sheen = 0.075 * smoothstep(-0.25, 0.95, -p.y / Rf) * (1.0 - 0.45 * tt);
@@ -993,7 +995,7 @@ index c8679c1..0291b0f 100644
 +    // the chrome bezel round the face: bright and dark stretches follow the light
 +    float rb = r + hw + 18.0, bw = 8.0;
 +    float bd = abs(d - rb) - bw * 0.5;
-+    if (bd < 1.0) {
++    if (u_flat < 0.5 && bd < 1.0) {
 +        float m = 0.20 + 0.55 * pow(0.5 + 0.5 * cos(2.0 * (a - 0.9 + 0.5 * u_a.z)), 4.0) + 0.40 * pow(0.5 + 0.5 * cos(a + 2.3), 10.0);
 +        float across = clamp((d - (rb - bw * 0.5)) / bw, 0.0, 1.0);
 +        m *= 0.55 + 0.75 * sin(PI * across);

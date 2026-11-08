@@ -48,12 +48,12 @@
             "kind": "app",
             "title": "EVA cluster and HUD",
             "description": "In Sport the instrument cluster and the windshield HUD become an EVA-style display: segmented rev bar (flashes at the redline), big speed, gear and drive mode; the cluster also shows coolant, range and outside temperature, and the pilot picture. The HUD map gives way while the EVA HUD shows",
-            "version": "0.17.1",
+            "version": "0.18.0",
             "artifact": {
-                "name": "eva_cluster@0.17.1.tgz",
-                "size": 1368640,
-                "sha256": "016ca951140f1e5d3debfec619420e5ce7cc1dff32957615d5354c017f7e9c0c",
-                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.17.1/eva_cluster%400.17.1.tgz"
+                "name": "eva_cluster@0.18.0.tgz",
+                "size": 1373135,
+                "sha256": "9bf5e47c51bf18ef79ec5771706548cb5ee2e599a2a1ea3265b89adfce9aabd2",
+                "url": "https://github.com/Izionloz/app/releases/download/eva_cluster%400.18.0/eva_cluster%400.18.0.tgz"
             },
             "mguHmi": [
                 "ID7"
