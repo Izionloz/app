@@ -380,3 +380,20 @@ test('eva vector layout: inside the cluster, clear of BMW\'s small gear letter a
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_vector'), `${k} lacks EVA Vector`);
     });
 });
+
+test('eva vector colourings: the same layout in five more colours, with their own icons, offered in the settings', () => {
+    const base = json('hud', 'layouts', 'eva_vector.json');
+    ['red', 'violet', 'lime', 'mono', 'gold'].forEach((c) => {
+        const id = `eva_vector_${c}`;
+        const l = json('hud', 'layouts', `${id}.json`);
+        assert.strictEqual(l.widgets.length, base.widgets.length, `${id} has other widgets`);
+        l.widgets.filter((w) => w.type === 'picture').forEach((w) => {
+            const pic = json('hud', 'pictures', `${w.name}.json`);
+            assert.deepStrictEqual([pic.w, pic.h], [w.w, w.h], `${id}/${w.id}: the baked picture is not its widget's size`);
+        });
+        assert.notDeepStrictEqual(l.widgets.find((w) => w.type === 'evadial').dial.yellow, base.widgets.find((w) => w.type === 'evadial').dial.yellow, `${id} keeps the base colour`);
+        ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+            assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === id), `${k} lacks ${id}`);
+        });
+    });
+});

@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -103,7 +103,27 @@
         ],
         [
           "eva_vector",
-          "EVA Vector (sporty sci-fi)"
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -149,7 +169,27 @@
         ],
         [
           "eva_vector",
-          "EVA Vector (sporty sci-fi)"
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -189,7 +229,27 @@
         ],
         [
           "eva_vector",
-          "EVA Vector (sporty sci-fi)"
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
@@ -229,7 +289,27 @@
         ],
         [
           "eva_vector",
-          "EVA Vector (sporty sci-fi)"
+          "EVA Vector (cyan)"
+        ],
+        [
+          "eva_vector_red",
+          "EVA Vector Red"
+        ],
+        [
+          "eva_vector_violet",
+          "EVA Vector Violet"
+        ],
+        [
+          "eva_vector_lime",
+          "EVA Vector Lime"
+        ],
+        [
+          "eva_vector_mono",
+          "EVA Vector Mono"
+        ],
+        [
+          "eva_vector_gold",
+          "EVA Vector Gold"
         ]
       ]
     },
