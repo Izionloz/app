@@ -99,8 +99,7 @@
     255,
     255
    ],
-   "align": "center",
-   "glow": true
+   "align": "center"
   },
   {
    "id": "speedUnit",
@@ -136,8 +135,7 @@
     52,
     255
    ],
-   "align": "center",
-   "glow": true
+   "align": "center"
   },
   {
    "id": "alert",

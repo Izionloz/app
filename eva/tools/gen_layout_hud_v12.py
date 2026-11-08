@@ -41,9 +41,9 @@ def build(id, name, acc, acc_f):
             a = math.radians(225 + 270 * i / 8)
             x, y = CX + 64 * math.sin(a), CY - 64 * math.cos(a)
             text('tick%d' % i, round(x) - 12, round(y) - 9, 24, str(i), 'w_small', RED, 'center', z=6)
-    text('speed', CX - 52, 204, 104, '{{speed}}', 'w_gear', WHITE, 'center', z=7, glow=True)
+    text('speed', CX - 52, 204, 104, '{{speed}}', 'w_gear', WHITE, 'center', z=7)
     text('speedUnit', CX - 50, 272, 100, '{{u:speedLc}}', 'w_unit', YEL, 'center', z=7)
-    text('gear', 488, 222, 100, '{{gear}}', 'w_gear', YEL, 'center', z=8, glow=True)
+    text('gear', 488, 222, 100, '{{gear}}', 'w_gear', YEL, 'center', z=8)
     text('alert', 400, 355, 200, '{{evaAlert}}', 'w_alert', RED, 'center', z=9, byRpm=True)
     with open(os.path.join(APP, 'layouts', id + '.json'), 'w') as f:
         json.dump({'schemaVersion': 2, 'name': name, 'theme': 'eva',
