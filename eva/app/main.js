@@ -24,6 +24,7 @@ function visit(ctx, msg, tries) {
 
 const HudApp = require('./hud');
 const page = require('./settingsui');
+const G = require('./kit/gauges');
 
 // what the page shows under STATUS (the engine's own lines for the cluster and the HUD)
 const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD' };
@@ -45,6 +46,9 @@ function drawPage(ctx) {
     ctx.loop('MAIN', 10, () => {
         const cv = ctx.canvas(1600, 520);
         page.draw(cv, ctx.settings, status);
+        // the header with the page's tab (and Settings next to it): the kit's controller ring starts there, so the knob turns onto the
+        // page's rows from it; without it the first turn stopped on a Settings tab that was not drawn and nothing seemed to move
+        G.frame(cv, ctx.theme(), ['EVA'], 0, []);
         return ctx.ui.image('MAIN_GFX', cv);
     });
 }
