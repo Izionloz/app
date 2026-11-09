@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.22.1",
+  "version": "0.23.0",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
@@ -124,6 +124,10 @@
         [
           "eva_vector_gold",
           "EVA Vector Gold"
+        ],
+        [
+          "eva_v12_gpu",
+          "EVA V12 GPU text"
         ]
       ]
     },
@@ -190,6 +194,10 @@
         [
           "eva_vector_gold",
           "EVA Vector Gold"
+        ],
+        [
+          "eva_v12_gpu",
+          "EVA V12 GPU text"
         ]
       ]
     },
@@ -250,6 +258,10 @@
         [
           "eva_vector_gold",
           "EVA Vector Gold"
+        ],
+        [
+          "eva_v12_gpu",
+          "EVA V12 GPU text"
         ]
       ]
     },
@@ -310,6 +322,10 @@
         [
           "eva_vector_gold",
           "EVA Vector Gold"
+        ],
+        [
+          "eva_v12_gpu",
+          "EVA V12 GPU text"
         ]
       ]
     },

@@ -399,3 +399,21 @@ test('eva vector colourings: the same layout in five more colours, with their ow
         });
     });
 });
+
+test('eva v12 gpu layout: the speed, the rpm and the gear are atext widgets on a second connection, with room in their cells, the rest is V12', () => {
+    const base = json('hud', 'layouts', 'eva_v12.json');
+    const l = json('hud', 'layouts', 'eva_v12_gpu.json');
+    assert.strictEqual(l.widgets.length, base.widgets.length);
+    ['speed', 'rpm', 'gear'].forEach((id) => {
+        const w = l.widgets.find((q) => q.id === id);
+        assert.strictEqual(w.type, 'atext');
+        assert.strictEqual(w.conn, 1, `${id} must be on the second connection: the first has its 8 layers`);
+        assert.ok(w.cells >= 1 && w.cells <= 32);
+        const f = json('hud', 'fonts', `${w.font}.json`);
+        assert.strictEqual(w.h, f.cellHeight, `${id}: an atext is as high as its font's cell`);
+        assert.ok(w.x >= 0 && w.x + w.w <= 1920);
+    });
+    ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+        assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_v12_gpu'), `${k} lacks EVA V12 GPU text`);
+    });
+});
