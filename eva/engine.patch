@@ -1,5 +1,5 @@
 diff --git a/shared/hud.js b/shared/hud.js
-index db817c2..cf7fbdb 100644
+index db817c2..727ff29 100644
 --- a/shared/hud.js
 +++ b/shared/hud.js
 @@ -152,6 +152,7 @@
@@ -414,7 +414,7 @@ index db817c2..cf7fbdb 100644
 +        c.uniform(ref, 'u_n', N ? [N.inner, N.outer, N.width || 3, 1] : [0, 0, 0, 0]);
 +        c.uniform(ref, 'u_w', [0, this.setting('warp') !== false && d.warp !== false && d.fx !== false ? 0 : -1, 0, 0]);
 +        c.uniform(ref, 'u_flat', [d.flat === true ? 1 : (Number(d.flat) || 0)]);
-+        c.uniform(ref, 'u_v', [w.w >= 1900 && w.h >= 700 ? 1 : 0]);
++        c.uniform(ref, 'u_whole', [w.w >= 1900 && w.h >= 700 ? 1 : 0]);
 +        c.uniform(ref, 'u_o', Array.isArray(d.origin) ? [d.origin[0] - w.x, d.origin[1] - w.y] : [0, 0]);
 +        c.uniform(ref, 'u_bg', [d.bg ? 1 : 0]);
 +        c.uniform(ref, 'u_yel', d.yellow || [1, 0.82, 0.05]);
@@ -554,7 +554,7 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..9e49f56 100644
+index c8679c1..d77d175 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
 @@ -889,4 +889,561 @@ void main() {
@@ -920,7 +920,7 @@ index c8679c1..9e49f56 100644
 +uniform vec3 u_red;
 +uniform vec2 u_o;       // the warp streaks' origin in layer px (0: the dial's centre)
 +uniform float u_bg;     // 1: the layer paints the whole cluster black under everything it draws
-+uniform float u_v;      // 1: the layer is the whole cluster: the vignette and the stars are drawn
++uniform float u_whole;      // 1: the layer is the whole cluster: the vignette and the stars are drawn
 +uniform float u_flat;   // 1: a flat look: no dish, bezel, vignette, stars, tube shading, glow or shadows (the windshield HUD: black is no light there)
 +const float PI = 3.14159265359;
 +
@@ -954,10 +954,10 @@ index c8679c1..9e49f56 100644
 +    vec2 pos = v_uv * u_size;
 +    // the screen's edges fall away a little (a vignette), and glow red at the redline
 +    float vg = smoothstep(0.50, 1.10, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0));
-+    if (flatHud < 0.5 && u_v > 0.5 && u_w.y >= 0.0) acc = ov(acc, vec3(0.0), 0.32 * vg);
-+    if (flatHud < 0.5 && u_v > 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
++    if (flatHud < 0.5 && u_whole > 0.5 && u_w.y >= 0.0) acc = ov(acc, vec3(0.0), 0.32 * vg);
++    if (flatHud < 0.5 && u_whole > 0.5) acc = ov(acc, u_red, u_w.w * 0.42 * smoothstep(0.35, 1.15, length((v_uv - 0.5) * vec2(1.25, 1.0) * 2.0)));
 +    // a field of faint stars far back, drifting slowly (they stretch into the warp streaks above a certain speed)
-+    if (flatHud < 0.5 && u_v > 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
++    if (flatHud < 0.5 && u_whole > 0.5 && u_w.y >= 0.0 && d > r + hw + 30.0) {
 +        vec2 sp = pos + vec2(0.0, u_w.y * 5.0);
 +        vec2 cell = floor(sp / 28.0);
 +        float hh = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
@@ -1006,7 +1006,7 @@ index c8679c1..9e49f56 100644
 +            float side = 1.0 - smoothstep(0.3 * wpx, wpx, perpPx);
 +            float vis = (flatHud > 0.5 ? smoothstep(1.0, 1.3, rad) : smoothstep(0.28, 0.9, rad)) * (1.0 - smoothstep(3.4, 4.2, rad));   // flat (the HUD): only outside the ring, the speed stays clear
 +            float edge = min(min(pos.x, u_size.x - pos.x), min(pos.y, u_size.y - pos.y));
-+            float outer = (d0 > r + hw + 24.0 ? 0.65 : 1.0) * (u_o.x > 0.0 ? 0.8 : 1.0) * (u_v > 0.5 ? 1.0 : smoothstep(0.0, 60.0, edge));                       // a little fainter out over the panels, so their words stay clear
++            float outer = (d0 > r + hw + 24.0 ? 0.65 : 1.0) * (u_o.x > 0.0 ? 0.8 : 1.0) * (u_whole > 0.5 ? 1.0 : smoothstep(0.0, 60.0, edge));                       // a little fainter out over the panels, so their words stay clear
 +            acc = ov(acc, mix(vec3(0.78, 0.9, 1.0), u_yel, 0.22), clamp(body * side * vis * outer * (0.45 + u_w.x) * 1.5, 0.0, 1.0));
 +        }
 +    }

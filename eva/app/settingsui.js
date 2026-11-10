@@ -16,15 +16,24 @@ const path = require('path');
 
 // previews of the layouts (hud/previews/<layout>.json: 240x90 RGBA, made by tools/make_previews.py from bench pictures), registered once as the kit's pixel
 // images; a layout with none (or no kit, as in a test) gets a plain card
-let rec = null;
+let rec = null, pack = null;
 try { rec = require('./kit/record'); } catch (e) { rec = null; }
+// on the car the kit packs hud/ into hud.pack, so the pictures are read through the kit's pack reader (it reads the plain folder too)
+try { pack = require('./kit/pack').open(path.join(__dirname, 'hud')); } catch (e) { pack = null; }
 const previews = {};
 let nextImage = 0x45560000;
+function readPreview(id) {
+    if (pack) {
+        const j = pack.json('previews/' + id + '.json');
+        if (j && j.rgba) return j;
+    }
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'hud', 'previews', id + '.json'), 'utf8'));
+}
 function preview(id) {
     if (Object.prototype.hasOwnProperty.call(previews, id)) return previews[id];
     previews[id] = null;
     try {
-        const j = JSON.parse(fs.readFileSync(path.join(__dirname, 'hud', 'previews', id + '.json'), 'utf8'));
+        const j = readPreview(id);
         if (rec && rec.setImage && j.w > 0 && j.h > 0) {
             const n = nextImage++;
             rec.setImage(n, j.w, j.h, Buffer.from(j.rgba, 'base64'));

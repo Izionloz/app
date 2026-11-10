@@ -39,8 +39,8 @@ W.append({'id': 'dialR', 'type': 'evadial', 'class': 'overlay', 'z': -8, 'x': RC
           'dial': {'cx': RC, 'cy': CY, 'r': R, 'width': RW, 'start': START, 'sweep': SWEEP, 'majors': 8, 'minors': 4, 'majorLen': 22, 'minorLen': 10,
                    'signal': 'speed', 'redFrom': 1.0, 'clip': 240, 'fx': False, 'yellow': ACC_F, 'needle': {'inner': 150, 'outer': R + RW // 2 + 2, 'width': 3}}})
 
-text('mode', 760, 104, 230, 41, '{{mode}}', 'e_title', WHITE, glow=True)
-text('clock', 1010, 106, 160, 46, '{{time}}', 'e_clock', WHITE, 'right', glow=True)
+text('mode', 756, 104, 296, 41, '{{mode}}', 'e_title', WHITE, glow=True)
+text('clock', 1060, 106, 120, 46, '{{time}}', 'e_clock', WHITE, 'right', glow=True)
 
 # the numbers round the two dials
 for i in range(9):
