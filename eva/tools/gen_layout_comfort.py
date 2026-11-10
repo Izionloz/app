@@ -104,7 +104,7 @@ def build(wide):
         text('gearWord', GC - 130, 558, 260, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=11)
         step, bw, ry = 50, 46, 518
     for k, L in enumerate('PRNDM'):                              # the selector row: dim letters, the engaged one lit over its own
-        text('selDim' + L, GC + (k - 2) * step - bw // 2, ry, bw, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=8)
+        text('selDim' + L, GC + (k - 2) * step - bw // 2, ry, bw, 30, L, 'e_label', [150, 84, 62, 255], 'center', z=10)
         text('sel' + L, GC + (k - 2) * step - bw // 2, ry, bw, 30, '{{sel:%s}}' % L, 'e_label', [255, 190, 110, 255], 'center', glow=True, z=11)
 
     if wide:
@@ -116,8 +116,8 @@ def build(wide):
             for i, (cap, val, unit) in enumerate(rows):
                 y0 = 378 + i * 74
                 text('colN%d_%d' % (ci, i), cx + 14, y0, 92, 28, cap, 'e_label', DIM, z=9)
-                text('colV%d_%d' % (ci, i), cx + 14, y0 + 26, 140, 39, val, 'e_val', VAL, 'left', z=9)
-                text('colU%d_%d' % (ci, i), cx + 96, y0 - 6, 50, 37, unit, 'e_unit', TITLE, 'right', z=10)
+                text('colV%d_%d' % (ci, i), cx + 14, y0 + 28, 94, 39, val, 'e_val', VAL, 'left', z=9)
+                text('colU%d_%d' % (ci, i), cx + 108, y0 - 6, 40, 37, unit, 'e_unit', TITLE, 'right', z=9)
 
     text('tyreCap', 1630, 338, 200, 28, 'TYRE PRESSURE', 'e_label', HEAD, z=9)
     for key, x, y, al in (('FL', 1624, 435, 'left'), ('FR', 1801, 435, 'right'), ('RL', 1624, 514, 'left'), ('RR', 1801, 514, 'right')):

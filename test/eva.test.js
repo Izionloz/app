@@ -417,3 +417,42 @@ test('eva v12 gpu layout: the speed, the rpm and the gear are atext widgets on a
         assert.ok(app.settings.find((x) => x.key === k).options.some((o) => o[0] === 'eva_v12_gpu'), `${k} lacks EVA V12 GPU text`);
     });
 });
+
+test('every layout fits the 8 layers a connection to cluster-render draws (a ninth is dropped on the car: the last sheet, often the bottom row, then shows nothing)', () => {
+    // the planner of shared/hud.js: image widgets are grouped by (class, z) and placed in file order; a widget goes into the first sheet of its group opened after
+    // every earlier layer or widget its rect intersects, whose union box with it stays within the size limit; the limit starts at a quarter of the target and is
+    // doubled until the layout needs 8 layers or fewer, up to unlimited
+    const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const union = (s, w) => { const x = Math.min(s.x, w.x), y = Math.min(s.y, w.y); return { x, y, w: Math.max(s.x + s.w, w.x + w.w) - x, h: Math.max(s.y + s.h, w.y + w.h) - y }; };
+    const layers = (widgets, limit) => {
+        const byConn = {};
+        widgets.forEach((w) => { (byConn[w.conn || 0] = byConn[w.conn || 0] || []).push(w); });
+        return Math.max.apply(null, Object.keys(byConn).map((ci) => {
+            const plan = [];
+            byConn[ci].forEach((w) => {
+                const image = (w.type === 'text' || w.type === 'picture') && !w.own;
+                if (!image) { plan.push({ kind: 'layer', members: [w], z: w.z || 0, cls: w.class || 'content', x: w.x, y: w.y, w: w.w, h: w.h }); return; }
+                const z = w.z || 0, cls = w.class || 'content';
+                let after = -1;
+                plan.forEach((e, i) => { if (e.z === z && e.cls === cls && e.members.some((m) => hit(m, w))) after = i; });
+                let sh = null;
+                for (let i = after + 1; i < plan.length && !sh; i++) {
+                    const e = plan[i];
+                    if (e.kind !== 'sheet' || e.z !== z || e.cls !== cls) continue;
+                    const u = union(e, w);
+                    if (u.w * u.h <= limit) { sh = e; Object.assign(e, u); }
+                }
+                if (!sh) { sh = { kind: 'sheet', z, cls, x: w.x, y: w.y, w: w.w, h: w.h, members: [] }; plan.push(sh); }
+                sh.members.push(w);
+            });
+            return plan.length;
+        }));
+    };
+    fs.readdirSync(path.join(APP, 'hud', 'layouts')).filter((f) => f.endsWith('.json') && f !== 'grid.json').forEach((f) => {
+        const l = json('hud', 'layouts', f);
+        const hud = f.startsWith('eva_hud') || f === 'alert.json';
+        let limit = hud ? 96000 : 345600, n = layers(l.widgets, limit);
+        while (n > 8 && limit < 1e9) { limit *= 2; n = layers(l.widgets, limit); }
+        assert.ok(n <= 8, `${f} needs ${n} layers on a connection, the cluster draws 8`);
+    });
+});
