@@ -78,13 +78,15 @@ test('eva engine.patch only touches the engine files it names', () => {
     assert.deepStrictEqual(files, ['a/shared/hud.js', 'a/shared/hud_themes.js', 'a/shared/layouts.js', 'a/shared/shaders.js']);
 });
 
-test('eva app: only the signals it shows are declared (an interface this car lacks fails the install)', () => {
+test('eva app: only the signals it shows are declared (an interface this car lacks fails the install, unless it is _optional)', () => {
     assert.deepStrictEqual(Object.keys(app.signals).sort(), [
-        'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES', 'de.bmw.infotainment.misc.MDrive', 'de.bmw.infotainment.vehicle.CDS',
-        'de.bmw.infotainment.vehicle.TPMS', 'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation',
-        'de.bmw.infrastructure.VehicleInformation']);
+        'com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu', 'de.bmw.infotainment.KombiIF', 'de.bmw.infotainment.drivingexcitement.FES',
+        'de.bmw.infotainment.misc.MDrive', 'de.bmw.infotainment.vehicle.CDS', 'de.bmw.infotainment.vehicle.CDS2', 'de.bmw.infotainment.vehicle.TPMS',
+        'de.bmw.infotainment.vehicle.Vehicle2', 'de.bmw.infrastructure.EnvironmentalInformation', 'de.bmw.infrastructure.VehicleInformation']);
+    // the interfaces added after the first install: _optional, so that a unit without them still installs
+    ['de.bmw.infotainment.vehicle.CDS2', 'com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu'].forEach((i) => assert.ok(app.signals[i]._optional, `${i} must be _optional`));
     assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.vehicle.TPMS']).filter((k) => k[0] !== '_'), ['statusTyrePressure', 'statusTyreTemperature']);
-    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI', 'statusSwitchDriveDynamicSport2']);
+    assert.deepStrictEqual(Object.keys(app.signals['de.bmw.infotainment.drivingexcitement.FES']), ['statusFESVehicleDynamicSwitchHMI', 'statusSwitchDriveDynamicSport2', 'statusActualValueTorque2']);
 });
 
 const hudLayout = json('hud', 'layouts', 'eva_hud.json');
@@ -455,4 +457,13 @@ test('every layout fits the 8 layers a connection to cluster-render draws (a nin
         while (n > 8 && limit < 1e9) { limit *= 2; n = layers(l.widgets, limit); }
         assert.ok(n <= 8, `${f} needs ${n} layers on a connection, the cluster draws 8`);
     });
+});
+
+test('eva app.json declares the signals of every number the layouts show: the g forces (CDS2), the torque (FES), and the engine unit for the boost (tasu and config.dme), as the other apps of the kit do', () => {
+    const sg = app.signals;
+    assert.ok(sg['de.bmw.infotainment.vehicle.CDS2'] && sg['de.bmw.infotainment.vehicle.CDS2'].statusLongitudinalAccelerationMassCenter && sg['de.bmw.infotainment.vehicle.CDS2'].statusLateralAccelerationMassCenter, '{{gLat}} {{gLong}} need CDS2');
+    assert.ok(sg['de.bmw.infotainment.drivingexcitement.FES'].statusActualValueTorque2, '{{torque}} {{torquePct}} {{powerPct}} need the torque');
+    assert.ok(sg['com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu'], 'the boost from the engine unit needs tasu');
+    assert.ok(app.config.dme && Array.isArray(app.config.dme.boost) && app.config.dme.boost.length > 0, 'config.dme');
+    assert.ok(app.config.engine && app.config.engine.torqueNm > 0 && app.config.engine.powerKw > 0, 'config.engine: the peaks the percentages count from');
 });
