@@ -52,8 +52,8 @@ W.append({'id': 'dialR', 'type': 'evadial', 'class': 'overlay', 'z': -8, 'x': RC
           'dial': {'cx': RC, 'cy': CY, 'r': R, 'width': RW, 'start': START, 'sweep': SWEEP, 'majors': 8, 'minors': 4, 'majorLen': 24, 'minorLen': 11,
                    'signal': 'speed', 'redFrom': 1.0, 'clip': 250, 'flat': 3, 'fx': False, 'yellow': ACC_F, 'red': [1.0, 0.22, 0.14], 'needle': needle}})
 
-text('mode', 740, 100, 230, 41, '{{mode}}', 'e_title', WHITE, glow=True)
-text('clock', 1010, 102, 170, 46, '{{time}}', 'e_clock', WHITE, 'right', glow=True)
+text('mode', 736, 100, 296, 41, '{{mode}}', 'e_title', WHITE, glow=True)
+text('clock', 1040, 102, 150, 46, '{{time}}', 'e_clock', WHITE, 'right', glow=True)
 
 for i in range(9):
     a = math.radians(START + SWEEP * i / 8)
