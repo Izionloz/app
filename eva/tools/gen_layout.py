@@ -41,10 +41,10 @@ text('title', 232, 98, 520, 41, 'VEHICLE STATUS', 'e_title', TITLE, glow=True)
 text('sub', 233, 144, 420, 18, 'TACTICAL DRIVE DISPLAY', 'e_sub', SUB)
 # the 12 V battery's charge (CDS statusBattery2), in the header between the title and the clock
 # the boost pressure (FES sport display, as M Vitals reads it): bar, or psi with the US units
-text('boostCap', 790, 112, 100, 28, 'BOOST', 'e_label', HEAD)
+text('boostCap', 790, 112, 86, 28, 'BOOST', 'e_label', HEAD)
 text('boost', 878, 108, 100, 39, '{{boost}}', 'e_val', VAL, 'right')
 text('boostU', 986, 111, 50, 37, '{{u:boost}}', 'e_unit', TITLE)
-text('batCap', 1070, 112, 150, 28, 'BATTERY', 'e_label', HEAD)
+text('batCap', 1070, 112, 136, 28, 'BATTERY', 'e_label', HEAD)
 text('bat', 1210, 108, 90, 39, '{{battery}}', 'e_val', VAL, 'right')
 text('batU', 1308, 111, 40, 37, '%', 'e_unit', TITLE)
 text('clock', 1430, 112, 270, 46, '{{time}}', 'e_clock', CLOCK, 'right', glow=True)
@@ -81,14 +81,14 @@ text('coolU', 722, 593, 36, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
 text('oilCap', 802, 594, 100, 28, 'OIL', 'e_label', HEAD, z=9)
 text('oil', 905, 590, 130, 39, '{{oil}}', 'e_val', VAL, 'right', z=9)
 text('oilU', 1042, 593, 50, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
-text('rangeCap', 1130, 594, 100, 28, 'RANGE', 'e_label', HEAD, z=9)
+text('rangeCap', 1130, 594, 92, 28, 'RANGE', 'e_label', HEAD, z=9)
 text('range', 1226, 590, 92, 39, '{{range}}', 'e_val', VAL, 'right', z=9)
 text('rangeU', 1324, 593, 52, 37, '{{u:distLc}}', 'e_unit', TITLE, z=9)
-text('outCap', 1422, 594, 190, 28, 'OUTSIDE', 'e_label', HEAD, z=9)
+text('outCap', 1422, 594, 150, 28, 'OUTSIDE', 'e_label', HEAD, z=9)
 text('out', 1580, 590, 130, 39, '{{ambient}}', 'e_val', VAL, 'right', z=9)
 text('outU', 1720, 593, 70, 37, '{{u:temp}}', 'e_unit', TITLE, z=9)
 # the cold-engine guard's note, left of the rev warning
-text('coldNote', 1380, 290, 240, 24, '{{coldNote}}', 'e_mono', [255, 173, 84, 255], 'right', z=6)
+text('coldNote', 1380, 316, 220, 24, '{{coldNote}}', 'e_mono', [255, 173, 84, 255], 'right', z=6)
 
 with open(OUT, 'w') as f:
     json.dump({'schemaVersion': 2, 'name': 'EVA', 'theme': 'eva',
