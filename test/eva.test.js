@@ -467,3 +467,17 @@ test('eva app.json declares the signals of every number the layouts show: the g 
     assert.ok(app.config.dme && Array.isArray(app.config.dme.boost) && app.config.dme.boost.length > 0, 'config.dme');
     assert.ok(app.config.engine && app.config.engine.torqueNm > 0 && app.config.engine.powerKw > 0, 'config.engine: the peaks the percentages count from');
 });
+
+test('the engine patch declares no uniform cluster-render reserves (u_mvp, u_mv, u_m, u_v, u_p, u_normal are filled by the renderer and must be mat4: a shader that declares u_v as a float fails on the car, so no dial was drawn)', () => {
+    const patch = fs.readFileSync(path.join(APP, '..', 'engine.patch'), 'utf8');
+    const bad = patch.split('\n').filter((l) => l[0] === '+' && /\buniform\s+\w+\s+(u_mvp|u_mv|u_m|u_v|u_p|u_normal)\b/.test(l));
+    assert.deepStrictEqual(bad, []);
+    // and hud.js sets no uniform of those names
+    const set = patch.split('\n').filter((l) => l[0] === '+' && /uniform\([^)]*'(u_mvp|u_mv|u_m|u_v|u_p|u_normal)'/.test(l));
+    assert.deepStrictEqual(set, []);
+});
+
+test('the settings page reads its layout pictures through the kit\'s pack reader (hud/ is packed into hud.pack on the car, so a plain file read finds nothing there)', () => {
+    const src = fs.readFileSync(path.join(APP, 'settingsui.js'), 'utf8');
+    assert.ok(/require\('\.\/kit\/pack'\)/.test(src), 'settingsui.js must use kit/pack');
+});
