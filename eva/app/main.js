@@ -66,6 +66,7 @@ mgu.run({
         }
         hud.onStatus((s) => { status.cluster = s; });
         hud.start();
+        status.modeOf = () => hud.driveMode;
         drawPage(ctx);
 
         // The EVA HUD on the windshield: a second display of this app on cluster-render's "hud" target, with a connection of

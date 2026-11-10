@@ -14,18 +14,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// previews of the layouts (hud/previews/<layout>.json: 240x90 RGBA, made by tools/make_previews.py from bench pictures), registered once as the kit's pixel
-// images; a layout with none (or no kit, as in a test) gets a plain card
-let rec = null, pack = null;
-try { rec = require('./kit/record'); } catch (e) { rec = null; }
+// previews of the layouts (hud/previews/<layout>.json, made by tools/make_previews.py from bench pictures): a mosaic of 3 px cells, runs [x, y, length, colour] of
+// the cells that are not black, drawn as rectangles. (The kit's pixel images are not drawn by the car's renderer: it warns "pixel images need the upstream dialect".)
+let pack = null;
 // on the car the kit packs hud/ into hud.pack, so the pictures are read through the kit's pack reader (it reads the plain folder too)
 try { pack = require('./kit/pack').open(path.join(__dirname, 'hud')); } catch (e) { pack = null; }
 const previews = {};
-let nextImage = 0x45560000;
 function readPreview(id) {
     if (pack) {
         const j = pack.json('previews/' + id + '.json');
-        if (j && j.rgba) return j;
+        if (j && Array.isArray(j.runs)) return j;
     }
     return JSON.parse(fs.readFileSync(path.join(__dirname, 'hud', 'previews', id + '.json'), 'utf8'));
 }
@@ -34,17 +32,19 @@ function preview(id) {
     previews[id] = null;
     try {
         const j = readPreview(id);
-        if (rec && rec.setImage && j.w > 0 && j.h > 0) {
-            const n = nextImage++;
-            rec.setImage(n, j.w, j.h, Buffer.from(j.rgba, 'base64'));
-            previews[id] = { id: n, w: j.w, h: j.h };
-        }
+        if (j && Array.isArray(j.runs) && j.w > 0 && j.h > 0) previews[id] = j;
     } catch (e) { /* no preview */ }
     return previews[id];
 }
+function drawPreview(cv, pv, x, y, w, h) {
+    cv.fillRect(x, y, w, h, '#030405');
+    const sx = w / pv.w, sy = h / pv.h;
+    pv.runs.forEach((r) => cv.fillRect(x + r[0] * sx, y + r[1] * sy, r[2] * sx, sy, r[3]));
+}
 
 // which setting a tap on a layout card writes: the default layout or the one of a drive mode
-const state = { target: 'hudLayout', htarget: 'windHudLayout' };
+const state = { target: 'hudLayout', htarget: 'windHudLayout', picked: [false, false] };
+const MODE_KEYS = [{ comfort: 'inComfort', sport: 'inSport', eco: 'inEco' }, { comfort: 'windInComfort', sport: 'windInSport', eco: 'windInEco' }];
 // the two galleries: the cluster's layouts and the HUD's (each picture is a window onto what its display shows)
 const GALLERIES = [
     { item: 'hudLayout', stateKey: 'target', box: [240, 90], cols: 5, targets: [['hudLayout', 'DEFAULT', 'D'], ['inComfort', 'COMFORT', 'C'], ['inSport', 'SPORT', 'S'], ['inEco', 'ECO PRO', 'E']] },
@@ -140,18 +140,23 @@ function stepper(cv, s, col, y, key, label, unit) {
 }
 
 /** The layouts of the cluster (kind 0) or the HUD (kind 1) as a gallery: a card with a picture for each, the chosen one lit; the chips above say whose layout a tap sets. */
-function gallery(cv, s, kind) {
-    const G = GALLERIES[kind], TG = G.targets, cur = () => state[G.stateKey];
+function gallery(cv, s, kind, status) {
+    const G = GALLERIES[kind], TG = G.targets;
+    // what a tap sets: what the owner picked with the chips, else, while "By drive mode" is on, the layout of the drive mode the car is in (the default one is not used then)
+    const mode = status && status.modeOf ? status.modeOf() : null, byMode = !!s.get('byMode');
+    const cur = () => (state.picked[kind] ? state[G.stateKey] : byMode && mode && MODE_KEYS[kind][mode] ? MODE_KEYS[kind][mode] : TG[0][0]);
     let x = 24;
     TG.forEach(([key, label]) => {
         const on = cur() === key, w = 138, h = 32, y = 50;
         cv.roundRect(x, y, w, h, h / 2, on ? C.redFill : C.row);
         cv.strokeRoundRect(x, y, w, h, h / 2, on ? 2 : 1, on ? C.redLit : C.line);
         cv.text(label, x + w / 2, y + h / 2 + 6, 17, on ? C.text : C.dim, { align: 'center', font: 'bold', spacing: 1 });
-        target(cv, x, y, w, h, () => { state[G.stateKey] = key; }, 'target:' + key);
+        if (key === (MODE_KEYS[kind][mode] || '')) cv.roundRect(x + 14, y + 12, 8, 8, 4, C.ok);
+        target(cv, x, y, w, h, () => { state[G.stateKey] = key; state.picked[kind] = true; }, 'target:' + key);
         x += w + 8;
     });
-    cv.text('Tap a layout: it is the ' + (TG.find((t) => t[0] === cur()) || TG[0])[1].toLowerCase() + ' one.', x + 12, 72, 16, C.dim, {});
+    const lone = cur() === TG[0][0] && byMode;
+    cv.text(lone ? 'By drive mode is on: the default layout is not used. Pick COMFORT, SPORT or ECO PRO.' : 'Tap a layout: it is the ' + (TG.find((t) => t[0] === cur()) || TG[0])[1].toLowerCase() + ' one.', x + 12, 72, 16, lone ? C.warn : C.dim, {});
     const bw = 340, bx = 1600 - 24 - bw;
     toggle(cv, s, { x: bx, w: bw }, 46, 'byMode', 'By drive mode', false);
     const it = s.item(G.item);
@@ -163,7 +168,7 @@ function gallery(cv, s, kind) {
         cv.roundRect(cx, cy, cw, ch, 10, on ? C.redFill : C.row);
         cv.strokeRoundRect(cx, cy, cw, ch, 10, on ? 3 : 1, on ? C.redLit : C.line);
         const px = cx + (cw - tw) / 2, py = cy + 8, pv = preview(o[0]);
-        if (pv && cv.image) cv.image(pv.id, px, py, tw, th);
+        if (pv) drawPreview(cv, pv, px, py, tw, th);
         else {
             cv.fillRect(px, py, tw, th, '#050608');
             cv.strokeRoundRect(px, py, tw, th, 4, 1, C.line);
@@ -190,7 +195,7 @@ function draw(cv, s, status, view) {
     cv.clear(C.bg);
     const own = !!cv.own;
     if (view === 0 || view === 1) {
-        gallery(cv, s, view);
+        gallery(cv, s, view, status);
         if (!own) cv.text('Change these in Settings (the button below).', 24, 506, 16, C.dim, {});
         return;
     }

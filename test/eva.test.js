@@ -481,3 +481,15 @@ test('the settings page reads its layout pictures through the kit\'s pack reader
     const src = fs.readFileSync(path.join(APP, 'settingsui.js'), 'utf8');
     assert.ok(/require\('\.\/kit\/pack'\)/.test(src), 'settingsui.js must use kit/pack');
 });
+
+test('every layout of the galleries has a picture: a mosaic of runs the page draws as rectangles (the car\'s renderer draws no pixel images), small enough to draw each frame', () => {
+    [['hudLayout', 80, 30], ['windHudLayout', 80, 46]].forEach(([key, w, h]) => {
+        app.settings.find((x) => x.key === key).options.filter((o) => o[0] !== 'off').forEach((o) => {
+            const j = json('hud', 'previews', `${o[0]}.json`);
+            assert.strictEqual(j.w, w, `${o[0]} width`);
+            assert.strictEqual(j.h, h, `${o[0]} height`);
+            assert.ok(j.runs.length > 50 && j.runs.length < 1200, `${o[0]}: ${j.runs.length} runs`);
+            j.runs.forEach((r) => assert.ok(r[0] >= 0 && r[1] >= 0 && r[1] < h && r[0] + r[2] <= w && /^#[0-9a-f]{6}$/.test(r[3]), `${o[0]}: a bad run ${r}`));
+        });
+    });
+});
