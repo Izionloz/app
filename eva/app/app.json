@@ -2,7 +2,7 @@
   "id": "eva_cluster",
   "title": "EVA cluster",
   "description": "Sport mode turns the instrument cluster into an EVA-style tactical display: segmented rev rail, big speed, gear, coolant, range",
-  "version": "0.23.3",
+  "version": "0.23.4",
   "vendor": "custom",
   "loggingId": "OAE1",
   "iconGlyph": "EVA",
