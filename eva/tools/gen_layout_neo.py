@@ -65,7 +65,7 @@ for k, L in enumerate('PRNDSM'):
     text('sel' + L, x, 356, 28, 30, '{{selx:%s}}' % L, 'e_label', ACC, 'center', z=10, glow=True)
 for i, (cap, val, unit) in enumerate((('BOOST', '{{boost}}', '{{u:boost}}'), ('TORQUE', '{{torque}}', '{{u:torque}}'), ('LOAD', '{{torquePct}}', '%'))):
     x = 748 + 148 * i
-    text('dCap%d' % i, x, 404, 130, 28, cap, 'e_label', ACC, z=9)
+    text('dCap%d' % i, x, 404, 90, 28, cap, 'e_label', ACC, 'right', z=9)
     text('dVal%d' % i, x, 436, 90, 39, val, 'e_val', WHITE, 'right', z=9)
     text('dUnit%d' % i, x + 92, 440, 50, 37, unit, 'e_unit', GREY, 'left', z=9)
 text('tyreCap', 748, 496, 200, 28, 'TYRES', 'e_label', ACC, z=9)
