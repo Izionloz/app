@@ -554,10 +554,10 @@ index af2ad98..5a0bff7 100644
  const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
  
 diff --git a/shared/shaders.js b/shared/shaders.js
-index c8679c1..d77d175 100644
+index c8679c1..9b4924d 100644
 --- a/shared/shaders.js
 +++ b/shared/shaders.js
-@@ -889,4 +889,561 @@ void main() {
+@@ -889,4 +889,567 @@ void main() {
  }
  `;
  
@@ -1025,7 +1025,13 @@ index c8679c1..d77d175 100644
 +    // the ring: the track, then the lit part, with a glow round it
 +    float ringD = arcDist(p, r, u_a.x, u_a.y) - hw;
 +    float lit = u_a.z * u_a.y;
-+    float litD = lit > 0.002 ? arcDist(p, r, u_a.x, lit) - hw : 1e5;
++    // the lit part ends square, right at the needle (a round cap would reach past it by half the ring's width)
++    float litD = 1e5;
++    if (lit > 0.002) {
++        float gapMid = lit + (2.0 * PI - lit) * 0.5;
++        float relS = rel > gapMid ? rel - 2.0 * PI : rel;
++        litD = max(abs(d - r) - hw, max(-relS, relS - lit) * d);
++    }
 +    bool zone = f >= redAt && f <= 1.0;
 +    vec3 track = zone ? vec3(0.30, 0.04, 0.04) : vec3(0.15, 0.15, 0.17);
 +    vec3 litC = zone ? u_red : u_yel;

@@ -80,15 +80,15 @@ def build(id, name, acc, acc_f, suf):
     # the left card: boost, torque, power, the shift point
     text('engCap', 84, 250, 300, 28, 'ENGINE', 'e_label', YEL, z=8)
     for i, (cap, val, unit) in enumerate((('BOOST', '{{boost}}', '{{u:boost}}'), ('TORQUE', '{{torque}}', '{{u:torque}}'), ('POWER', '{{powerPct}}', '%'), ('SHIFT AT', '{{shiftAt}}', 'rpm'))):
-        y0 = 294 + i * 80
-        text('lCap%d' % i, 84, y0, 150, 28, cap, 'e_label', GREY, z=8)
-        text('lVal%d' % i, 84, y0 + 28, 330, 39, val, 'e_val', WHITE, 'right', z=8)
-        text('lUnit%d' % i, 420, y0 + 31, 90, 37, unit, 'e_unit', YEL, 'left', z=8)
+        y0 = 296 + i * 76
+        text('lCap%d' % i, 84, y0 + 6, 150, 28, cap, 'e_label', GREY, z=8)
+        text('lVal%d' % i, 240, y0, 180, 39, val, 'e_val', WHITE, 'right', z=8)
+        text('lUnit%d' % i, 426, y0 + 3, 90, 37, unit, 'e_unit', YEL, 'left', z=8)
 
     # the top right card: the g forces and the engine's load
     for i, (cap, val, unit) in enumerate((('G LAT', '{{gLat}}', 'g'), ('G LONG', '{{gLong}}', 'g'), ('LOAD', '{{torquePct}}', '%'))):
         x = 1350 + 180 * i
-        text('dCap%d' % i, x, 222, 150, 28, cap, 'e_label', YEL)
+        text('dCap%d' % i, x, 222, 110, 28, cap, 'e_label', YEL, 'right')
         text('dVal%d' % i, x, 258, 110, 39, val, 'e_val', WHITE, 'right', z=9)
         text('dUnit%d' % i, x + 114, 262, 44, 37, unit, 'e_unit', GREY, 'left', z=9)
 
