@@ -90,6 +90,7 @@ def build(wide):
 
     text('speed', SPW // 2 + 26 - 172, 350, 345, 171, '{{speed}}', 'e_speed', VAL, 'center', glow=True, z=7, rate=1)
     text('speedUnit', SPW // 2 + 26 - 172, 522, 345, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], 'center', z=7)
+    text('cruise', SPW // 2 + 26 - 172, 590, 345, 24, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'center', z=7)
 
     # BMW's gear box (x 1406-1597, y 342-419; the bench shows it) is drawn over the panel: nothing of ours goes under it. The big layout's gear panel is
     # just that wide, so the number sits below it (and the caption and the word are left out); the first layout's panel has room at its left.

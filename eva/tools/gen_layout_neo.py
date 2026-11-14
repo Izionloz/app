@@ -54,6 +54,7 @@ text('rpm', LC - 80, 360, 160, 56, '{{rpm}}', 'e_segs', WHITE, 'center', z=6, ra
 text('rpmCap', LC - 40, 424, 80, 28, 'RPM', 'e_label', ACC, 'center', z=6)
 text('speed', RC - 100, 436, 200, 100, '{{speed}}', 'e_seg', WHITE, 'center', z=8, rate=1)
 text('speedUnit', RC - 60, 542, 120, 37, '{{u:speedLc}}', 'e_unit', ACC, 'center', z=7)
+text('cruise', RC - 90, 588, 180, 28, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'center', z=9)
 
 # the column: the gear, its selector row, three engine numbers, the tyres
 GC = 960

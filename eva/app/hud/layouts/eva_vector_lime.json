@@ -664,6 +664,25 @@
    "align": "center"
   },
   {
+   "id": "cruise",
+   "type": "text",
+   "class": "alert",
+   "z": 9,
+   "x": 1430,
+   "y": 588,
+   "w": 180,
+   "h": 28,
+   "text": "{{cruise}}",
+   "font": "e_mono",
+   "color": [
+    64,
+    230,
+    120,
+    255
+   ],
+   "align": "center"
+  },
+  {
    "id": "gearCap",
    "type": "text",
    "class": "alert",
