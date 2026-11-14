@@ -26,8 +26,36 @@ const HudApp = require('./hud');
 const page = require('./settingsui');
 const G = require('./kit/gauges');
 
+// Looks for the cruise control among the SOME/IP interface files the unit has (the same folders signals.js reads): any
+// interface, field, method or broadcast whose name has cruise / tempomat / set speed / limiter in it. The names go to the app log
+// and to the page's STATUS, so the real ones can be read off the screen. Read only; nothing is subscribed.
+function findCruise(ctx) {
+    const fs = require('fs'), path = require('path');
+    let base;
+    try { base = path.dirname(require.resolve('./kit/signals')); } catch (e) { return 'no signals module'; }
+    const root = path.resolve(base, '..', '..', '..');
+    const dirs = [path.join(root, 'someipInterfaces'), path.join(base, '..', '..', 'someipdefs')];
+    const re = /cruise|tempomat|set_?speed|speed_?limit|limiter|distronic|\bacc/i;
+    const hits = [];
+    let files = 0;
+    dirs.forEach((d) => {
+        let list = [];
+        try { list = fs.readdirSync(d); } catch (e) { return; }
+        list.filter((f) => /\.json$/.test(f)).forEach((f) => {
+            files++;
+            let cfg; try { cfg = JSON.parse(fs.readFileSync(path.join(d, f), 'utf8')); } catch (e) { return; }
+            const names = [];
+            ['fields', 'methods', 'broadcasts', 'events', 'attributes'].forEach((k) => { if (cfg && cfg[k] && typeof cfg[k] === 'object') names.push.apply(names, Array.isArray(cfg[k]) ? cfg[k].map(String) : Object.keys(cfg[k])); });
+            names.filter((n) => re.test(n) || re.test(f)).forEach((n) => hits.push(f.replace(/\.json$/, '').replace(/_/g, '.') + ' : ' + n));
+        });
+    });
+    const out = hits.length ? hits.slice(0, 6).join(' | ') : 'no cruise names in ' + files + ' interface files (' + dirs.join(', ') + ')';
+    ctx.log.info('cruise finder: ' + hits.length + ' hits, ' + files + ' files: ' + hits.join(' | '));
+    return out;
+}
+
 // what the page shows under STATUS (the engine's own lines for the cluster and the HUD)
-const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD' };
+const status = { cluster: 'Starting the cluster', hud: 'Starting the HUD', cruise: '' };
 
 // EVA Comfort (big map): the window is 936x264 at cluster x 440, y 336, wider than the map's shape allows, so the map is drawn at its own
 // shape, 936x414, with its top 150 px above the window and cropped by it: the rest of the cluster's backdrop (the panel is above the map)
@@ -65,6 +93,7 @@ mgu.run({
             return;
         }
         hud.onStatus((s) => { status.cluster = s; });
+        try { status.cruise = findCruise(ctx); } catch (e) { status.cruise = 'finder failed: ' + e; }
         hud.start();
         status.modeOf = () => hud.driveMode;
         drawPage(ctx);
