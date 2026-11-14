@@ -67,7 +67,7 @@ text('rpm', LC - 80, 350, 160, 56, '{{rpm}}', 'e_segs', WHITE, 'center', z=6, ra
 text('rpmCap', LC - 40, 414, 80, 28, 'RPM', 'e_label', ACC, 'center', z=6)
 text('speed', RC - 100, 432, 200, 100, '{{speed}}', 'e_seg', WHITE, 'center', z=7, rate=1)
 text('speedUnit', RC - 60, 538, 120, 37, '{{u:speedLc}}', 'e_unit', HOT, 'center', z=7)
-text('cruise', RC - 90, 588, 180, 28, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'center', z=9)
+text('cruise', RC - 90, 588, 180, 24, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'center', z=9)
 
 GC = 960
 text('gearCap', GC - 60, 194, 120, 28, 'GEAR', 'e_label', ACC, 'center', z=9)
