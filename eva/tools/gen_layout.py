@@ -64,6 +64,7 @@ text('gearWord', 156, 516, 170, 24, '{{gearWord}}', 'e_mono', SUB, 'center', z=7
 
 text('speed', 392, 362, 440, 171, '{{speed}}', 'e_speed', VAL, 'right', glow=True, z=8, rate=1)
 text('speedUnit', 850, 466, 200, 58, '{{u:speedLc}}', 'e_unitbig', [255, 187, 121, 255], z=8)
+text('cruise', 392, 540, 440, 24, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'right', z=8)
 
 text('modeCap', 1130, 350, 250, 24, 'DRIVE MODE', 'e_mono', SUB, z=8)
 text('mode', 1130, 374, 250, 24, '{{mode}}', 'e_mono', VAL, z=8)

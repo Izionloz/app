@@ -566,6 +566,24 @@
    "align": "left"
   },
   {
+   "id": "cruise",
+   "type": "text",
+   "z": 8,
+   "x": 392,
+   "y": 540,
+   "w": 440,
+   "h": 24,
+   "text": "{{cruise}}",
+   "font": "e_mono",
+   "color": [
+    64,
+    230,
+    120,
+    255
+   ],
+   "align": "right"
+  },
+  {
    "id": "modeCap",
    "type": "text",
    "z": 8,

@@ -74,6 +74,7 @@ def build(id, name, acc, acc_f, suf):
     # inside the ring: the speed, under it the rev count
     text('speed', CX - 172, 236, 345, 171, '{{speed}}', 'e_speed', WHITE, 'center', glow=True, z=7, rate=1)
     text('speedUnit', CX - 172, 410, 345, 58, '{{u:speedLc}}', 'e_unitbig', YEL, 'center', z=7)
+    text('cruise', CX - 120, 198, 240, 24, '{{cruise}}', 'e_mono', [64, 230, 120, 255], 'center', z=9)
     text('rpm', CX - 100, 500, 200, 70, '{{rpm}}', 'e_rpm', WHITE, 'center', z=7, rate=1)
     text('rpmCap', CX - 40, 572, 80, 28, 'RPM', 'e_label', YEL, 'center', z=7)
 
