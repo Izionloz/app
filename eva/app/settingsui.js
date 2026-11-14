@@ -222,7 +222,7 @@ function draw(cv, s, status, view) {
     toggle(cv, s, COLS[1], y, 'separate', 'EVA + HUD map together', false); y += ROW_H + 18;
     heading(cv, COLS[1], y, 'STATUS');
     y += 34;
-    [['Cluster', status && status.cluster], ['HUD', status && status.hud]].forEach(([n, v]) => {
+    [['Cluster', status && status.cluster], ['HUD', status && status.hud], ['Cruise', status && status.cruise]].forEach(([n, v]) => {
         cv.text(n.toUpperCase(), COLS[1].x, y + 16, 16, C.dim, { font: 'bold', spacing: 1.5 });
         const txt = String(v || '-');
         cv.text(txt, COLS[1].x + 90, y + 16, fit(cv, txt, 18, COLS[1].w - 90, {}), C.text);
