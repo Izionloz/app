@@ -516,3 +516,18 @@ test('catalog: the RideTube entries point at the author\'s own release assets wi
     assert.strictEqual(by['jap-ridetube-d'].requires['jap-node22'], by['jap-node22'].version, 'the service wants the node the catalog has');
     assert.strictEqual(by['jap_ridetube'].requires['jap-ridetube-d'], by['jap-ridetube-d'].version, 'the app wants the service the catalog has');
 });
+
+test('release/sync_external.js: an author\'s newer entry replaces ours, an unchanged one changes nothing, an unusable one throws', () => {
+    const { merge } = require('../release/sync_external.js');
+    const url = (n) => `https://github.com/JustAnotherPU/mgu-apps/releases/download/catalog/${n}`;
+    const entry = (v, sha) => ({ id: 'jap-node22', version: v, artifact: { name: `jap-node22@${v}.tgz`, size: 5, sha256: sha, url: url(`jap-node22@${v}.tgz`) } });
+    const a = 'a'.repeat(64), b = 'b'.repeat(64);
+    const same = merge({ components: [entry('1', a)] }, { components: [entry('1', a)] }, ['jap-node22']);
+    assert.deepStrictEqual(same.changes, []);
+    const newer = merge({ components: [entry('1', a)] }, { components: [entry('2', b)] }, ['jap-node22']);
+    assert.strictEqual(newer.catalog.components[0].version, '2');
+    assert.strictEqual(newer.changes.length, 1);
+    const bad = entry('2', b); bad.artifact.url = 'https://example.com/x.tgz';
+    assert.throws(() => merge({ components: [] }, { components: [bad] }, ['jap-node22']), /usable artifact/);
+    assert.throws(() => merge({ components: [] }, { components: [] }, ['jap-node22']), /not in the author/);
+});

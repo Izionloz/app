@@ -11,6 +11,7 @@ display. One helper and one app, independent of any fork:
 - **HUD map** (`designer/`, the app `hud_designer`) - a touch page, also run with the iDrive controller: a list of
   sliders and a preview to put the zoom focus on the car.
 - `apps/mgux_hud_map` - an older page of buttons (source only, no longer in the catalog).
+- `ridetube/` - a copy of the RideTube source by JustAnotherPU (GPL-3.0-or-later), to read and change; see `ridetube/UPSTREAM.md`. It is not built here: the catalog points to the author's own release assets.
 
 With **waze-on-cluster 0.9.0** (source `robertnisipeanu/idrive-apps`, with cluster-render 0.4.0) the HUD map also has
 a black background, which a HUD shows as nothing (see below). The designer also needs the GPU renderer with touch
@@ -36,7 +37,7 @@ Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases)
 
 ### RideTube through this source
 
-The catalog also lists **RideTube** (`jap_ridetube`), its service `jap-ridetube-d` and `jap-node22`, so that one source is enough. They are **not built or hosted here**: each entry points to the author's own release asset (`JustAnotherPU/ridetube` and `JustAnotherPU/mgu-apps`, tag `catalog`) with the size and sha256 the author's catalog gives (checked when they were added), and `release/catalog.js` leaves them as they are. RideTube is an unofficial client for YouTube by JustAnotherPU (GPL-3.0); its service runs on the unit with an internet connection, and this repository has not audited it. Do **not** also add the source `JustAnotherPU/mgu-apps`: the Store must not see the same tool id from two sources. If the author replaces an asset under its tag, the link or the sha256 here goes stale and the install fails until the entry is updated from the author's catalog.
+The catalog also lists **RideTube** (`jap_ridetube`), its service `jap-ridetube-d` and `jap-node22`, so that one source is enough. They are **not built or hosted here**: each entry points to the author's own release asset (`JustAnotherPU/ridetube` and `JustAnotherPU/mgu-apps`, tag `catalog`) with the size and sha256 the author's catalog gives (checked when they were added), and `release/catalog.js` leaves them as they are. RideTube is an unofficial client for YouTube by JustAnotherPU (GPL-3.0); its service runs on the unit with an internet connection, and this repository has not audited it. Do **not** also add the source `JustAnotherPU/mgu-apps`: the Store must not see the same tool id from two sources. If the author replaces an asset under its tag, the link or the sha256 here goes stale and the install fails until the entry is updated from the author's catalog. `node release/sync_external.js` does that update from the authors' catalogs (`--check` only reports, `--verify` also downloads the assets and checks their size and sha256).
 
 To release: change the code, bump the component's version (`native/<id>/component.json` or
 `apps/<id>/mgu-app.json` or `designer/app/app.json`), run `node release/catalog.js --out dist` and commit
