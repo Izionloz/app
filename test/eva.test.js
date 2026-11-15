@@ -493,3 +493,12 @@ test('every layout of the galleries has a picture: a mosaic of runs the page dra
         });
     });
 });
+
+test('the engine patch keeps each interface once in the signal handlers (a second key of the same name silently replaced the first: the battery readout went blank)', () => {
+    const patch = fs.readFileSync(path.join(APP, '..', 'engine.patch'), 'utf8');
+    // the object of handlers in _setupVehicleData: keys at 12 spaces, as added or kept lines of shared/hud.js
+    const hud = patch.split(/^diff --git /m).find((d) => /a\/shared\/hud\.js /.test(d)) || '';
+    const keys = {};
+    hud.split('\n').filter((l) => /^[+ ] {12}'[A-Za-z0-9_.]+': \{$/.test(l)).forEach((l) => { const k = l.trim(); keys[k] = (keys[k] || 0) + 1; });
+    Object.keys(keys).forEach((k) => assert.strictEqual(keys[k], 1, `${k} is in the handlers twice`));
+});
