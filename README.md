@@ -11,6 +11,7 @@ display. One helper and one app, independent of any fork:
 - **HUD map** (`designer/`, the app `hud_designer`) - a touch page, also run with the iDrive controller: a list of
   sliders and a preview to put the zoom focus on the car.
 - `apps/mgux_hud_map` - an older page of buttons (source only, no longer in the catalog).
+- `ridetube/` - a copy of the RideTube source by JustAnotherPU (GPL-3.0-or-later), to read and change; see `ridetube/UPSTREAM.md`. It is not built here: the catalog points to the author's own release assets.
 
 With **waze-on-cluster 0.9.0** (source `robertnisipeanu/idrive-apps`, with cluster-render 0.4.0) the HUD map also has
 a black background, which a HUD shows as nothing (see below). The designer also needs the GPU renderer with touch
