@@ -502,3 +502,17 @@ test('the engine patch keeps each interface once in the signal handlers (a secon
     hud.split('\n').filter((l) => /^[+ ] {12}'[A-Za-z0-9_.]+': \{$/.test(l)).forEach((l) => { const k = l.trim(); keys[k] = (keys[k] || 0) + 1; });
     Object.keys(keys).forEach((k) => assert.strictEqual(keys[k], 1, `${k} is in the handlers twice`));
 });
+
+test('catalog: the RideTube entries point at the author\'s own release assets with a sha256, and what they require is there or the Store\'s', () => {
+    const cat = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalog.json'), 'utf8'));
+    const by = {};
+    cat.components.forEach((c) => { by[c.id] = c; });
+    ['jap_ridetube', 'jap-ridetube-d', 'jap-node22'].forEach((id) => {
+        const c = by[id];
+        assert.ok(c, `${id} is in the catalog`);
+        assert.ok(/^https:\/\/github\.com\/JustAnotherPU\/(ridetube|mgu-apps)\/releases\/download\/catalog\//.test(c.artifact.url), `${id}: url`);
+        assert.ok(/^[0-9a-f]{64}$/.test(c.artifact.sha256) && c.artifact.size > 0, `${id}: sha256 and size`);
+    });
+    assert.strictEqual(by['jap-ridetube-d'].requires['jap-node22'], by['jap-node22'].version, 'the service wants the node the catalog has');
+    assert.strictEqual(by['jap_ridetube'].requires['jap-ridetube-d'], by['jap-ridetube-d'].version, 'the app wants the service the catalog has');
+});

@@ -34,6 +34,10 @@ to end) and the map's state from waze-on-cluster under the preview.
 
 Add the source in the Store: Settings -> Add source -> `Izionloz/app` (Releases).
 
+### RideTube through this source
+
+The catalog also lists **RideTube** (`jap_ridetube`), its service `jap-ridetube-d` and `jap-node22`, so that one source is enough. They are **not built or hosted here**: each entry points to the author's own release asset (`JustAnotherPU/ridetube` and `JustAnotherPU/mgu-apps`, tag `catalog`) with the size and sha256 the author's catalog gives (checked when they were added), and `release/catalog.js` leaves them as they are. RideTube is an unofficial client for YouTube by JustAnotherPU (GPL-3.0); its service runs on the unit with an internet connection, and this repository has not audited it. Do **not** also add the source `JustAnotherPU/mgu-apps`: the Store must not see the same tool id from two sources. If the author replaces an asset under its tag, the link or the sha256 here goes stale and the install fails until the entry is updated from the author's catalog.
+
 To release: change the code, bump the component's version (`native/<id>/component.json` or
 `apps/<id>/mgu-app.json` or `designer/app/app.json`), run `node release/catalog.js --out dist` and commit
 `catalog.json`. On `main`, the
